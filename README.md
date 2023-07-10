@@ -1,7 +1,7 @@
 # jupyterlab_eduhelx_submission
 
 [![Github Actions Status](https://github.com/helxplatform/jupyterlab_eduhelx_submission/workflows/Build/badge.svg)](https://github.com/helxplatform/jupyterlab_eduhelx_submission/actions/workflows/build.yml)
-A JupyterLab extension tfor submitting assignments in EduHeLx
+A JupyterLab extension for managing assignments/submissions in EduHeLx
 
 This extension is composed of a Python package named `jupyterlab_eduhelx_submission`
 for the server extension and a NPM package named `jupyterlab_eduhelx_submission`
@@ -9,7 +9,7 @@ for the frontend extension.
 
 ## Requirements
 
-- JupyterLab >= 4.0.0
+- JupyterLab >= 3.0.0
 
 ## Install
 
