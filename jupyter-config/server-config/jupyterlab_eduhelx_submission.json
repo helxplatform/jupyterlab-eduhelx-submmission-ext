@@ -3,5 +3,8 @@
     "jpserver_extensions": {
       "jupyterlab_eduhelx_submission": true
     }
+  },
+  "EduhelxSubmission": {
+    "graderApiUrl": ""
   }
 }
