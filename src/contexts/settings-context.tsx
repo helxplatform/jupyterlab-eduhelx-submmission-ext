@@ -15,4 +15,4 @@ export const SettingsProvider = ({ settings, children }: ISettingsProviderProps)
         </SettingsContext.Provider>
     )
 }
-export const useSettingsContext = () => useContext(SettingsContext)
+export const useSettings = () => useContext(SettingsContext)

@@ -48,4 +48,4 @@ export const AssignmentProvider = ({ model, children }: IAssignmentProviderProps
         </AssignmentContext.Provider>
     )
 }
-export const useAssignmentContext = () => useContext(AssignmentContext)
+export const useAssignment = () => useContext(AssignmentContext)

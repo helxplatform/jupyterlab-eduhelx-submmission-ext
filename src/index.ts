@@ -40,7 +40,11 @@ async function activate (
     model.currentPath = change.newValue
   })
 
-  const submissionWidget = new AssignmentWidget(model, serverSettings)
+  const submissionWidget = new AssignmentWidget(
+    model,
+    app.commands,
+    serverSettings
+  )
   submissionWidget.id = 'jp-submission-widget'
   submissionWidget.title.icon = submissionIcon
   submissionWidget.title.caption = 'Submit assignments'

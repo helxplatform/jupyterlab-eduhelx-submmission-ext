@@ -17,7 +17,41 @@ class AssignmentHandler(BaseHandler):
     def get(self):
         current_path: str = self.get_argument("path")
         self.finish(json.dumps({
-            "name": current_path.split("/")[-1]
+            "id": 0,
+            "name": current_path.split("/")[-1],
+            "due_date": "2023-07-11T03:07:03.284289",
+            "student": {
+                "id": 0,
+                "first_name": "Bob",
+                "last_name": "Smith",
+                "professor_onyen": "pfessor"
+            },
+            "submissions": [
+                {
+                    "id": 2,
+                    "commit_id": "b42c7f3fa56a75f0aa9e42411fd94a3a0999b12f",
+                    "submission_time": "2023-07-11T03:05:24.284289",
+                    "active": True,
+                    "student": {
+                        "id": 1,
+                        "first_name": "Bob",
+                        "last_name": "Smith",
+                        "professor_onyen": "pfessor"
+                    }
+                },
+                {
+                    "id": 1,
+                    "commit_id": "e259014d8f20e069fb6d1fcb0768988f5c8b47d7",
+                    "submission_time": "2023-07-10T04:15:58.152890",
+                    "active": False,
+                    "student": {
+                        "id": 1,
+                        "first_name": "Bob",
+                        "last_name": "Smith",
+                        "professor_onyen": "pfessor"
+                    }
+                }
+            ]
         }))
 
 class SubmissionHandler(BaseHandler):

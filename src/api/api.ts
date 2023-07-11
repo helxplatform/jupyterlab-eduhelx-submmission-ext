@@ -1,24 +1,24 @@
 import qs from 'qs'
 import { ServerConnection } from '@jupyterlab/services'
-import { requestAPI } from './handler'
+import { requestAPI } from '../handler'
+import { IAssignment, Assignment } from './assignment'
+import { IServerSettings, ServerSettings } from './server-settings'
+import { AssignmentResponse, ServerSettingsResponse } from './api-responses'
 
-export interface IAssignment {
-    name: string
-}
-
-export interface IServerSettings {}
-
-export async function getCurrentAssignment(path: string): Promise<IAssignment | null> {
-    return await requestAPI<IAssignment | null>(`/assignment?${ qs.stringify({ path }) }`, {
+export async function getCurrentAssignment(path: string): Promise<IAssignment|null> {
+    const data = await requestAPI<AssignmentResponse|null>(`/assignment?${ qs.stringify({ path }) }`, {
         method: 'GET'
     })
+    if (data === null) return null
+    return Assignment.fromResponse(data)
 }
 
 export async function getServerSettings(): Promise<IServerSettings> {
     try {
-        return await requestAPI<IServerSettings>('/settings', {
+        const data = await requestAPI<ServerSettingsResponse>('/settings', {
             method: 'GET'
         })
+        return ServerSettings.fromResponse(data)
     } catch (e) {
         if (e instanceof ServerConnection.ResponseError) {
             const response = e.response;
@@ -37,10 +37,4 @@ export async function getServerSettings(): Promise<IServerSettings> {
             throw e;
         }
     }
-}
-
-export async function postSubmission(): Promise<any> {
-    return await requestAPI<any>('/submission', {
-        method: 'POST'
-    })
 }

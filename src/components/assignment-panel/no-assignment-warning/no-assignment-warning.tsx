@@ -1,7 +1,9 @@
 import React from 'react'
 import { containerClass, openFileBrowserButtonClass, textContainerClass } from './style'
+import { useCommands } from '../../../contexts'
 
 export const NoAssignmentWarning = () => {
+    const commands = useCommands()!
     return (
         <div className={ containerClass }>
             <div className={ textContainerClass }>
@@ -10,7 +12,7 @@ export const NoAssignmentWarning = () => {
             </div>
             <button
                 className={ openFileBrowserButtonClass }
-                onClick={ () => console.log("Open the filebrowser") }
+                onClick={ () => commands.execute('filebrowser:toggle-main') }
             >
                 Open the FileBrowser
             </button>

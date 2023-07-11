@@ -1,15 +1,25 @@
 import React from 'react'
-import { assignmentInfoClass } from './style'
-import { useAssignmentContext } from '../../../contexts'
+import { assignmentInfoClass, assignmentInfoSectionClass, assignmentInfoSectionHeaderClass, assignmentNameClass } from './style'
+import { useAssignment } from '../../../contexts'
 
 export const AssignmentInfo = () => {
-    const { assignment, path } = useAssignmentContext()!
-    
+    const { assignment } = useAssignment()!
+    if (!assignment) return null
     return (
         <div className={ assignmentInfoClass }>
-            The active assignment is called "{ assignment!.name }"
-            <br />
-            The active path is "{ path! }"
+            <header className={ assignmentNameClass }>{ assignment.name }</header>
+            <div className={ assignmentInfoSectionClass }>
+                <h5 className={ assignmentInfoSectionHeaderClass }>Student</h5>
+                <span>{ assignment.student.firstName } { assignment.student.lastName }</span>
+            </div>
+            <div className={ assignmentInfoSectionClass }>
+                <h5 className={ assignmentInfoSectionHeaderClass }>Professor</h5>
+                <span>{ assignment.student.professorOnyen }</span>
+            </div>
+            <div className={ assignmentInfoSectionClass }>
+                <h5 className={ assignmentInfoSectionHeaderClass }>Due date</h5>
+                <span>{ assignment.dueDate.toDateString() }</span>
+            </div>
         </div>
     )
 }

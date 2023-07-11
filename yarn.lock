@@ -2353,6 +2353,21 @@
 
 "@lumino/commands@^2.1.1", "@lumino/commands@^2.1.2":
   version "2.1.2"
+  resolved "https://registry.npmjs.org/@lumino/commands/-/commands-2.1.2.tgz"
+  integrity sha512-wdA7kx2z0oygD44yQo5Tlk+yViKqmjTqwQSg2jfKfGyVOrwM3i1NXdZ8ntIV8WQIHmg24D2WqElwjUq5G7bGlw==
+  dependencies:
+    "@lumino/algorithm" "^2.0.0"
+    "@lumino/coreutils" "^2.1.1"
+    "@lumino/disposable" "^2.1.1"
+    "@lumino/domutils" "^2.0.0"
+    "@lumino/keyboard" "^2.0.0"
+    "@lumino/signaling" "^2.1.1"
+    "@lumino/virtualdom" "^2.0.0"
+
+"@lumino/commands@^2.1.2":
+  version "2.1.2"
+  resolved "https://registry.npmjs.org/@lumino/commands/-/commands-2.1.2.tgz"
+  integrity sha512-wdA7kx2z0oygD44yQo5Tlk+yViKqmjTqwQSg2jfKfGyVOrwM3i1NXdZ8ntIV8WQIHmg24D2WqElwjUq5G7bGlw==
   dependencies:
     "@lumino/algorithm" "^2.0.0"
     "@lumino/coreutils" "^2.1.1"
