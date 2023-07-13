@@ -33,36 +33,6 @@ export const AssignmentSubmissions = ({ ...props }: AssignmentSubmissionsProps) 
     return (
         <div className={ assignmentSubmissionsContainerClass } { ...props }>
             <TextDivider innerStyle={{ fontSize: 'var(--jp-ui-font-size2)' }} style={{ padding: '0 12px' }}>Submissions</TextDivider>
-            {/* <h3 className={ assignmentSubmimssionsHeaderClass }>Submissions</h3> */}
-            <Table style={{ display: "none" }} size="small" className={ assignmentsTableClass }>
-                <TableHead>
-                    <TableRow>
-                        <TableCell>#</TableCell>
-                        <TableCell>Date</TableCell>
-                        {/* <TableCell>Commit</TableCell> */}
-                        <TableCell>Details</TableCell>
-                    </TableRow>
-                </TableHead>
-                <TableBody>
-                    { assignment.submissions.map((submission) => (
-                        <TableRow>
-                            <TableCell>{ submission.id }</TableCell>
-                            <TableCell>{ new DateFormat(submission.submissionTime).toBasicDatetime() }</TableCell>
-                            {/* <TableCell>{ submission.commitIdShort }</TableCell> */}
-                            <TableCell>
-                                <div style={{ display: "flex", alignItems: "center", width: "100%", "height": "100%" }}>
-                                    {/* { submission.active ? (
-                                        <CheckSharp style={{ fontSize: 16 }} />
-                                    ) : (
-                                        <button className={ activateSubmissionButtonClass }>Activate</button>
-                                    ) } */}
-                                    <button className={ activateSubmissionButtonClass }>View</button>
-                                </div>
-                            </TableCell>
-                        </TableRow>
-                    )) }
-                </TableBody>
-            </Table>
             <div className={ assignmentsListClass }>
                 { assignment.submissions.map((submission) => (
                     <ExpansionPanel key={ submission.id } square>
