@@ -29,7 +29,6 @@ class AssignmentHandler(BaseHandler):
             "submissions": [
                 {
                     "id": 2,
-                    "commit_id": "b42c7f3fa56a75f0aa9e42411fd94a3a0999b12f",
                     "submission_time": "2023-07-11T03:05:24.284289",
                     "active": True,
                     "student": {
@@ -37,11 +36,16 @@ class AssignmentHandler(BaseHandler):
                         "first_name": "Bob",
                         "last_name": "Smith",
                         "professor_onyen": "pfessor"
+                    },
+                    "commit": {
+                        "id": "b42c7f3fa56a75f0aa9e42411fd94a3a0999b12f",
+                        "message": "I made some changes\nI changed this thing and this other thing",
+                        "author": "bobbysmith",
+                        "committer": "bobbysmith"
                     }
                 },
                 {
                     "id": 1,
-                    "commit_id": "e259014d8f20e069fb6d1fcb0768988f5c8b47d7",
                     "submission_time": "2023-07-10T04:15:58.152890",
                     "active": False,
                     "student": {
@@ -49,6 +53,12 @@ class AssignmentHandler(BaseHandler):
                         "first_name": "Bob",
                         "last_name": "Smith",
                         "professor_onyen": "pfessor"
+                    },
+                    "commit": {
+                        "id": "e259014d8f20e069fb6d1fcb0768988f5c8b47d7",
+                        "message": "This is a summary\nThis is the description",
+                        "author": "bobbysmith",
+                        "committer": "bobbysmith"
                     }
                 }
             ]

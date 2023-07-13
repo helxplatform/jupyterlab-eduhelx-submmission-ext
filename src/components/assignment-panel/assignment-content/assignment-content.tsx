@@ -4,7 +4,7 @@ import { assignmentContainerClass, containerClass, loadingContainerClass } from 
 import { NoAssignmentWarning } from '../no-assignment-warning'
 import { AssignmentInfo } from '../assignment-info'
 import { AssignmentSubmissions } from '../assignment-submissions'
-import { AssignmentSubmitButton } from '../assignment-submit-button'
+import { AssignmentSubmitForm } from '../assignment-submit-form'
 import { useAssignment } from '../../../contexts'
 
 export const AssignmentContent = () => {
@@ -21,10 +21,9 @@ export const AssignmentContent = () => {
                 ) : (
                     <div className={ assignmentContainerClass }>
                         <AssignmentInfo />
-                        <Divider style={{ margin: '0 12px 16px 12px' }} />
-                        <AssignmentSubmissions />
-                        <div style={{ flexGrow: 1 }} />
-                        <AssignmentSubmitButton />
+                        {/* <Divider style={{ margin: '0 12px 16px 12px' }} /> */}
+                        <AssignmentSubmissions style={{ flexGrow: 1 }} />
+                        <AssignmentSubmitForm />
                     </div>
                 )
             }
