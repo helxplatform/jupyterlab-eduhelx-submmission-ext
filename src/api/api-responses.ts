@@ -7,6 +7,7 @@ export interface CommitResponse {
 
 export interface StudentResponse {
     id: number
+    student_onyen: string
     first_name: string
     last_name: string
     professor_onyen: string
@@ -14,18 +15,23 @@ export interface StudentResponse {
 
 export interface SubmissionResponse {
     id: number
-    student_id: number
     active: boolean
     submission_time: string
-    student: StudentResponse
     commit: CommitResponse
 }
 
 export interface AssignmentResponse {
     id: number
     name: string
+    git_remote_url: string
+    revision_count: number
+    created_date: string
+    released_date: string
+    last_modified_date: string
     due_date: string
-    student: StudentResponse
+}
+
+export interface CurrentAssignmentResponse extends AssignmentResponse {
     submissions: SubmissionResponse[]
 }
 

@@ -4,18 +4,18 @@ import { useAssignment } from '../../../contexts'
 import { DateFormat } from '../../../utils'
 
 export const AssignmentInfo = () => {
-    const { assignment } = useAssignment()!
-    if (!assignment) return null
+    const { assignment, student } = useAssignment()!
+    if (!student || !assignment) return null
     return (
         <div className={ assignmentInfoClass }>
             <header className={ assignmentNameClass }>{ assignment.name }</header>
             <div className={ assignmentInfoSectionClass }>
                 <h5 className={ assignmentInfoSectionHeaderClass }>Student</h5>
-                <span>{ assignment.student.firstName } { assignment.student.lastName }</span>
+                <span>{ student.firstName } { student.lastName }</span>
             </div>
             <div className={ assignmentInfoSectionClass }>
                 <h5 className={ assignmentInfoSectionHeaderClass }>Professor</h5>
-                <span>{ assignment.student.professorOnyen }</span>
+                <span>{ student.professorOnyen }</span>
             </div>
             <div className={ assignmentInfoSectionClass }>
                 <h5 className={ assignmentInfoSectionHeaderClass }>Due date</h5>

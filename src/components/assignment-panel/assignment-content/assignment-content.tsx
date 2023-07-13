@@ -8,11 +8,11 @@ import { AssignmentSubmitForm } from '../assignment-submit-form'
 import { useAssignment } from '../../../contexts'
 
 export const AssignmentContent = () => {
-    const { assignment } = useAssignment()!
+    const { loading, assignment, student, assignments } = useAssignment()!
     return (
         <div className={ containerClass }>
             {
-                assignment === undefined ? (
+                loading ? (
                     <div className={ loadingContainerClass }>
                         <CircularProgress color="inherit" />
                     </div>
@@ -21,7 +21,6 @@ export const AssignmentContent = () => {
                 ) : (
                     <div className={ assignmentContainerClass }>
                         <AssignmentInfo />
-                        {/* <Divider style={{ margin: '0 12px 16px 12px' }} /> */}
                         <AssignmentSubmissions style={{ flexGrow: 1 }} />
                         <AssignmentSubmitForm />
                     </div>

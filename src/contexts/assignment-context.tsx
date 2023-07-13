@@ -1,10 +1,12 @@
 import React, { createContext, useContext, ReactNode, useState, useMemo, useEffect } from 'react'
 import { IChangedArgs } from '@jupyterlab/coreutils'
 import { IEduhelxSubmissionModel } from '../tokens'
-import { IAssignment } from '../api'
+import { IAssignment, IStudent, ICurrentAssignment } from '../api'
 
 interface IAssignmentContext {
-    assignment: IAssignment | null | undefined
+    assignments: IAssignment[] | undefined
+    student: IStudent | undefined
+    assignment: ICurrentAssignment | null | undefined
     path: string | null
     loading: boolean
 }
@@ -18,29 +20,49 @@ export const AssignmentContext = createContext<IAssignmentContext|undefined>(und
 
 export const AssignmentProvider = ({ model, children }: IAssignmentProviderProps) => {
     const [currentPath, setCurrentPath] = useState<string|null>(null)
-    const [currentAssignment, setCurrentAssignment] = useState<IAssignment|null|undefined>(undefined)
-    const loading = useMemo(() => currentAssignment === undefined, [currentAssignment])
+    const [currentAssignment, setCurrentAssignment] = useState<ICurrentAssignment|null|undefined>(undefined)
+    const [student, setStudent] = useState<IStudent|undefined>(undefined)
+    const [assignments, setAssignments] = useState<IAssignment[]|undefined>(undefined)
+    const loading = useMemo(() => (
+        currentAssignment === undefined ||
+        student === undefined ||
+        assignments === undefined
+    ), [currentAssignment, student, assignments])
 
     useEffect(() => {
         setCurrentPath(model.currentPath)
         setCurrentAssignment(model.currentAssignment)
+        setStudent(model.student)
+        setAssignments(model.assignments)
         const onCurrentPathChanged = (model: IEduhelxSubmissionModel, change: IChangedArgs<string|null>) => {
             setCurrentPath(change.newValue)
         }
-        const onCurrentAssignmentChanged = (model: IEduhelxSubmissionModel, change: IChangedArgs<IAssignment|null|undefined>) => {
+        const onCurrentAssignmentChanged = (model: IEduhelxSubmissionModel, change: IChangedArgs<ICurrentAssignment|null|undefined>) => {
             setCurrentAssignment(change.newValue)
+        }
+        const onStudentChanged = (model: IEduhelxSubmissionModel, change: IChangedArgs<IStudent|undefined>) => {
+            setStudent(change.newValue)
+        }
+        const onAssignmentsChanged = (model: IEduhelxSubmissionModel, change: IChangedArgs<IAssignment[]|undefined>) => {
+            setAssignments(change.newValue)
         }
         model.currentPathChanged.connect(onCurrentPathChanged)
         model.currentAssignmentChanged.connect(onCurrentAssignmentChanged)
+        model.studentChanged.connect(onStudentChanged)
+        model.assignmentsChanged.connect(onAssignmentsChanged)
         return () => {
             model.currentPathChanged.disconnect(onCurrentPathChanged)
             model.currentAssignmentChanged.disconnect(onCurrentAssignmentChanged)
+            model.studentChanged.disconnect(onStudentChanged)
+            model.assignmentsChanged.disconnect(onAssignmentsChanged)
         }
     }, [model])
 
     return (
         <AssignmentContext.Provider value={{
             assignment: currentAssignment,
+            student,
+            assignments,
             path: currentPath,
             loading
         }}>

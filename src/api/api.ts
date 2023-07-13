@@ -1,16 +1,35 @@
 import qs from 'qs'
 import { ServerConnection } from '@jupyterlab/services'
 import { requestAPI } from '../handler'
-import { IAssignment, Assignment } from './assignment'
+import { IAssignment, Assignment, ICurrentAssignment, CurrentAssignment } from './assignment'
+import { IStudent, Student } from './student'
 import { IServerSettings, ServerSettings } from './server-settings'
-import { AssignmentResponse, ServerSettingsResponse } from './api-responses'
+import {
+    AssignmentResponse, CurrentAssignmentResponse,
+    ServerSettingsResponse, StudentResponse
+} from './api-responses'
 
-export async function getCurrentAssignment(path: string): Promise<IAssignment|null> {
-    const data = await requestAPI<AssignmentResponse|null>(`/assignment?${ qs.stringify({ path }) }`, {
+export async function getAssignments(): Promise<IAssignment[]> {
+    const data = await requestAPI<AssignmentResponse[]>(`/assignments`, {
+        method: 'GET'
+    })
+    return data.map((res) => Assignment.fromResponse(res))
+}
+
+export async function getStudent(): Promise<IStudent> {
+    const data = await requestAPI<StudentResponse>(`/student`, {
+        method: 'GET'
+    })
+    return Student.fromResponse(data)
+}
+
+
+export async function getCurrentAssignment(path: string): Promise<ICurrentAssignment|null> {
+    const data = await requestAPI<CurrentAssignmentResponse|null>(`/assignment?${ qs.stringify({ path }) }`, {
         method: 'GET'
     })
     if (data === null) return null
-    return Assignment.fromResponse(data)
+    return CurrentAssignment.fromResponse(data)
 }
 
 export async function getServerSettings(): Promise<IServerSettings> {

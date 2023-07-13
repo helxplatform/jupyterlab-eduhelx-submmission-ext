@@ -5,6 +5,7 @@ import tornado
 from jupyter_server.base.handlers import APIHandler
 from jupyter_server.utils import url_path_join
 from .config import ExtensionConfig
+from .api import Api
 from ._version import __version__
 
 class BaseHandler(APIHandler):
@@ -12,14 +13,39 @@ class BaseHandler(APIHandler):
     def config(self) -> ExtensionConfig:
         return ExtensionConfig(self.serverapp)
 
-class AssignmentHandler(BaseHandler):
+    @property
+    def api(self) -> Api:
+        return Api(self.config)
+
+
+class StudentHandler(BaseHandler):
+    @tornado.web.authenticated
+    def get(self):
+        student = self.api.get_student()
+        self.finish(json.dumps(student))
+
+class AssignmentsHandler(BaseHandler):
+    @tornado.web.authenticated
+    def get(self):
+        assignments = self.api.get_assignments()
+        self.finish(json.dumps(assignments))
+
+class CurrentAssignmentHandler(BaseHandler):
     @tornado.web.authenticated
     def get(self):
         current_path: str = self.get_argument("path")
+
+        self.finish(json.dumps(None))
+
+        """
         self.finish(json.dumps({
             "id": 0,
             "name": current_path.split("/")[-1],
+            "created_date": "2023-06-28T11:51:24.523612",
+            "released_date": "2023-07-01T00:00:00.0",
+            "last_modified_date": "2023-06-28T11:51:24.523612",
             "due_date": "2023-07-11T03:07:03.284289",
+            "revision_count": 0,
             "student": {
                 "id": 0,
                 "first_name": "Bob",
@@ -63,6 +89,7 @@ class AssignmentHandler(BaseHandler):
                 }
             ]
         }))
+        """
 
 class SubmissionHandler(BaseHandler):
     @tornado.web.authenticated
@@ -91,7 +118,9 @@ def setup_handlers(server_app):
 
     base_url = web_app.settings["base_url"]
     handlers = [
-        ("assignment", AssignmentHandler),
+        ("assignments", AssignmentsHandler),
+        ("assignment", CurrentAssignmentHandler),
+        ("student", StudentHandler),
         ("submission", SubmissionHandler),
         ("settings", SettingsHandler)
     ]
