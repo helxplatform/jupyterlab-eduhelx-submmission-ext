@@ -1,4 +1,4 @@
-import React, { Fragment } from 'react'
+import React, { Fragment, useMemo } from 'react'
 import { 
     Table, TableHead, TableBody, TableRow, TableCell,
     List, ListItem, ListItemText, ListItemIcon, Divider,
@@ -22,6 +22,10 @@ interface AssignmentSubmissionsProps extends React.HTMLProps<HTMLDivElement> {
 
 export const AssignmentSubmissions = ({ ...props }: AssignmentSubmissionsProps) => {
     const { assignment } = useAssignment()!
+
+    const submissionSource = useMemo(() => (
+        assignment?.submissions.sort((a, b) => b.submissionTime.getTime() - a.submissionTime.getTime())
+    ), [assignment])
     
     if (!assignment) return null
     if (assignment.submissions.length === 0) return (
@@ -34,7 +38,7 @@ export const AssignmentSubmissions = ({ ...props }: AssignmentSubmissionsProps) 
         <div className={ assignmentSubmissionsContainerClass } { ...props }>
             <TextDivider innerStyle={{ fontSize: 'var(--jp-ui-font-size2)' }} style={{ padding: '0 12px' }}>Submissions</TextDivider>
             <div className={ assignmentsListClass }>
-                { assignment.submissions.map((submission) => (
+                { submissionSource!.map((submission) => (
                     <ExpansionPanel key={ submission.id } square>
                         <ExpansionPanelSummary expandIcon={ <ExpandMoreSharp /> }>
                             <ListItem>
@@ -60,8 +64,16 @@ export const AssignmentSubmissions = ({ ...props }: AssignmentSubmissionsProps) 
                                     <Typography style={{ fontSize: 12, marginBottom: 4, fontFamily: "inherit" }} color="textSecondary">
                                         { submission.commit.idShort }
                                     </Typography>
-                                    <Typography variant="body2" component="p" style={{ fontSize: 12, fontFamily: "inherit" }}>
-                                        { submission.commit.description }
+                                    <Typography
+                                        variant="body2"
+                                        component="p"
+                                        style={{
+                                            fontSize: 12,
+                                            fontFamily: "inherit",
+                                            fontStyle: submission.commit.description ? "normal" : "italic"
+                                        }}
+                                    >
+                                        { submission.commit.description || "No description" }
                                     </Typography>
                                 </CardContent>
                             </Card>

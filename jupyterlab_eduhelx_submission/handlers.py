@@ -48,7 +48,7 @@ class CurrentAssignmentHandler(BaseHandler):
                 if remote == assignment["git_remote_url"]:
                     current_assignment = assignment
                     break
-            submissions = self.api.get_assignment_submissions(current_assignment["id"], student["student_onyen"])
+            submissions = self.api.get_assignment_submissions(current_assignment["id"], student["student_onyen"], git_path=current_path_abs)
             current_assignment["submissions"] = submissions
             self.finish(json.dumps(current_assignment))
         except InvalidGitRepositoryException:

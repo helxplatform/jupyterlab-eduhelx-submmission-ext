@@ -20,10 +20,12 @@ class Api:
         })
         return res.json()
 
-    def get_assignment_submissions(self, assignment_id, onyen):
+    def get_assignment_submissions(self, assignment_id, onyen, git_path="./"):
         res = requests.get(f"{ self.api_url }api/v1/assignment/{ assignment_id }/submissions", params={
             "onyen": onyen
         })
         submissions = res.json()
         for submission in submissions:
-            submission["commit"] = get_commit_info(submission["commit_id"])
+            submission["commit"] = get_commit_info(submission["commit_id"], path=git_path)
+        
+        return submissions
