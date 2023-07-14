@@ -55,7 +55,7 @@ export const AssignmentSubmissions = ({ ...props }: AssignmentSubmissionsProps) 
                             <Card variant="outlined">
                                 <CardContent style={{ padding: 0 }}>
                                     <Typography variant="h5" component="h5" style={{ fontSize: 13, fontFamily: "inherit" }}>
-                                        { submission.commit.author }
+                                        { submission.commit.authorName }
                                     </Typography>
                                     <Typography style={{ fontSize: 12, marginBottom: 4, fontFamily: "inherit" }} color="textSecondary">
                                         { submission.commit.idShort }

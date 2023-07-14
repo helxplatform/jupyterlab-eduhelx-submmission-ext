@@ -1,8 +1,10 @@
 export interface CommitResponse {
     id: string
     message: string
-    author: string
-    committer: string
+    author_name: string
+    author_email: string
+    committer_name: string
+    committer_email: string
 }
 
 export interface StudentResponse {

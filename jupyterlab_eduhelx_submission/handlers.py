@@ -1,11 +1,14 @@
 import json
 import os
 import requests
+import subprocess
 import tornado
 from jupyter_server.base.handlers import APIHandler
 from jupyter_server.utils import url_path_join
 from .config import ExtensionConfig
 from .api import Api
+from .git import InvalidGitRepositoryException, get_remote
+from .process import execute
 from ._version import __version__
 
 class BaseHandler(APIHandler):
@@ -34,62 +37,23 @@ class CurrentAssignmentHandler(BaseHandler):
     @tornado.web.authenticated
     def get(self):
         current_path: str = self.get_argument("path")
+        current_path_abs = os.path.abspath(current_path)
 
-        self.finish(json.dumps(None))
+        assignments = self.api.get_assignments()
+        student = self.api.get_student()
 
-        """
-        self.finish(json.dumps({
-            "id": 0,
-            "name": current_path.split("/")[-1],
-            "created_date": "2023-06-28T11:51:24.523612",
-            "released_date": "2023-07-01T00:00:00.0",
-            "last_modified_date": "2023-06-28T11:51:24.523612",
-            "due_date": "2023-07-11T03:07:03.284289",
-            "revision_count": 0,
-            "student": {
-                "id": 0,
-                "first_name": "Bob",
-                "last_name": "Smith",
-                "professor_onyen": "pfessor"
-            },
-            "submissions": [
-                {
-                    "id": 2,
-                    "submission_time": "2023-07-11T03:05:24.284289",
-                    "active": True,
-                    "student": {
-                        "id": 1,
-                        "first_name": "Bob",
-                        "last_name": "Smith",
-                        "professor_onyen": "pfessor"
-                    },
-                    "commit": {
-                        "id": "b42c7f3fa56a75f0aa9e42411fd94a3a0999b12f",
-                        "message": "I made some changes\nI changed this thing and this other thing",
-                        "author": "bobbysmith",
-                        "committer": "bobbysmith"
-                    }
-                },
-                {
-                    "id": 1,
-                    "submission_time": "2023-07-10T04:15:58.152890",
-                    "active": False,
-                    "student": {
-                        "id": 1,
-                        "first_name": "Bob",
-                        "last_name": "Smith",
-                        "professor_onyen": "pfessor"
-                    },
-                    "commit": {
-                        "id": "e259014d8f20e069fb6d1fcb0768988f5c8b47d7",
-                        "message": "This is a summary\nThis is the description",
-                        "author": "bobbysmith",
-                        "committer": "bobbysmith"
-                    }
-                }
-            ]
-        }))
-        """
+        try:
+            remote = get_remote(current_path_abs)
+            for assignment in assignments:
+                if remote == assignment["git_remote_url"]:
+                    current_assignment = assignment
+                    break
+            submissions = self.api.get_assignment_submissions(current_assignment["id"], student["student_onyen"])
+            current_assignment["submissions"] = submissions
+            self.finish(json.dumps(current_assignment))
+        except InvalidGitRepositoryException:
+            self.finish(json.dumps(None))
+            
 
 class SubmissionHandler(BaseHandler):
     @tornado.web.authenticated
