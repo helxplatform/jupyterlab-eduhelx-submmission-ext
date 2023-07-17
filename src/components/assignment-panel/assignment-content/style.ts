@@ -1,7 +1,9 @@
 import { style } from 'typestyle'
 
 export const containerClass = style({
-    flexGrow: 1
+    flexGrow: 1,
+    display: 'flex',
+    flexDirection: 'column'
 })
 
 export const loadingContainerClass = style({

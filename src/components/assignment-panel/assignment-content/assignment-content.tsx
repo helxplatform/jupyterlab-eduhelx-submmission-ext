@@ -1,4 +1,4 @@
-import React, { Fragment } from 'react'
+import React, { Fragment, useEffect, useState } from 'react'
 import { CircularProgress, Divider } from '@material-ui/core'
 import { assignmentContainerClass, containerClass, loadingContainerClass } from './style'
 import { NoAssignmentWarning } from '../no-assignment-warning'
@@ -8,7 +8,22 @@ import { AssignmentSubmitForm } from '../assignment-submit-form'
 import { useAssignment } from '../../../contexts'
 
 export const AssignmentContent = () => {
-    const { loading, assignment, student, assignments } = useAssignment()!
+    const { loading, path, assignment, student, assignments } = useAssignment()!
+
+    /*
+    const [showSelectionView, setShowSelectionView] = useState<boolean>(true)
+
+    useEffect(() => {
+        // When the path / active assignment changes,
+        // if there's an active assignment, show the assignment view.
+        if (assignment) setShowSelectionView(false)
+        // If there isn't an assignment in the current directory, show the selection view.
+        else setShowSelectionView(true)
+        // Then, users can press a button while in the assignment view, users can press
+        // a back button to go back to the selection view.
+    }, [path, assignment?.id])
+    */
+
     return (
         <div className={ containerClass }>
             {

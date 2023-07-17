@@ -1,4 +1,4 @@
-import moment, { Moment } from 'moment'
+import moment, { Moment, duration } from 'moment'
 
 interface IDateFormat {
     // E.g. Mar 5 at 11:59 PM
@@ -21,7 +21,8 @@ export class DateFormat implements IDateFormat {
         return this._moment.format("MMM DD [at] h[:]mm A")
     }
 
-    toRelativeDatetime(): string {
-        return ""
+    toRelativeDatetime(referenceTime?: Date): string {
+        if (!referenceTime) referenceTime = new Date()
+        return duration(this._moment.diff(moment(referenceTime))).humanize()
     }
 }

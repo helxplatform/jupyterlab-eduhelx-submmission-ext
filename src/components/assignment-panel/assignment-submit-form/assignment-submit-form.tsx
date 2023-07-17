@@ -25,11 +25,12 @@ export const AssignmentSubmitForm = ({ }: AssignmentSubmitFormProps) => {
                     disabled: disabledStyle
                 }}
                 type="text"
-                placeholder="Summary (optional)"
+                placeholder="Summary"
                 title="Enter a summary for the submission (preferably less than 50 characters)"
                 value={ summaryText }
                 onChange={ (e) => setSummaryText(e.target.value) }
                 disabled={ loading }
+                required
                 disableUnderline
                 fullWidth
             />

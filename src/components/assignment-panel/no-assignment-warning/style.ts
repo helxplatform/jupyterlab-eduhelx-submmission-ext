@@ -1,6 +1,7 @@
 import { style } from 'typestyle'
 
 export const containerClass = style({
+    flexGrow: 1,
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
@@ -22,6 +23,13 @@ export const openFileBrowserButtonClass = style({
     color: 'white',
     fontSize: 'var(--jp-ui-font-size1)',
     height: 28,
-    marginTop: 8,
+    margin: '8px 0',
     width: 200,
+})
+
+export const warningTextContainerClass = style({
+    fontSize: 12,
+    fontWeight: 500,
+    color: 'var(--jp-warn-color0)',
+    margin: '8px 0'
 })

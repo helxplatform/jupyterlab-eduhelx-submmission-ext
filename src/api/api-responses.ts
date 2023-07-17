@@ -30,11 +30,11 @@ export interface AssignmentResponse {
     created_date: string
     released_date: string
     last_modified_date: string
-    due_date: string
-}
-
-export interface CurrentAssignmentResponse extends AssignmentResponse {
-    submissions: SubmissionResponse[]
+    base_time: number
+    extra_time: number
+    is_released: boolean
+    is_closed: boolean
+    submissions?: SubmissionResponse[]
 }
 
 export interface CourseResponse {

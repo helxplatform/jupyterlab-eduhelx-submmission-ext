@@ -1,11 +1,11 @@
 import qs from 'qs'
 import { ServerConnection } from '@jupyterlab/services'
 import { requestAPI } from '../handler'
-import { IAssignment, Assignment, ICurrentAssignment, CurrentAssignment } from './assignment'
+import { IAssignment, Assignment, ICurrentAssignment } from './assignment'
 import { IStudent, Student } from './student'
 import { IServerSettings, ServerSettings } from './server-settings'
 import {
-    AssignmentResponse, CurrentAssignmentResponse,
+    AssignmentResponse,
     ServerSettingsResponse, StudentResponse
 } from './api-responses'
 
@@ -25,11 +25,11 @@ export async function getStudent(): Promise<IStudent> {
 
 
 export async function getCurrentAssignment(path: string): Promise<ICurrentAssignment|null> {
-    const data = await requestAPI<CurrentAssignmentResponse|null>(`/assignment?${ qs.stringify({ path }) }`, {
+    const data = await requestAPI<AssignmentResponse|null>(`/assignment?${ qs.stringify({ path }) }`, {
         method: 'GET'
     })
     if (data === null) return null
-    return CurrentAssignment.fromResponse(data)
+    return Assignment.fromResponse(data) as ICurrentAssignment
 }
 
 export async function getServerSettings(): Promise<IServerSettings> {

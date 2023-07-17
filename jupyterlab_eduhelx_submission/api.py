@@ -10,8 +10,10 @@ class Api:
     def api_url(self) -> str:
         return self.config.GRADER_API_URL
 
-    def get_assignments(self):
-        res = requests.get(f"{ self.api_url }api/v1/assignments")
+    def get_assignments(self, onyen: str):
+        res = requests.get(f"{ self.api_url }api/v1/assignments", params={
+            "onyen": onyen
+        })
         return res.json()
 
     def get_student(self):
@@ -20,7 +22,7 @@ class Api:
         })
         return res.json()
 
-    def get_assignment_submissions(self, assignment_id, onyen, git_path="./"):
+    def get_assignment_submissions(self, assignment_id: int, onyen: str, git_path="./"):
         res = requests.get(f"{ self.api_url }api/v1/assignment/{ assignment_id }/submissions", params={
             "onyen": onyen
         })

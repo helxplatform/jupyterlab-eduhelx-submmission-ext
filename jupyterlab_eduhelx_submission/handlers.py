@@ -30,7 +30,8 @@ class StudentHandler(BaseHandler):
 class AssignmentsHandler(BaseHandler):
     @tornado.web.authenticated
     def get(self):
-        assignments = self.api.get_assignments()
+        student = self.api.get_student()
+        assignments = self.api.get_assignments(student["student_onyen"])
         self.finish(json.dumps(assignments))
 
 class CurrentAssignmentHandler(BaseHandler):
@@ -39,19 +40,24 @@ class CurrentAssignmentHandler(BaseHandler):
         current_path: str = self.get_argument("path")
         current_path_abs = os.path.abspath(current_path)
 
-        assignments = self.api.get_assignments()
         student = self.api.get_student()
-
+        assignments = self.api.get_assignments(student["student_onyen"])
+        current_assignment = None
         try:
             remote = get_remote(current_path_abs)
             for assignment in assignments:
                 if remote == assignment["git_remote_url"]:
                     current_assignment = assignment
                     break
+        except InvalidGitRepositoryException:
+            self.finish(json.dumps(None))
+            return
+
+        if current_assignment is not None:
             submissions = self.api.get_assignment_submissions(current_assignment["id"], student["student_onyen"], git_path=current_path_abs)
             current_assignment["submissions"] = submissions
             self.finish(json.dumps(current_assignment))
-        except InvalidGitRepositoryException:
+        else:
             self.finish(json.dumps(None))
             
 
