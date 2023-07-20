@@ -78,7 +78,7 @@ const AssignmentListItem = ({ assignment }: AssignmentListItemProps) => {
                                     style={{ marginTop: 4, fontSize: 12, display: 'flex', alignItems: 'center' }}
                                 >
                                     <QueryBuilderOutlined style={{ fontSize: 16 }} />
-                                    &nbsp;Lasts { new DateFormat(assignment.adjustedDueDate).toRelativeDatetime({ referenceTime: assignment.releasedDate }) }
+                                    &nbsp;Lasts { new DateFormat(assignment.adjustedDueDate).toRelativeDatetime(assignment.releasedDate) }
                                 </div>
                             </div>
                         )
