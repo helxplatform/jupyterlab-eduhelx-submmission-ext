@@ -8,10 +8,10 @@ export const submitFormContainerClass = style({
 })
 
 export const submitRootClass = style({
-    color: 'var(--jp-ui-font-color1)',
-    fontSize: 'var(--jp-ui-font-size1)',
-    fontFamily: 'var(--jp-ui-font-family)',
-    backgroundColor: 'var(--jp-layout-color1)'
+    color: 'var(--jp-ui-font-color1) !important',
+    fontSize: 'var(--jp-ui-font-size1) !important',
+    fontFamily: 'var(--jp-ui-font-family) !important',
+    backgroundColor: 'var(--jp-layout-color1) !important'
 })
 
 export const summaryClass = style({

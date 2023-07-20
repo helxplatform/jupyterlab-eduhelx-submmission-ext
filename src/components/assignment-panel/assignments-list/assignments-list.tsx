@@ -3,11 +3,11 @@ import {
     Avatar, List, ListItem, ListItemAvatar as _ListItemAvatar, ListItemText,
     ExpansionPanel, ExpansionPanelSummary, ExpansionPanelDetails
 } from '@material-ui/core'
-import { GetAppSharp, QueryBuilderOutlined, ExpandMoreSharp } from '@material-ui/icons'
+import { OpenInNewSharp, QueryBuilderOutlined, ExpandMoreSharp } from '@material-ui/icons'
 import { classes } from 'typestyle'
-import { assignmentBucketContainerClass, assignmentListHeaderClass, downloadAssignmentButtonClass } from './style'
+import { assignmentBucketContainerClass, assignmentListHeaderClass, assignmentListItemClass, downloadAssignmentButtonClass } from './style'
 import { TextDivider } from '../../text-divider'
-import { useAssignment } from '../../../contexts'
+import { useAssignment, useCommands } from '../../../contexts'
 import type { IAssignment } from '../../../api'
 import { DateFormat } from '../../../utils'
 import { assignmentsListClass } from '../assignment-submissions/style'
@@ -39,9 +39,11 @@ const ListHeader = ({ title }: ListHeaderProps) => {
 }
 
 const AssignmentListItem = ({ assignment }: AssignmentListItemProps) => {
+    const commands = useCommands()!
     return (
         <ListItem
             key={ assignment.id }
+            className={ assignmentListItemClass }
             dense
             style={{
                 padding: '4px 8px'
@@ -55,7 +57,7 @@ const AssignmentListItem = ({ assignment }: AssignmentListItemProps) => {
                     {
                         assignment.isClosed ? (
                             <span title={ new DateFormat(assignment.adjustedDueDate).toBasicDatetime() }>
-                                Closed
+                                Closed on { new DateFormat(assignment.adjustedDueDate).toBasicDatetime() }
                             </span>
                         ) : assignment.isReleased ? (
                             <span title={ new DateFormat(assignment.adjustedDueDate).toBasicDatetime() }>
@@ -76,7 +78,7 @@ const AssignmentListItem = ({ assignment }: AssignmentListItemProps) => {
                                     style={{ marginTop: 4, fontSize: 12, display: 'flex', alignItems: 'center' }}
                                 >
                                     <QueryBuilderOutlined style={{ fontSize: 16 }} />
-                                    &nbsp;Lasts { new DateFormat(assignment.adjustedDueDate).toRelativeDatetime(assignment.releasedDate) }
+                                    &nbsp;Lasts { new DateFormat(assignment.adjustedDueDate).toRelativeDatetime({ referenceTime: assignment.releasedDate }) }
                                 </div>
                             </div>
                         )
@@ -86,9 +88,14 @@ const AssignmentListItem = ({ assignment }: AssignmentListItemProps) => {
             <ListItemAvatar style={{ minWidth: 0, marginLeft: 16 }}>
                 <Avatar variant="square">
                     <button
-                        className={ classes(downloadAssignmentButtonClass, disabledButtonClass) }
+                        className={ classes(downloadAssignmentButtonClass, !assignment.isReleased && disabledButtonClass) }
+                        disabled={ !assignment.isReleased }
+                        onClick={ () => commands.execute('filebrowser:go-to-path', {
+                            path: assignment.absoluteDirectoryPath,
+                            dontShowBrowser: true
+                        }) }
                     >
-                        <GetAppSharp />
+                        <OpenInNewSharp />
                     </button>
                 </Avatar>
             </ListItemAvatar>

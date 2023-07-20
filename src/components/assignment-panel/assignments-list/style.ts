@@ -7,6 +7,15 @@ export const assignmentBucketContainerClass = (style as any)({
     }
 })
 
+export const assignmentListItemClass = (style as any)({
+    '&:first-child': {
+        paddingTop: '0 !important',
+    },
+    '&:first-child > .MuiListItemText-root': {
+        marginTop: '0 !important'
+    }
+})
+
 export const assignmentListHeaderClass = style({
     color: 'var(--jp-ui-font-color0)',
     fontSize: 13,

@@ -25,8 +25,8 @@ export interface SubmissionResponse {
 export interface AssignmentResponse {
     id: number
     name: string
-    git_remote_url: string
-    revision_count: number
+    directory_path: string
+    absolute_directory_path: string
     created_date: string
     released_date: string
     last_modified_date: string
@@ -38,7 +38,9 @@ export interface AssignmentResponse {
 }
 
 export interface CourseResponse {
-
+    id: number
+    name: string
+    master_remote_url: string
 }
 
 export interface ServerSettingsResponse {}

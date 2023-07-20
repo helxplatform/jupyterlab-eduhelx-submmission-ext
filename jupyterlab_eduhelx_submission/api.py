@@ -16,6 +16,10 @@ class Api:
         })
         return res.json()
 
+    def get_course(self):
+        res = requests.get(f"{ self.api_url }api/v1/course")
+        return res.json()
+
     def get_student(self):
         res = requests.get(f"{ self.api_url }api/v1/student", params={
             "onyen": "bsmith"

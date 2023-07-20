@@ -15,7 +15,7 @@
     "resolveJsonModule": true,
     "outDir": "lib",
     "rootDir": "src",
-    "strict": true,
+    "strict": false,
     "strictNullChecks": true,
     "target": "ES2018",
     "types": ["node", "jest"]

@@ -14,8 +14,9 @@ export const assignmentNameClass = style({
     fontSize: 'var(--jp-ui-font-size3)',
     fontWeight: 600,
     marginTop: 6,
-    marginBottom: 8,
     padding: '8px 0',
+    marginBottom: 0,
+    paddingBottom: 0
 })
 
 export const assignmentInfoSectionClass = (style as any)({

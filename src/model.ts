@@ -2,14 +2,15 @@ import { IChangedArgs } from '@jupyterlab/coreutils'
 import { ISignal, Signal } from '@lumino/signaling'
 import { Poll } from '@lumino/polling'
 import { IEduhelxSubmissionModel } from './tokens'
-import { getAssignments, getCurrentAssignment, getStudent, IAssignment, IStudent, ICurrentAssignment } from './api'
+import { getAssignments, IAssignment, IStudent, ICurrentAssignment, GetAssignmentsResponse, GetStudentAndCourseResponse, getStudentAndCourse, ICourse } from './api'
 
 export class EduhelxSubmissionModel implements IEduhelxSubmissionModel {
     private _isDisposed: boolean = false
     private _currentPath: string | null = null
     private _currentAssignment: ICurrentAssignment | null | undefined = undefined
-    private _assignments: IAssignment[] | undefined = undefined
+    private _assignments: IAssignment[] | null | undefined = undefined
     private _student: IStudent | undefined = undefined
+    private _course: ICourse | undefined = undefined
 
     private _assignmentPoll: Poll
 
@@ -23,11 +24,15 @@ export class EduhelxSubmissionModel implements IEduhelxSubmissionModel {
     >(this)
     private _assignmentsChanged = new Signal<
         IEduhelxSubmissionModel,
-        IChangedArgs<IAssignment[] | undefined>
+        IChangedArgs<IAssignment[] | null | undefined>
     >(this)
     private _studentChanged = new Signal<
         IEduhelxSubmissionModel,
         IChangedArgs<IStudent | undefined>
+    >(this)
+    private _courseChanged = new Signal<
+        IEduhelxSubmissionModel,
+        IChangedArgs<ICourse | undefined>
     >(this)
 
     constructor() {
@@ -46,11 +51,11 @@ export class EduhelxSubmissionModel implements IEduhelxSubmissionModel {
         return this._isDisposed
     }
 
-    get assignments(): IAssignment[] | undefined {
+    get assignments(): IAssignment[] | null | undefined {
         return this._assignments
     }
-    private set assignments(v: IAssignment[] | undefined) {
-        const change: IChangedArgs<IAssignment[] | undefined> = {
+    private set assignments(v: IAssignment[] | null | undefined) {
+        const change: IChangedArgs<IAssignment[] | null | undefined> = {
             name: 'assignments',
             newValue: v,
             oldValue: this.assignments
@@ -58,7 +63,7 @@ export class EduhelxSubmissionModel implements IEduhelxSubmissionModel {
         this._assignments = v
         this._assignmentsChanged.emit(change)
     }
-    get assignmentsChanged(): ISignal<IEduhelxSubmissionModel, IChangedArgs<IAssignment[] | undefined>> {
+    get assignmentsChanged(): ISignal<IEduhelxSubmissionModel, IChangedArgs<IAssignment[] | null | undefined>> {
         return this._assignmentsChanged
     }
 
@@ -76,6 +81,22 @@ export class EduhelxSubmissionModel implements IEduhelxSubmissionModel {
     }
     get studentChanged(): ISignal<IEduhelxSubmissionModel, IChangedArgs<IStudent | undefined>> {
         return this._studentChanged
+    }
+
+    get course(): ICourse | undefined {
+        return this._course
+    }
+    private set course(v: ICourse | undefined) {
+        const change: IChangedArgs<ICourse | undefined> = {
+            name: 'course',
+            newValue: v,
+            oldValue: this.course
+        }
+        this._course = v
+        this._courseChanged.emit(change)
+    }
+    get courseChanged(): ISignal<IEduhelxSubmissionModel, IChangedArgs<ICourse | undefined>> {
+        return this._courseChanged
     }
 
     // Undefined: loading, null: no current assignment
@@ -112,13 +133,13 @@ export class EduhelxSubmissionModel implements IEduhelxSubmissionModel {
         return this._currentPathChanged
     }
 
-    private async _loadAssignment(): Promise<ICurrentAssignment | null | undefined> {
+    private async _loadAssignments(): Promise<GetAssignmentsResponse | undefined> {
         // If the currentPath is loading, the assignment is also loading.
         if (this.currentPath === null) {
             return undefined
         }
         try {
-            return await getCurrentAssignment(this.currentPath)
+            return await getAssignments(this.currentPath)
         } catch (e: any) {
             console.error(e)
             // If the request encouners an error, default to loading.
@@ -127,19 +148,9 @@ export class EduhelxSubmissionModel implements IEduhelxSubmissionModel {
         }
     }
 
-    private async _loadAssignmentList(): Promise<IAssignment[] | undefined> {
+    private async _loadStudentAndCourse(): Promise<GetStudentAndCourseResponse | undefined> {
         try {
-            return await getAssignments()
-        } catch (e: any) {
-            console.error(e)
-            // If the request encouners an error, default to loading.
-            return undefined
-        }
-    }
-
-    private async _loadStudent(): Promise<IStudent | undefined> {
-        try {
-            return await getStudent()
+            return await getStudentAndCourse()
         } catch (e: any) {
             console.error(e)
             // If the request encouners an error, default to loading.
@@ -158,17 +169,26 @@ export class EduhelxSubmissionModel implements IEduhelxSubmissionModel {
 
     private async _refreshModel(): Promise<void> {
         const [
-            currentAssignment,
-            assignments,
-            student
+            assignmentsResponse,
+            studentAndCourseResponse
         ] = await Promise.all([
-            this._loadAssignment(),
-            this._loadAssignmentList(),
-            this._loadStudent()
+            this._loadAssignments(),
+            this._loadStudentAndCourse()
         ])
-        this.currentAssignment = currentAssignment
-        this.assignments = assignments
-        this.student = student
+        if (assignmentsResponse === undefined) {
+            this.assignments = undefined
+            this.currentAssignment = undefined
+        } else {
+            this.assignments = assignmentsResponse.assignments
+            this.currentAssignment = assignmentsResponse.currentAssignment
+        }
+        if (studentAndCourseResponse === undefined) {
+            this.student = undefined
+            this.course = undefined
+        } else {
+            this.student = studentAndCourseResponse.student
+            this.course = studentAndCourseResponse.course
+        }
     }
 
     /**

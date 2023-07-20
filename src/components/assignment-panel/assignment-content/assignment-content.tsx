@@ -31,8 +31,8 @@ export const AssignmentContent = () => {
                     <div className={ loadingContainerClass }>
                         <CircularProgress color="inherit" />
                     </div>
-                ) : assignment === null ? (
-                    <NoAssignmentWarning />
+                ) : assignments === null || assignment === null ? (
+                    <NoAssignmentWarning noRepository={ assignments === null } />
                 ) : (
                     <div className={ assignmentContainerClass }>
                         <AssignmentInfo />

@@ -11,6 +11,8 @@ export const panelWrapperClass = (style as any)({
 })
 
 export const panelHeaderClass = style({
+    display: 'flex',
+    alignItems: 'center',
     borderBottom: 'var(--jp-border-width) solid var(--jp-border-color2)',
     flex: '0 0 auto',
     fontSize: 'var(--jp-ui-font-size0)',

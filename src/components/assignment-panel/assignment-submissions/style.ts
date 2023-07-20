@@ -20,7 +20,8 @@ export const noSubmissionsTextContainerClass = style({
     fontSize: 'var(--jp-ui-font-size1)',
     lineHeight: 'var(--jp-content-line-height)',
     textAlign: 'left',
-    padding: '0 12px'
+    padding: '0 12px',
+    flexGrow: 1
 })
 
 export const assignmentsTableClass = (style as any)({

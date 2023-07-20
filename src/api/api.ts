@@ -3,33 +3,49 @@ import { ServerConnection } from '@jupyterlab/services'
 import { requestAPI } from '../handler'
 import { IAssignment, Assignment, ICurrentAssignment } from './assignment'
 import { IStudent, Student } from './student'
+import { ICourse, Course } from './course'
 import { IServerSettings, ServerSettings } from './server-settings'
 import {
     AssignmentResponse,
+    CourseResponse,
     ServerSettingsResponse, StudentResponse
 } from './api-responses'
 
-export async function getAssignments(): Promise<IAssignment[]> {
-    const data = await requestAPI<AssignmentResponse[]>(`/assignments`, {
-        method: 'GET'
-    })
-    return data.map((res) => Assignment.fromResponse(res))
+export interface GetAssignmentsResponse {
+    assignments: IAssignment[] | null
+    currentAssignment: ICurrentAssignment | null
 }
 
-export async function getStudent(): Promise<IStudent> {
-    const data = await requestAPI<StudentResponse>(`/student`, {
+export interface GetStudentAndCourseResponse {
+    student: IStudent
+    course: ICourse
+}
+
+export async function getStudentAndCourse(): Promise<GetStudentAndCourseResponse> {
+    const { student, course } = await requestAPI<{
+        student: StudentResponse
+        course: CourseResponse
+    }>(`/course_student`, {
         method: 'GET'
     })
-    return Student.fromResponse(data)
+    return {
+        student: Student.fromResponse(student),
+        course: Course.fromResponse(course)
+    }
 }
 
 
-export async function getCurrentAssignment(path: string): Promise<ICurrentAssignment|null> {
-    const data = await requestAPI<AssignmentResponse|null>(`/assignment?${ qs.stringify({ path }) }`, {
+export async function getAssignments(path: string): Promise<GetAssignmentsResponse> {
+    const { assignments, current_assignment } = await requestAPI<{
+        assignments: AssignmentResponse[] | null
+        current_assignment: AssignmentResponse | null
+    }>(`/assignments?${ qs.stringify({ path }) }`, {
         method: 'GET'
     })
-    if (data === null) return null
-    return Assignment.fromResponse(data) as ICurrentAssignment
+    return {
+        assignments: assignments ? assignments.map((data) => Assignment.fromResponse(data)) : null,
+        currentAssignment: current_assignment ? Assignment.fromResponse(current_assignment) as ICurrentAssignment : null
+    }
 }
 
 export async function getServerSettings(): Promise<IServerSettings> {

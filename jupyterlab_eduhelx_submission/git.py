@@ -3,8 +3,14 @@ from .process import execute
 class InvalidGitRepositoryException(Exception):
     ...
 
-def get_remote(path="./"):
-    (remote, err) = execute(["git", "remote", "get-url", "origin"], cwd=path)
+def get_repo_root(path="./"):
+    (root, err) = execute(["git", "rev-parse", "--show-toplevel"], cwd=path)
+    if err != "":
+        raise InvalidGitRepositoryException(err)
+    return root
+
+def get_remote(name="origin", path="./"):
+    (remote, err) = execute(["git", "remote", "get-url", name], cwd=path)
     if err != "":
         raise InvalidGitRepositoryException(err)
     return remote
