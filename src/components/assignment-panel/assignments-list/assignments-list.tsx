@@ -55,13 +55,16 @@ const AssignmentListItem = ({ assignment }: AssignmentListItemProps) => {
                 </div>
                 <div style={{ fontSize: 13, color: 'var(--jp-ui-font-color2' }}>
                     {
+                        !assignment.isReleased ? (
+                            <span>No release date yet</span>
+                        ) :
                         assignment.isClosed ? (
-                            <span title={ new DateFormat(assignment.adjustedDueDate).toBasicDatetime() }>
-                                Closed on { new DateFormat(assignment.adjustedDueDate).toBasicDatetime() }
+                            <span title={ new DateFormat(assignment.adjustedDueDate!).toBasicDatetime() }>
+                                Closed on { new DateFormat(assignment.adjustedDueDate!).toBasicDatetime() }
                             </span>
-                        ) : assignment.isReleased ? (
-                            <span title={ new DateFormat(assignment.adjustedDueDate).toBasicDatetime() }>
-                                Closes in { new DateFormat(assignment.adjustedDueDate).toRelativeDatetime() }
+                        ) : assignment.isAvailable ? (
+                            <span title={ new DateFormat(assignment.adjustedDueDate!).toBasicDatetime() }>
+                                Closes in { new DateFormat(assignment.adjustedDueDate!).toRelativeDatetime() }
                                 { assignment.isExtended && (
                                     <i>&nbsp;(extended)</i>
                                 ) }
@@ -69,16 +72,16 @@ const AssignmentListItem = ({ assignment }: AssignmentListItemProps) => {
                         ) : (
                             <div style={{ display: 'flex', flexDirection: 'column' }}>
                                 <div
-                                    title={ new DateFormat(assignment.releasedDate).toBasicDatetime() }
+                                    title={ new DateFormat(assignment.adjustedAvailableDate!).toBasicDatetime() }
                                 >
-                                    Opens in { new DateFormat(assignment.releasedDate).toRelativeDatetime() }
+                                    Opens in { new DateFormat(assignment.adjustedAvailableDate!).toRelativeDatetime() }
                                 </div>
                                 <div
-                                    title={ new DateFormat(assignment.adjustedDueDate).toBasicDatetime() }
+                                    title={ new DateFormat(assignment.adjustedDueDate!).toBasicDatetime() }
                                     style={{ marginTop: 4, fontSize: 12, display: 'flex', alignItems: 'center' }}
                                 >
                                     <QueryBuilderOutlined style={{ fontSize: 16 }} />
-                                    &nbsp;Lasts { new DateFormat(assignment.adjustedDueDate).toRelativeDatetime(assignment.releasedDate) }
+                                    &nbsp;Lasts { new DateFormat(assignment.adjustedDueDate!).toRelativeDatetime(assignment.adjustedAvailableDate!) }
                                 </div>
                             </div>
                         )
@@ -88,8 +91,8 @@ const AssignmentListItem = ({ assignment }: AssignmentListItemProps) => {
             <ListItemAvatar style={{ minWidth: 0, marginLeft: 16 }}>
                 <Avatar variant="square">
                     <button
-                        className={ classes(downloadAssignmentButtonClass, !assignment.isReleased && disabledButtonClass) }
-                        disabled={ !assignment.isReleased }
+                        className={ classes(downloadAssignmentButtonClass, (!assignment.isReleased || !assignment.isAvailable) && disabledButtonClass) }
+                        disabled={ !assignment.isReleased || !assignment.isAvailable }
                         onClick={ () => commands.execute('filebrowser:go-to-path', {
                             path: assignment.absoluteDirectoryPath,
                             dontShowBrowser: true
@@ -112,7 +115,7 @@ const AssignmentsBucket = ({
     const [expanded, setExpanded] = useState<boolean>(defaultExpanded)
 
     const assignmentsSource = useMemo(() => (
-        assignments?.sort((a, b) => a.releasedDate.getTime() - b.releasedDate.getTime())
+        assignments?.sort((a, b) => (a.adjustedAvailableDate?.getTime() ?? 0) - (b.adjustedAvailableDate?.getTime() ?? 0))
     ), [assignments])
 
     const isEmpty = useMemo(() => !assignmentsSource || assignmentsSource.length === 0, [assignmentsSource])
@@ -150,9 +153,9 @@ const AssignmentsBucket = ({
 export const AssignmentsList = () => {
     const { assignments } = useAssignment()!
 
-    const upcomingAssignments = useMemo(() => assignments?.filter((assignment) => !assignment.isReleased), [assignments])
-    const activeAssignments = useMemo(() => assignments?.filter((assignment) => assignment.isReleased && !assignment.isClosed), [assignments])
-    const pastAssignments = useMemo(() => assignments?.filter((assignment) => assignment.isReleased && assignment.isClosed), [assignments])
+    const upcomingAssignments = useMemo(() => assignments?.filter((assignment) => !assignment.isAvailable), [assignments])
+    const activeAssignments = useMemo(() => assignments?.filter((assignment) => assignment.isAvailable && !assignment.isClosed), [assignments])
+    const pastAssignments = useMemo(() => assignments?.filter((assignment) => assignment.isAvailable && assignment.isClosed), [assignments])
 
     return (
         <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', width: 'calc(100% + 22px)' }}>

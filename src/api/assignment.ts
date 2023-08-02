@@ -10,17 +10,19 @@ export interface IAssignment {
     // to open an assignment, even though we don't know where the repo root is.
     readonly absoluteDirectoryPath: string
     readonly createdDate: Date
-    readonly releasedDate: Date
+    readonly adjustedAvailableDate: Date | null
+    readonly adjustedDueDate: Date | null
     readonly lastModifiedDate: Date
-    readonly baseDueDate: Date
-    readonly adjustedDueDate: Date
-    readonly baseTimeSeconds: number
-    readonly extraTimeSeconds: number
-    // Indicates if a student has been alloted extra time.
+
+    // Indicates that release date has been deferred to a later date for the student
+    readonly isDeferred: boolean
+    // Indicates that due date is extended to a later date for the student
     readonly isExtended: boolean
-    // Simply if the releasedDate has passed or not, computed by the server. 
+    // Indicates if an assignment has an available_date and a due_date assigned to it.
     readonly isReleased: boolean
-    // Accounts for extra time.
+    // Indicates if an assignment is available to work on (e.g. date is greater than adjusted_available_date)
+    readonly isAvailable: boolean
+    // Indicates if an assignment is no longer available to work on (e.g. date is greater than adjusted_due_date)
     readonly isClosed: boolean
     readonly submissions?: ISubmission[]
 }
@@ -31,44 +33,40 @@ export interface ICurrentAssignment extends IAssignment {
 }
 
 export class Assignment implements IAssignment {
-    private _baseDueDate: Date
-    private _adjustedDueDate: Date
     constructor(
         private _id: number,
         private _name: string,
         private _directoryPath: string,
         private _absoluteDirectoryPath: string,
         private _createdDate: Date,
-        private _releasedDate: Date,
+        private _adjustedAvailableDate: Date | null,
+        private _adjustedDueDate: Date | null,
         private _lastModifiedDate: Date,
-        private _baseTimeSeconds: number,
-        private _extraTimeSeconds: number,
+
+        private _isDeferred: boolean,
+        private _isExtended: boolean,
         private _isReleased: boolean,
+        private _isAvailable: boolean,
         private _isClosed: boolean,
         private _submissions?: ISubmission[]
-    ) {
-        const baseTimeMs = this._baseTimeSeconds * 1000
-        const extraTimeMs = this._extraTimeSeconds * 1000
-        this._baseDueDate = new Date(this._releasedDate.getTime() + baseTimeMs)
-        this._adjustedDueDate = new Date(this._baseDueDate.getTime() + extraTimeMs)
-    }
+    ) {}
     
     get id() { return this._id }
     get name() { return this._name }
     get directoryPath() { return this._directoryPath }
     get absoluteDirectoryPath() { return this._absoluteDirectoryPath }
     get createdDate() { return this._createdDate }
-    get releasedDate() { return this._releasedDate }
-    get lastModifiedDate() { return this._lastModifiedDate }
-    get baseDueDate() { return this._baseDueDate }
+    get adjustedAvailableDate() { return this._adjustedAvailableDate }
     get adjustedDueDate() { return this._adjustedDueDate }
-    get baseTimeSeconds() { return this._baseTimeSeconds }
-    get extraTimeSeconds() { return this._extraTimeSeconds }
-    get isExtended() {
-        return this._extraTimeSeconds > 0
-    }
+    get lastModifiedDate() { return this._lastModifiedDate }
+    
+
+    get isDeferred() { return this._isDeferred }
+    get isExtended() { return this._isExtended }
     get isReleased() { return this._isReleased }
+    get isAvailable() { return this._isAvailable }
     get isClosed() { return this._isClosed }
+
     get submissions() { return this._submissions }
     
 
@@ -79,11 +77,14 @@ export class Assignment implements IAssignment {
             data.directory_path,
             data.absolute_directory_path,
             new Date(data.created_date),
-            new Date(data.released_date),
+            data.adjusted_available_date ? new Date(data.adjusted_available_date) : null,
+            data.adjusted_due_date ? new Date(data.adjusted_due_date) : null,
             new Date(data.last_modified_date),
-            data.base_time,
-            data.extra_time,
+
+            data.is_deferred,
+            data.is_extended,
             data.is_released,
+            data.is_available,
             data.is_closed,
             data.submissions?.map((res) => Submission.fromResponse(res))
         )

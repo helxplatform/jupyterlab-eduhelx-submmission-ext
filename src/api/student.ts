@@ -5,7 +5,8 @@ export interface IStudent {
     readonly studentOnyen: string
     readonly firstName: string
     readonly lastName: string
-    readonly professorOnyen: string
+    readonly joinDate: Date
+    readonly exitDate: Date | null
 }
 
 export class Student implements IStudent {
@@ -14,13 +15,15 @@ export class Student implements IStudent {
         private _studentOnyen: string,
         private _firstName: string,
         private _lastName: string,
-        private _professorOnyen: string
+        private _joinDate: Date,
+        private _exitDate: Date | null
     ) {}
     get id() { return this._id }
     get studentOnyen() { return this._studentOnyen }
     get firstName() { return this._firstName }
     get lastName() { return this._lastName }
-    get professorOnyen() { return this._professorOnyen }
+    get joinDate() { return this._joinDate }
+    get exitDate() { return this._exitDate }
 
     static fromResponse(data: StudentResponse): IStudent {
         return new Student(
@@ -28,7 +31,8 @@ export class Student implements IStudent {
             data.student_onyen,
             data.first_name,
             data.last_name,
-            data.professor_onyen
+            new Date(data.join_date),
+            data.exit_date ? new Date(data.exit_date) : null
         )
     }
 }

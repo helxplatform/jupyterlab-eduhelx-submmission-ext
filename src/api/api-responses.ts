@@ -7,12 +7,20 @@ export interface CommitResponse {
     committer_email: string
 }
 
+export interface InstructorResponse {
+    id: number
+    instructor_onyen: string
+    first_name: string
+    last_name: string
+}
+
 export interface StudentResponse {
     id: number
     student_onyen: string
     first_name: string
     last_name: string
-    professor_onyen: string
+    join_date: string
+    exit_date: string | null
 }
 
 export interface SubmissionResponse {
@@ -28,12 +36,18 @@ export interface AssignmentResponse {
     directory_path: string
     absolute_directory_path: string
     created_date: string
-    released_date: string
+    available_date: string | null
+    adjusted_available_date: string | null
+    due_date: string | null
+    adjusted_due_date: string | null
     last_modified_date: string
-    base_time: number
-    extra_time: number
+
+    is_deferred: boolean
+    is_extended: boolean
     is_released: boolean
+    is_available: boolean
     is_closed: boolean
+
     submissions?: SubmissionResponse[]
 }
 
@@ -41,6 +55,7 @@ export interface CourseResponse {
     id: number
     name: string
     master_remote_url: string
+    instructors: InstructorResponse[]
 }
 
 export interface ServerSettingsResponse {}

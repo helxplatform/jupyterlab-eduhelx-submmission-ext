@@ -10,10 +10,12 @@ interface AssignmentInfoProps {
 }
 
 export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
-    const { assignment, student } = useAssignment()!
-    if (!student || !assignment) return null
+    const { assignment, student, course } = useAssignment()!
+    if (!student || !assignment || !course) return null
 
-    const hoursUntilDue = (assignment.adjustedDueDate.getTime() - Date.now()) / MS_IN_HOURS
+    const hoursUntilDue = assignment.isReleased ? (
+        (assignment.adjustedDueDate!.getTime() - Date.now()) / MS_IN_HOURS
+    ) : Infinity
 
     return (
         <div className={ assignmentInfoClass }>
@@ -37,20 +39,26 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                 <span>{ student.firstName } { student.lastName }</span>
             </div>
             <div className={ assignmentInfoSectionClass }>
-                <h5 className={ assignmentInfoSectionHeaderClass }>Professor</h5>
-                <span>{ student.professorOnyen }</span>
+                <h5 className={ assignmentInfoSectionHeaderClass }>
+                    Professor{ course.instructors.length > 1 ? "s" : "" }
+                </h5>
+                <span>{ course.instructors.map((ins) => ins.fullName).join(", ") }</span>
             </div>
             <div className={ assignmentInfoSectionClass }>
                 <h5 className={ assignmentInfoSectionHeaderClass }>Due date</h5>
                 <div>
-                    { new DateFormat(assignment.adjustedDueDate).toBasicDatetime() }
+                    { assignment.isReleased ? (
+                        new DateFormat(assignment.adjustedDueDate!).toBasicDatetime()
+                    ) : (
+                        `To be determined`
+                    ) }
                     { assignment.isExtended ? (
                         <i>&nbsp;(extended)</i>
                     ) : null }
                 </div>
-                { !assignment.isClosed && hoursUntilDue <= 5 ? (
+                { assignment.isReleased && !assignment.isClosed && hoursUntilDue <= 5 ? (
                     <div style={{ marginTop: 4, color: 'var(--jp-warn-color0)' }}>
-                        Warning: { new DateFormat(assignment.adjustedDueDate).toRelativeDatetime() } remaining
+                        Warning: { new DateFormat(assignment.adjustedDueDate!).toRelativeDatetime() } remaining
                     </div>
                 ) : null }
             </div>
