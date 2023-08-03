@@ -66,7 +66,8 @@ export const NoAssignmentWarning = ({ noRepository }: NoAssignmentWarningProps) 
                             marginBottom: 0,
                             flexGrow: 1,
                             height: '2.25em',
-                            borderWidth: 1
+                            borderWidth: 1,
+                            overflow: 'visible'
                         }}
                         type="url"
                         placeholder="Class repository URL"
@@ -110,7 +111,7 @@ export const NoAssignmentWarning = ({ noRepository }: NoAssignmentWarningProps) 
                         ) }
                     </button>
                 </div>
-                <div style={{ color: 'var(--jp-error-color1)', marginTop: 8, fontSize: '0.75rem' }}>
+                <div style={{ color: 'var(--jp-error-color1)', marginTop: 8, marginBottom: -4, fontSize: '0.75rem', wordBreak: 'break-all' }}>
                     { errorMessage }
                 </div>
             </div>

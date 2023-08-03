@@ -60,7 +60,7 @@ def get_repo_name(path="./"):
     # Technically, a git remote URL can contain quotes, so it could break out of the quotations around `out`.
     # However, since execute is not executing in shell mode, it can't perform command substitution so there isn't
     # any risk involved here.
-    (out, err) = execute(["basename", "-s", ".git", f'"{ out }"'])
+    (out, err) = execute(["basename", "-s", ".git", out])
     if err != "":
         raise Exception(err)
     return out

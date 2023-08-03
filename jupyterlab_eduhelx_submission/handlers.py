@@ -83,7 +83,7 @@ class CloneStudentRepositoryHandler(BaseHandler):
             return
 
         # Check to make sure that ./{cloned_repo_name} either doesn't exist or exists but is an empty directory.
-        if os.path.exists(cloned_repo_name) and any(shutil.iterdir(cloned_repo_name)):
+        if os.path.exists(cloned_repo_name) and any(os.scandir(cloned_repo_name)):
             self.set_status(409)
             self.finish(json.dumps({
                 "message": f'The repository folder "{cloned_repo_name}" exists and is not empty. Please move or rename it and try again.'
