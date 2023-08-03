@@ -73,3 +73,14 @@ export async function getServerSettings(): Promise<IServerSettings> {
         }
     }
 }
+
+export async function cloneStudentRepository(repositoryUrl: string, currentPath: string): Promise<string> {
+    const repositoryRootPath = await requestAPI<string>(`/clone_student_repository`, {
+        method: 'POST',
+        body: JSON.stringify({
+            repository_url: repositoryUrl,
+            current_path: currentPath
+        })
+    })
+    return repositoryRootPath
+}

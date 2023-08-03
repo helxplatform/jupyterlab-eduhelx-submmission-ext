@@ -2,13 +2,19 @@ import json
 import os
 import requests
 import subprocess
+import tempfile
+import shutil
 import tornado
 from jupyter_server.base.handlers import APIHandler
 from jupyter_server.utils import url_path_join
 from pathlib import Path
 from .config import ExtensionConfig
 from .api import Api
-from .git import InvalidGitRepositoryException, get_remote, get_repo_root
+from .git import (
+    InvalidGitRepositoryException,
+    get_remote, get_repo_root, clone_repository,
+    get_tail_commit_id, get_repo_name, add_remote
+)
 from .process import execute
 from ._version import __version__
 
@@ -20,6 +26,83 @@ class BaseHandler(APIHandler):
     @property
     def api(self) -> Api:
         return Api(self.config)
+
+
+class CloneStudentRepositoryHandler(BaseHandler):
+    @tornado.web.authenticated
+    def post(self):
+        data = json.loads(self.request.body)
+        repository_url: str = data["repository_url"]
+        current_path: str = data["current_path"]
+        
+        course = self.api.get_course()
+        master_repository_url = course["master_remote_url"]
+
+        # Get the name of the master repo and the first commit id 
+        with tempfile.TemporaryDirectory() as tmp_master_repo:
+            clone_repository(master_repository_url, tmp_master_repo)
+            master_repo_name = get_repo_name(tmp_master_repo)
+            master_tail_id = get_tail_commit_id(tmp_master_repo)
+
+        # This needs to get cleaned up!
+        tmp_repo = tempfile.TemporaryDirectory()
+        # Check that the student repo is actually a repo, and get it's first commit id
+        try:
+            clone_repository(repository_url, tmp_repo.name)
+            cloned_repo_name = get_repo_name(tmp_repo.name)
+            cloned_tail_id = get_tail_commit_id(tmp_repo.name)
+        except Exception as e:
+            self.set_status(404)
+            self.finish(json.dumps({
+                "message": "URL is not a valid git repository. Please make sure you have the correct URL."
+            }))
+            tmp_repo.cleanup()
+            return
+        
+        # Confirm that the repository that the student has provided
+        # is actually a fork of the master repository.
+        # There's no actual, functional feature of "forks" in git, so we'll
+        # just check that:
+        #   1. The initial commit (tail) of the repositories are the same
+        #   2. The student repo isn't named the same as the master repo.
+
+        if master_tail_id != cloned_tail_id:
+            self.set_status(400)
+            self.finish(json.dumps({
+                "message": "The repository is not a fork of the master class repository. You may have the wrong URL."
+            }))
+            tmp_repo.cleanup()
+            return
+            
+        if master_repo_name == cloned_repo_name:
+            self.set_status(400)
+            self.finish(json.dumps({
+                "message": "The repository appears to be the master class repository. You should only try to clone the student version created for you."
+            }))
+            tmp_repo.cleanup()
+            return
+
+        # Check to make sure that ./{cloned_repo_name} either doesn't exist or exists but is an empty directory.
+        if os.path.exists(cloned_repo_name) and any(shutil.iterdir(cloned_repo_name)):
+            self.set_status(409)
+            self.finish(json.dumps({
+                "message": f'The repository folder "{cloned_repo_name}" exists and is not empty. Please move or rename it and try again.'
+            }))
+            tmp_repo.cleanup()
+            return
+        shutil.move(tmp_repo.name, cloned_repo_name)
+        tmp_repo.cleanup()
+
+        # Now we're working with cloned_repo_name
+        add_remote("upstream", master_repository_url, path=cloned_repo_name)
+
+        # Return the path to the cloned repo.
+        cwd = os.getcwd()
+        frontend_cloned_path = os.path.relpath(
+            cloned_repo_name,
+            cwd
+        )
+        return os.path.join("/", frontend_cloned_path)
 
 
 class CourseAndStudentHandler(BaseHandler):
@@ -130,6 +213,7 @@ def setup_handlers(server_app):
         ("assignments", AssignmentsHandler),
         ("course_student", CourseAndStudentHandler),
         ("submission", SubmissionHandler),
+        ("clone_student_repository", CloneStudentRepositoryHandler),
         ("settings", SettingsHandler)
     ]
     handlers_with_path = [
