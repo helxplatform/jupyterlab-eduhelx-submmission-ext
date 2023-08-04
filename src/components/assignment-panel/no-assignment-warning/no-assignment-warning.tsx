@@ -51,7 +51,7 @@ export const NoAssignmentWarning = ({ noRepository }: NoAssignmentWarningProps) 
 
     if (noRepository) return (
         <div className={ containerClass }>
-            <div style={{ width: '100%', marginBottom: 12 }}>
+            <div style={{ width: '100%', marginBottom: 4 }}>
                 <div style={{ display: 'flex', alignItems: 'stretch', width: '100%' }}>
                     <Input
                         className={ summaryClass }
@@ -111,7 +111,7 @@ export const NoAssignmentWarning = ({ noRepository }: NoAssignmentWarningProps) 
                         ) }
                     </button>
                 </div>
-                <div style={{ color: 'var(--jp-error-color1)', marginTop: 8, marginBottom: -4, fontSize: '0.75rem', wordBreak: 'break-all' }}>
+                <div style={{ color: 'var(--jp-error-color1)', marginTop: 8, marginBottom: 4, fontSize: '0.75rem', wordBreak: 'break-all' }}>
                     { errorMessage }
                 </div>
             </div>

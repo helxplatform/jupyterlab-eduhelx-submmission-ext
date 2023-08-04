@@ -41,16 +41,16 @@ class CloneStudentRepositoryHandler(BaseHandler):
         # Get the name of the master repo and the first commit id 
         with tempfile.TemporaryDirectory() as tmp_master_repo:
             clone_repository(master_repository_url, tmp_master_repo)
-            master_repo_name = get_repo_name(tmp_master_repo)
-            master_tail_id = get_tail_commit_id(tmp_master_repo)
+            master_repo_name = get_repo_name(path=tmp_master_repo)
+            master_tail_id = get_tail_commit_id(path=tmp_master_repo)
 
         # This needs to get cleaned up!
         tmp_repo = tempfile.TemporaryDirectory()
         # Check that the student repo is actually a repo, and get it's first commit id
         try:
             clone_repository(repository_url, tmp_repo.name)
-            cloned_repo_name = get_repo_name(tmp_repo.name)
-            cloned_tail_id = get_tail_commit_id(tmp_repo.name)
+            cloned_repo_name = get_repo_name(path=tmp_repo.name)
+            cloned_tail_id = get_tail_commit_id(path=tmp_repo.name)
         except Exception as e:
             self.set_status(404)
             self.finish(json.dumps({
@@ -82,27 +82,29 @@ class CloneStudentRepositoryHandler(BaseHandler):
             tmp_repo.cleanup()
             return
 
-        # Check to make sure that ./{cloned_repo_name} either doesn't exist or exists but is an empty directory.
-        if os.path.exists(cloned_repo_name) and any(os.scandir(cloned_repo_name)):
+        cloned_repo_path = os.path.join(current_path, cloned_repo_name)
+        # Check to make sure that cloned_repo_name either doesn't exist or exists but is an empty directory.
+        if os.path.exists(cloned_repo_path) and any(os.scandir(cloned_repo_path)):
             self.set_status(409)
             self.finish(json.dumps({
                 "message": f'The repository folder "{cloned_repo_name}" exists and is not empty. Please move or rename it and try again.'
             }))
             tmp_repo.cleanup()
             return
-        shutil.move(tmp_repo.name, cloned_repo_name)
+        shutil.move(tmp_repo.name, cloned_repo_path)
         tmp_repo.cleanup()
 
-        # Now we're working with cloned_repo_name
-        add_remote("upstream", master_repository_url, path=cloned_repo_name)
+        # Now we're working with cloned_repo_path
+        add_remote("upstream", master_repository_url, path=cloned_repo_path)
 
         # Return the path to the cloned repo.
         cwd = os.getcwd()
         frontend_cloned_path = os.path.relpath(
-            cloned_repo_name,
+            cloned_repo_path,
             cwd
         )
-        return os.path.join("/", frontend_cloned_path)
+        
+        self.finish(json.dumps(os.path.join("/", frontend_cloned_path)))
 
 
 class CourseAndStudentHandler(BaseHandler):
