@@ -52,7 +52,7 @@ class CloneStudentRepositoryHandler(BaseHandler):
             cloned_repo_name = get_repo_name(path=tmp_repo.name)
             cloned_tail_id = get_tail_commit_id(path=tmp_repo.name)
         except Exception as e:
-            self.set_status(404)
+            self.set_status(400)
             self.finish(json.dumps({
                 "message": "URL is not a valid git repository. Please make sure you have the correct URL."
             }))
@@ -91,6 +91,7 @@ class CloneStudentRepositoryHandler(BaseHandler):
             }))
             tmp_repo.cleanup()
             return
+        
         shutil.move(tmp_repo.name, cloned_repo_path)
         tmp_repo.cleanup()
 

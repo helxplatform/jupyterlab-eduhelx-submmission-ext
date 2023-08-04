@@ -15,10 +15,12 @@ export const panelHeaderClass = style({
     alignItems: 'center',
     borderBottom: 'var(--jp-border-width) solid var(--jp-border-color2)',
     flex: '0 0 auto',
-    fontSize: 'var(--jp-ui-font-size0)',
+    fontSize: 11,
     fontWeight: 600,
     letterSpacing: 1,
     margin: 0,
+    // It appears slightly off-center vertically, so this is just a small adjustment to fix that.
+    marginTop: 2,
     padding: '8px 12px',
     textTransform: 'uppercase'
 })

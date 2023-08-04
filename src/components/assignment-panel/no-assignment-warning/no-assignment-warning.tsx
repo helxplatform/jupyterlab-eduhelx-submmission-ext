@@ -33,17 +33,11 @@ export const NoAssignmentWarning = ({ noRepository }: NoAssignmentWarningProps) 
         setLoading(true)
         try {
             const repositoryRootPath = await cloneStudentRepository(repositoryUrl, path)
-            console.log("cloned to ", repositoryRootPath)
+            commands.execute('filebrowser:go-to-path', {
+                path: repositoryRootPath,
+                dontShowBrowser: true
+            })
         } catch (e: any) {
-            console.log("failed to clone", e)
-            if (e.response.status === 400) {
-                console.log("Not a fork of master repository, or is the master repository")
-            } else if (e.response.status === 404) {
-                console.log("Not a git repository")
-            } else if (e.response.status === 409) {
-                // Repository folder exists and is not empty, cannot clone into it.
-                console.log("Repository folder exists and is not empty, cannot clone into it")
-            }
             setErrorMessage(e.message)
         }
         setLoading(false)
