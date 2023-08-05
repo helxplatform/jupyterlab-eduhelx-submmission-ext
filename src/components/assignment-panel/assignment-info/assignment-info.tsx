@@ -56,7 +56,7 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                         <i>&nbsp;(extended)</i>
                     ) : null }
                 </div>
-                { assignment.isReleased && !assignment.isClosed && hoursUntilDue <= 5 ? (
+                { assignment.isReleased && !assignment.isClosed && hoursUntilDue <= 2 ? (
                     <div style={{ marginTop: 4, color: 'var(--jp-warn-color0)' }}>
                         Warning: { new DateFormat(assignment.adjustedDueDate!).toRelativeDatetime() } remaining
                     </div>

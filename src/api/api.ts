@@ -3,12 +3,15 @@ import { ServerConnection } from '@jupyterlab/services'
 import { requestAPI } from '../handler'
 import { IAssignment, Assignment, ICurrentAssignment } from './assignment'
 import { IStudent, Student } from './student'
+import { ISubmission, Submission } from './submission'
 import { ICourse, Course } from './course'
 import { IServerSettings, ServerSettings } from './server-settings'
 import {
     AssignmentResponse,
     CourseResponse,
-    ServerSettingsResponse, StudentResponse
+    StudentResponse,
+    SubmissionResponse,
+    ServerSettingsResponse,
 } from './api-responses'
 
 export interface GetAssignmentsResponse {
@@ -72,6 +75,22 @@ export async function getServerSettings(): Promise<IServerSettings> {
             throw e;
         }
     }
+}
+
+export async function submitAssignment(
+    currentPath: string,
+    summary: string,
+    description?: string
+): Promise<ISubmission> {
+    const res = await requestAPI<SubmissionResponse>(`/submit_assignment`, {
+        method: 'POST',
+        body: JSON.stringify({
+            summary,
+            description,
+            current_path: currentPath
+        })
+    })
+    return Submission.fromResponse(res)
 }
 
 export async function cloneStudentRepository(repositoryUrl: string, currentPath: string): Promise<string> {

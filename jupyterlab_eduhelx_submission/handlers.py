@@ -13,8 +13,10 @@ from .api import Api
 from .git import (
     InvalidGitRepositoryException,
     get_remote, get_repo_root, clone_repository,
-    get_tail_commit_id, get_repo_name, add_remote
+    get_tail_commit_id, get_repo_name, add_remote,
+    stage_files, commit
 )
+from .student_repo import StudentClassRepo, NotStudentClassRepositoryException
 from .process import execute
 from ._version import __version__
 
@@ -34,6 +36,7 @@ class CloneStudentRepositoryHandler(BaseHandler):
         data = json.loads(self.request.body)
         repository_url: str = data["repository_url"]
         current_path: str = data["current_path"]
+        current_path_abs = os.path.realpath(current_path)
         
         course = self.api.get_course()
         master_repository_url = course["master_remote_url"]
@@ -82,7 +85,7 @@ class CloneStudentRepositoryHandler(BaseHandler):
             tmp_repo.cleanup()
             return
 
-        cloned_repo_path = os.path.join(current_path, cloned_repo_name)
+        cloned_repo_path = os.path.join(current_path_abs, cloned_repo_name)
         # Check to make sure that cloned_repo_name either doesn't exist or exists but is an empty directory.
         if os.path.exists(cloned_repo_path) and any(os.scandir(cloned_repo_path)):
             self.set_status(409)
@@ -106,7 +109,6 @@ class CloneStudentRepositoryHandler(BaseHandler):
         )
         
         self.finish(json.dumps(os.path.join("/", frontend_cloned_path)))
-
 
 class CourseAndStudentHandler(BaseHandler):
     @tornado.web.authenticated
@@ -134,19 +136,8 @@ class AssignmentsHandler(BaseHandler):
         }
 
         try:
-            master_repo_remote = get_remote(
-                name="upstream",
-                path=current_path_abs
-            )
-            repo_root = get_repo_root(current_path_abs)
-            repo_root_abs = os.path.realpath(repo_root)
-        except InvalidGitRepositoryException:
-            # Not in the student's class repo, so not in an assignment.
-            self.finish(json.dumps(value))
-            return
-
-        # Confirm that the student's current repo is a fork of the class's master repo.
-        if master_repo_remote != course["master_remote_url"]:
+            student_repo = StudentClassRepo(course, assignments, current_path_abs)
+        except Exception:
             self.finish(json.dumps(value))
             return
 
@@ -158,7 +149,7 @@ class AssignmentsHandler(BaseHandler):
             # so we need to make sure the "absolute" path is actually relative to the Jupyter server
             cwd = os.getcwd()
             rel_assignment_path = os.path.relpath(
-                os.path.join(repo_root_abs, assignment["directory_path"]),
+                student_repo.get_assignment_path(assignment),
                 cwd
             )
             # The cwd is the root in the frontend, so treat the path as such.
@@ -166,16 +157,8 @@ class AssignmentsHandler(BaseHandler):
         value["assignments"] = assignments
 
         # The student is in their repo, but we still need to check if they're actually in an assignment directory.
-        current_assignment = None
-        for assignment in assignments:
-            assignment_path = Path(os.path.join(
-                repo_root_abs,
-                assignment["directory_path"]
-            ))
-            if assignment_path == Path(current_path_abs) or assignment_path in Path(current_path_abs).parents:
-                current_assignment = assignment
-                break
-
+        current_assignment = student_repo.current_assignment
+        
         if current_assignment is not None:
             submissions = self.api.get_assignment_submissions(current_assignment["id"], student["student_onyen"], git_path=current_path_abs)
             current_assignment["submissions"] = submissions
@@ -189,12 +172,41 @@ class AssignmentsHandler(BaseHandler):
 class SubmissionHandler(BaseHandler):
     @tornado.web.authenticated
     def post(self):
-        res = requests.post(f"{ self.config.GRADER_API_URL }api/v1/submission", params={
-            "student_id": None,
-            "commit_id": None
-        })
-        self.set_status(res.status_code)
-        self.finish(res.text)
+        data = json.loads(self.request.body)
+        submission_summary: str = data["summary"]
+        submission_description: str | None = data.get("description")
+        current_path: str = data["current_path"]
+        current_path_abs = os.path.realpath(current_path)
+
+        student = self.api.get_student()
+        assignments = self.api.get_assignments(student["student_onyen"])
+        course = self.api.get_course()
+
+        try:
+            student_repo = StudentClassRepo(course, assignments, current_path_abs)
+        except InvalidGitRepositoryException:
+            self.set_status(400)
+            self.finish(json.dumps({
+                "message": "Not in a git repository"
+            }))
+            return
+        except NotStudentClassRepositoryException:
+            self.set_status(400)
+            self.finish(json.dumps({
+                "message": "Not in student's class repository"
+            }))
+            return
+        
+        if student_repo.current_assignment is None:
+            self.set_status(400)
+            self.finish(json.dumps({
+                "message": "Not in an assignment directory"
+            }))
+            return
+
+        current_assignment_path = student_repo.get_assignment_path(student_repo.current_assignment)
+        stage_files(".", path=student_repo.current_assignment)
+        commit_id = commit(submission_summary, submission_description)
 
 class SettingsHandler(BaseHandler):
     @tornado.web.authenticated
@@ -215,7 +227,7 @@ def setup_handlers(server_app):
     handlers = [
         ("assignments", AssignmentsHandler),
         ("course_student", CourseAndStudentHandler),
-        ("submission", SubmissionHandler),
+        ("submit_assignment", SubmissionHandler),
         ("clone_student_repository", CloneStudentRepositoryHandler),
         ("settings", SettingsHandler)
     ]

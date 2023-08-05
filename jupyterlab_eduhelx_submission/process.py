@@ -15,8 +15,9 @@ def execute(cmd, **kwargs):
     output, error = process.communicate()
     output = output.decode("utf-8")
     error = error.decode("utf-8")
+    exit_code = process.returncode
 
     output = remove_trailing_newline(output)
     error = remove_trailing_newline(error)
 
-    return (output, error)
+    return (output, error, exit_code)

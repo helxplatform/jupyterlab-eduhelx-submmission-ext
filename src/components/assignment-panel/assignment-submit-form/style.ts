@@ -36,6 +36,8 @@ export const summaryClass = style({
 export const descriptionClass = style({
     marginBottom: '1em',
     padding: 'var(--jp-code-padding)',
+    paddingLeft: '5px !important',
+    paddingRight: '5px !important',
 
     outline: 'none',
     overflowX: 'auto',

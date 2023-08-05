@@ -1,31 +1,35 @@
+from typing import List
 from .process import execute
 
-class InvalidGitRepositoryException(Exception):
-    ...
+class GitException(Exception):
+    pass
 
-def get_repo_root(path="./"):
-    (root, err) = execute(["git", "rev-parse", "--show-toplevel"], cwd=path)
+class InvalidGitRepositoryException(GitException):
+    pass
+
+def get_repo_root(path="./") -> str:
+    (root, err, exit_code) = execute(["git", "rev-parse", "--show-toplevel"], cwd=path)
     if err != "":
-        raise InvalidGitRepositoryException(err)
+        raise InvalidGitRepositoryException()
     return root
 
-def get_remote(name="origin", path="./"):
-    (remote, err) = execute(["git", "remote", "get-url", name], cwd=path)
+def get_remote(name="origin", path="./") -> str:
+    (remote, err, exit_code) = execute(["git", "remote", "get-url", name], cwd=path)
     if err != "":
-        raise InvalidGitRepositoryException(err)
+        raise InvalidGitRepositoryException()
     return remote
     
 def get_commit_info(commit_id: str, path="./"):
     fmt = "%an%n%ae%n%cn%n%ce"
-    (out, err) = execute(["git", "show", "-s", f"--format={ fmt }", commit_id], cwd=path)
+    (out, err, exit_code) = execute(["git", "show", "-s", f"--format={ fmt }", commit_id], cwd=path)
     if err != "":
-        raise InvalidGitRepositoryException(err)
+        raise InvalidGitRepositoryException()
     
     [author_name, author_email, committer_name, committer_email] = out.split("\n")
 
     (message_out, err) = execute(["git", "show", "-s", f"--format=%B", commit_id], cwd=path)
     if err != "":
-        raise InvalidGitRepositoryException(err)
+        raise InvalidGitRepositoryException()
 
     return {
         "id": commit_id,
@@ -36,8 +40,16 @@ def get_commit_info(commit_id: str, path="./"):
         "committer_email": committer_email
     }
 
-def get_tail_commit_id(path="./"):
-    (out, err) = execute(["git", "rev-list", "--max-parents=0", "HEAD"], cwd=path)
+def get_head_commit_id(path="./") -> str:
+    (out, err, exit_code) = execute(["git", "rev-list", "HEAD"], cwd=path)
+    if err != "":
+        # Note: this will also error if ran on a repository with 0 commits,
+        # although that should never be a use-case so it should be alright.
+        raise InvalidGitRepositoryException()
+    return out
+
+def get_tail_commit_id(path="./") -> str:
+    (out, err, exit_code) = execute(["git", "rev-list", "--max-parents=0", "HEAD"], cwd=path)
     if err != "":
         # Note: this will also error if ran on a repository with 0 commits,
         # although that should never be a use-case so it should be alright.
@@ -45,16 +57,14 @@ def get_tail_commit_id(path="./"):
     return out
     
 def clone_repository(remote: str, path="./"):
-    (out, err) = execute(["git", "clone", remote, path])
+    (out, err, exit_code) = execute(["git", "clone", remote, path])
     # Git clone outputs human-useful information to stderr.
     last_line = err.split("\n")[-1]
     if last_line.startswith("fatal:"):
-        raise Exception(last_line)
-    # This will be an empty string
-    return out
+        raise GitException(last_line)
 
-def get_repo_name(path="./"):
-    (out, err) = execute(["git", "config", "--get", "remote.origin.url"], cwd=path)
+def get_repo_name(path="./") -> str:
+    (out, err, exit_code) = execute(["git", "config", "--get", "remote.origin.url"], cwd=path)
     if out == "" or err != "":
         raise InvalidGitRepositoryException()
     # Technically, a git remote URL can contain quotes, so it could break out of the quotations around `out`.
@@ -62,12 +72,29 @@ def get_repo_name(path="./"):
     # any risk involved here.
     (out, err) = execute(["basename", "-s", ".git", out])
     if err != "":
-        raise Exception(err)
+        raise GitException(err)
     return out
 
 def add_remote(remote_name: str, remote_url: str, path="./"):
-    (out, err) = execute(["git", "remote", "add", remote_name, remote_url], cwd=path)
+    (out, err, exit_code) = execute(["git", "remote", "add", remote_name, remote_url], cwd=path)
     if err != "":
         raise InvalidGitRepositoryException()
-    # This will be an empty string
-    return out
+
+def stage_files(files: str | List[str], path="./"):
+    if isinstance(files, str): files = [files]
+
+    (out, err, exit_code) = execute(["git", "add", *files], cwd=path)
+    if err != "":
+        raise InvalidGitRepositoryException()
+
+def commit(summary: str, description: str | None = None, path="./") -> str:
+    description_args = ["-m", description] if description is not None else []
+    (out, err, exit_code) = execute(["git", "commit", "--allow-empty", "-m", summary, *description_args], cwd=path)
+
+    if err != "":
+        raise InvalidGitRepositoryException()
+
+    if exit_code != 0:
+        raise GitException(out)
+    
+    
