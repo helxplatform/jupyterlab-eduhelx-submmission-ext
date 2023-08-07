@@ -55,7 +55,7 @@ const AssignmentListItem = ({ assignment }: AssignmentListItemProps) => {
                 </div>
                 <div style={{ fontSize: 13, color: 'var(--jp-ui-font-color2' }}>
                     {
-                        !assignment.isReleased ? (
+                        !assignment.isCreated ? (
                             <span>No release date yet</span>
                         ) :
                         assignment.isClosed ? (
@@ -91,8 +91,8 @@ const AssignmentListItem = ({ assignment }: AssignmentListItemProps) => {
             <ListItemAvatar style={{ minWidth: 0, marginLeft: 16 }}>
                 <Avatar variant="square">
                     <button
-                        className={ classes(downloadAssignmentButtonClass, (!assignment.isReleased || !assignment.isAvailable) && disabledButtonClass) }
-                        disabled={ !assignment.isReleased || !assignment.isAvailable }
+                        className={ classes(downloadAssignmentButtonClass, (!assignment.isCreated || !assignment.isAvailable) && disabledButtonClass) }
+                        disabled={ !assignment.isCreated || !assignment.isAvailable }
                         onClick={ () => commands.execute('filebrowser:go-to-path', {
                             path: assignment.absoluteDirectoryPath,
                             dontShowBrowser: true

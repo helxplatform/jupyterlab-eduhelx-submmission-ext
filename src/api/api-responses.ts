@@ -44,7 +44,7 @@ export interface AssignmentResponse {
 
     is_deferred: boolean
     is_extended: boolean
-    is_released: boolean
+    is_created: boolean
     is_available: boolean
     is_closed: boolean
 

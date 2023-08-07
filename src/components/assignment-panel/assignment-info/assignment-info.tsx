@@ -13,7 +13,7 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
     const { assignment, student, course } = useAssignment()!
     if (!student || !assignment || !course) return null
 
-    const hoursUntilDue = assignment.isReleased ? (
+    const hoursUntilDue = assignment.isCreated ? (
         (assignment.adjustedDueDate!.getTime() - Date.now()) / MS_IN_HOURS
     ) : Infinity
 
@@ -47,7 +47,7 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
             <div className={ assignmentInfoSectionClass }>
                 <h5 className={ assignmentInfoSectionHeaderClass }>Due date</h5>
                 <div>
-                    { assignment.isReleased ? (
+                    { assignment.isCreated ? (
                         new DateFormat(assignment.adjustedDueDate!).toBasicDatetime()
                     ) : (
                         `To be determined`
@@ -56,7 +56,7 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                         <i>&nbsp;(extended)</i>
                     ) : null }
                 </div>
-                { assignment.isReleased && !assignment.isClosed && hoursUntilDue <= 2 ? (
+                { assignment.isCreated && !assignment.isClosed && hoursUntilDue <= 2 ? (
                     <div style={{ marginTop: 4, color: 'var(--jp-warn-color0)' }}>
                         Warning: { new DateFormat(assignment.adjustedDueDate!).toRelativeDatetime() } remaining
                     </div>
