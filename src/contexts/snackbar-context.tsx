@@ -38,11 +38,24 @@ export const SnackbarProvider = ({ children }: ISnackbarProviderProps) => {
         props.duration = props.duration ?? 2500
         props.key = props.key ?? uuidv4()
         props.alignment = props.alignment ?? { vertical: 'bottom', horizontal: 'right' }
-
+        console.log(props, props.type)
         if (!props.content) props.content = (
             <Alert
                 variant="filled"
-                severity={ props.type }
+                color={ props.type }
+                style={{ 
+                    // Bug with Mui, Paper class overrides color/severity class styles
+                    backgroundColor: props.type === 'error' ? 'rgb(253, 236, 234)'
+                        : props.type === 'info' ? 'rgb(232, 244, 253)'
+                        : props.type === 'success' ? 'rgb(237, 247, 237)'
+                        : props.type === 'warning' ? 'rgb(255, 248, 230)'
+                        : undefined,
+                    color: props.type === 'error' ? 'rgb(97, 26, 21)'
+                        : props.type === 'info' ? 'rgb(13, 60, 97)'
+                        : props.type === 'success' ? 'rgb(30, 70, 32)'
+                        : props.type === 'warning' ? 'rgb(102, 77, 2)'
+                        : undefined
+                }}
                 onClose={ () => destroySnackbar(props.key!) }
             >
                 { props.message }
@@ -62,6 +75,7 @@ export const SnackbarProvider = ({ children }: ISnackbarProviderProps) => {
             return newSnackbars
         })
     }
+    (window as any).open = createSnackbar
     
     return (
         <SnackbarContext.Provider value={{
