@@ -4,6 +4,7 @@ import requests
 import subprocess
 import tempfile
 import shutil
+import shlex
 import tornado
 from jupyter_server.base.handlers import APIHandler
 from jupyter_server.utils import url_path_join
@@ -206,7 +207,11 @@ class SubmissionHandler(BaseHandler):
 
         current_assignment_path = student_repo.get_assignment_path(student_repo.current_assignment)
         stage_files(".", path=student_repo.current_assignment)
-        commit_id = commit(submission_summary, submission_description, path=student_repo.current_assignment)
+        commit_id = commit(
+            shlex.quote(submission_summary),
+            shlex.quote(submission_description),
+            path=student_repo.current_assignment
+        )
         push("origin", "master", path=student_repo.current_assignment)
         try:
             self.api.post_submission(
