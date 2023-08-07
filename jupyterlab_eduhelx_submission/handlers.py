@@ -4,7 +4,6 @@ import requests
 import subprocess
 import tempfile
 import shutil
-import shlex
 import tornado
 from jupyter_server.base.handlers import APIHandler
 from jupyter_server.utils import url_path_join
@@ -207,8 +206,8 @@ class SubmissionHandler(BaseHandler):
         current_assignment_path = student_repo.get_assignment_path(student_repo.current_assignment)
         stage_files(".", path=student_repo.repo_root)
         commit_id = commit(
-            shlex.quote(submission_summary),
-            shlex.quote(submission_description) if submission_description else None,
+            submission_summary,
+            submission_description if submission_description else None,
             path=student_repo.repo_root
         )
         push("origin", "master", path=student_repo.repo_root)
@@ -218,6 +217,7 @@ class SubmissionHandler(BaseHandler):
                 student_repo.current_assignment["id"],
                 commit_id
             )
+            self.finish()
         except requests.exceptions.HTTPError as e:
             self.set_status(e.response.status_code)
             self.finish(e.response.text)
