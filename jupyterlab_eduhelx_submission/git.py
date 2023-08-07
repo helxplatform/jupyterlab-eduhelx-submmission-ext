@@ -107,5 +107,5 @@ def commit(summary: str, description: str | None = None, path="./") -> str:
 
 def push(remote_name: str, branch_name: str, path="./"):
     (out, err, exit_code) = execute(["git", "push", remote_name, branch_name], cwd=path)
-    if err != "":
+    if exit_code != 0:
         raise InvalidGitRepositoryException()
