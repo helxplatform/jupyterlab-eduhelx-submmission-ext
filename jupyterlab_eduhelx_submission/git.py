@@ -28,7 +28,7 @@ def get_commit_info(commit_id: str, path="./"):
     
     [author_name, author_email, committer_name, committer_email] = out.split("\n")
 
-    (message_out, err) = execute(["git", "show", "-s", f"--format=%B", commit_id], cwd=path)
+    (message_out, err, exit_code) = execute(["git", "show", "-s", f"--format=%B", commit_id], cwd=path)
     if err != "":
         raise InvalidGitRepositoryException()
 
@@ -42,7 +42,7 @@ def get_commit_info(commit_id: str, path="./"):
     }
 
 def get_head_commit_id(path="./") -> str:
-    (out, err, exit_code) = execute(["git", "rev-list", "HEAD"], cwd=path)
+    (out, err, exit_code) = execute(["git", "rev-parse", "HEAD"], cwd=path)
     if err != "":
         # Note: this will also error if ran on a repository with 0 commits,
         # although that should never be a use-case so it should be alright.
@@ -71,7 +71,7 @@ def get_repo_name(path="./") -> str:
     # Technically, a git remote URL can contain quotes, so it could break out of the quotations around `out`.
     # However, since execute is not executing in shell mode, it can't perform command substitution so there isn't
     # any risk involved here.
-    (out, err) = execute(["basename", "-s", ".git", out])
+    (out, err, exit_code) = execute(["basename", "-s", ".git", out])
     if err != "":
         raise GitException(err)
     return out
@@ -100,10 +100,8 @@ def commit(summary: str, description: str | None = None, path="./") -> str:
     if exit_code != 0:
         raise GitException(out)
     
-    # Now we parse the commit id from the output.
-    pattern = r"^\[(?P<branch_name>[a-zA-Z0-9\._\-\/]+) (?P<commit_id>[^]]+)\] (?P<commit_summary>.*)$"
-    match = re.match(pattern, out.splitlines()[0])
-    return match.group("commit_id")
+    # `git commit` does return the short version of the generated commit, but we want to return the full version.
+    return get_head_commit_id(path=path)
 
 def push(remote_name: str, branch_name: str, path="./"):
     (out, err, exit_code) = execute(["git", "push", remote_name, branch_name], cwd=path)

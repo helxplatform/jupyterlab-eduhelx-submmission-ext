@@ -208,7 +208,7 @@ class SubmissionHandler(BaseHandler):
         stage_files(".", path=student_repo.repo_root)
         commit_id = commit(
             shlex.quote(submission_summary),
-            shlex.quote(submission_description),
+            shlex.quote(submission_description) if submission_description else None,
             path=student_repo.repo_root
         )
         push("origin", "master", path=student_repo.repo_root)
