@@ -25,7 +25,7 @@ class StudentClassRepo:
             repo_root = os.path.realpath(
                 git.get_repo_root(path=current_path)
             )
-            if master_repo_remote != self.course["master_remote_url"]:
+            if master_repo_remote != course["master_remote_url"]:
                 raise NotStudentClassRepositoryException()
             return repo_root
         except InvalidGitRepositoryException as e:
