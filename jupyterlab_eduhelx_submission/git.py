@@ -1,4 +1,5 @@
-from typing import List
+import re
+from typing import List, Tuple
 from .process import execute
 
 class GitException(Exception):
@@ -80,12 +81,14 @@ def add_remote(remote_name: str, remote_url: str, path="./"):
     if err != "":
         raise InvalidGitRepositoryException()
 
-def stage_files(files: str | List[str], path="./"):
+def stage_files(files: str | List[str], path="./") -> List[Tuple[str,]]:
     if isinstance(files, str): files = [files]
 
-    (out, err, exit_code) = execute(["git", "add", *files], cwd=path)
+    (out, err, exit_code) = execute(["git", "add", "--verbose", *files], cwd=path)
     if err != "":
         raise InvalidGitRepositoryException()
+
+    return [line.split(" ", 1) for line in out.splitlines()]
 
 def commit(summary: str, description: str | None = None, path="./") -> str:
     description_args = ["-m", description] if description is not None else []
@@ -97,4 +100,12 @@ def commit(summary: str, description: str | None = None, path="./") -> str:
     if exit_code != 0:
         raise GitException(out)
     
-    
+    # Now we parse the commit id from the output.
+    pattern = r"^\[(?P<branch_name>[a-zA-Z0-9\._\-\/]+) (?P<commit_id>[^]]+)\] (?P<commit_summary>.*)$"
+    match = re.match(pattern, out.splitlines()[0])
+    return match.group("commit_id")
+
+def push(remote_name: str, branch_name: str, path="./"):
+    (out, err, exit_code) = execute(["git", "push", remote_name, branch_name], cwd=path)
+    if err != "":
+        raise InvalidGitRepositoryException()

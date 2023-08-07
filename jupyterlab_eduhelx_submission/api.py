@@ -35,3 +35,12 @@ class Api:
             submission["commit"] = get_commit_info(submission["commit_id"], path=git_path)
         
         return submissions
+
+    def post_submission(self, onyen: str, assignment_id: str, commit_id: str):
+        res = requests.post(f"{ self.api_url }api/v1/submission", json={
+            "onyen": onyen,
+            "assignment_id": assignment_id,
+            "commit_id": commit_id
+        })
+        res.raise_for_status()
+        return res.json()

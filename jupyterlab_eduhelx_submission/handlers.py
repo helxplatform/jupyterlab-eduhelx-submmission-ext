@@ -14,7 +14,7 @@ from .git import (
     InvalidGitRepositoryException,
     get_remote, get_repo_root, clone_repository,
     get_tail_commit_id, get_repo_name, add_remote,
-    stage_files, commit
+    stage_files, commit, push
 )
 from .student_repo import StudentClassRepo, NotStudentClassRepositoryException
 from .process import execute
@@ -206,7 +206,18 @@ class SubmissionHandler(BaseHandler):
 
         current_assignment_path = student_repo.get_assignment_path(student_repo.current_assignment)
         stage_files(".", path=student_repo.current_assignment)
-        commit_id = commit(submission_summary, submission_description)
+        commit_id = commit(submission_summary, submission_description, path=student_repo.current_assignment)
+        push("origin", "master", path=student_repo.current_assignment)
+        try:
+            self.api.post_submission(
+                student["student_onyen"],
+                student_repo.current_assignment["id"],
+                commit_id
+            )
+        except requests.exceptions.HTTPError as e:
+            self.set_status(e.response.status_code)
+            self.finish(e.response.text)
+
 
 class SettingsHandler(BaseHandler):
     @tornado.web.authenticated
