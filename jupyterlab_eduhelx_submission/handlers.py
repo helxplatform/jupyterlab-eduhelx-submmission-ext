@@ -159,9 +159,8 @@ class AssignmentsHandler(BaseHandler):
 
         # The student is in their repo, but we still need to check if they're actually in an assignment directory.
         current_assignment = student_repo.current_assignment
-        
         if current_assignment is not None:
-            submissions = self.api.get_assignment_submissions(current_assignment["id"], student["student_onyen"], git_path=current_path_abs)
+            submissions = self.api.get_assignment_submissions(current_assignment["id"], student["student_onyen"], git_path=student_repo.repo_root)
             current_assignment["submissions"] = submissions
 
             value["current_assignment"] = current_assignment
@@ -206,13 +205,13 @@ class SubmissionHandler(BaseHandler):
             return
 
         current_assignment_path = student_repo.get_assignment_path(student_repo.current_assignment)
-        stage_files(".", path=student_repo.current_assignment)
+        stage_files(".", path=student_repo.repo_root)
         commit_id = commit(
             shlex.quote(submission_summary),
             shlex.quote(submission_description),
-            path=student_repo.current_assignment
+            path=student_repo.repo_root
         )
-        push("origin", "master", path=student_repo.current_assignment)
+        push("origin", "master", path=student_repo.repo_root)
         try:
             self.api.post_submission(
                 student["student_onyen"],

@@ -9,7 +9,7 @@ class NotStudentClassRepositoryException(Exception):
 class StudentClassRepo:
     def __init__(self, course, assignments, current_path):
         self.course = course
-        self.assignments = []
+        self.assignments = assignments
         self.current_path = os.path.realpath(current_path)
         
         self.repo_root = self._compute_repo_root(self.course, self.current_path)
