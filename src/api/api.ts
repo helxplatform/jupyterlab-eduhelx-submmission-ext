@@ -81,8 +81,8 @@ export async function submitAssignment(
     currentPath: string,
     summary: string,
     description?: string
-): Promise<ISubmission> {
-    const res = await requestAPI<SubmissionResponse>(`/submit_assignment`, {
+): Promise<void> {
+    const res = await requestAPI<void>(`/submit_assignment`, {
         method: 'POST',
         body: JSON.stringify({
             summary,
@@ -90,7 +90,6 @@ export async function submitAssignment(
             current_path: currentPath
         })
     })
-    return Submission.fromResponse(res)
 }
 
 export async function cloneStudentRepository(repositoryUrl: string, currentPath: string): Promise<string> {

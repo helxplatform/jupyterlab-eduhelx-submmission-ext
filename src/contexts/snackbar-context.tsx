@@ -41,6 +41,7 @@ export const SnackbarProvider = ({ children }: ISnackbarProviderProps) => {
 
         if (!props.content) props.content = (
             <Alert
+                variant="filled"
                 severity={ props.type }
                 onClose={ () => destroySnackbar(props.key!) }
             >
