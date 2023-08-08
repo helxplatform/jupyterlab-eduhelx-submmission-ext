@@ -70,6 +70,7 @@ export const AssignmentSubmissions = ({ ...props }: AssignmentSubmissionsProps) 
                                         style={{
                                             fontSize: 12,
                                             fontFamily: "inherit",
+                                            wordBreak: "break-word",
                                             fontStyle: submission.commit.description ? "normal" : "italic"
                                         }}
                                     >
