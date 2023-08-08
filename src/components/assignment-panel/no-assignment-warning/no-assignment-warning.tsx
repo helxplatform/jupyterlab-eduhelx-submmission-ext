@@ -129,8 +129,8 @@ export const NoAssignmentWarning = ({ noRepository }: NoAssignmentWarningProps) 
         <div className={ containerClass }>
             <div className={ textContainerClass }>
                 You are not currently in an assignment.
-                To submit your work, navigate to an existing
-                assignment or open an assignment here.
+                To submit your work, navigate to an assignment
+                in the filebrowser or open it here.
             </div>
             <TextDivider innerStyle={{ fontSize: 15 }} style={{ width: '100%', marginTop: 12 }}>Assignments</TextDivider>
             <AssignmentsList />
