@@ -91,8 +91,8 @@ const AssignmentListItem = ({ assignment }: AssignmentListItemProps) => {
             <ListItemAvatar style={{ minWidth: 0, marginLeft: 16 }}>
                 <Avatar variant="square">
                     <button
-                        className={ classes(downloadAssignmentButtonClass, (!assignment.isCreated || !assignment.isAvailable) && disabledButtonClass) }
-                        disabled={ !assignment.isCreated || !assignment.isAvailable }
+                        className={ classes(downloadAssignmentButtonClass, !assignment.isCreated && disabledButtonClass) }
+                        disabled={ !assignment.isCreated }
                         onClick={ () => commands.execute('filebrowser:go-to-path', {
                             path: assignment.absoluteDirectoryPath,
                             dontShowBrowser: true
