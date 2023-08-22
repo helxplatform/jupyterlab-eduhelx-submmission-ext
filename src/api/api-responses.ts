@@ -1,3 +1,8 @@
+export enum UserType {
+    STUDENT = 'student',
+    INSTRUCTOR = 'instructor'
+}
+
 export interface CommitResponse {
     id: string
     message: string
@@ -7,18 +12,21 @@ export interface CommitResponse {
     committer_email: string
 }
 
-export interface InstructorResponse {
+export interface UserResponse {
     id: number
-    instructor_onyen: string
+    user_type: UserType
+    onyen: string
     first_name: string
     last_name: string
+    email: string
 }
 
-export interface StudentResponse {
-    id: number
-    student_onyen: string
-    first_name: string
-    last_name: string
+export interface InstructorResponse extends UserResponse {
+    user_type: UserType.INSTRUCTOR
+}
+
+export interface StudentResponse extends UserResponse {
+    user_type: UserType.STUDENT
     join_date: string
     exit_date: string | null
 }

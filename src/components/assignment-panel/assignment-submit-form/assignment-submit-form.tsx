@@ -94,7 +94,7 @@ export const AssignmentSubmitForm = ({ }: AssignmentSubmitFormProps) => {
                 value={ descriptionText }
                 onChange={ (e) => setDescriptionText(e.target.value) }
                 onKeyDown={ (e) => {
-                    if (submitting) return
+                    if (disabled) return
                     if (e.key === 'Enter') submitAssignment()
                 } }
                 disabled={ submitting }

@@ -27,8 +27,9 @@ class Api:
         return res.json()
 
     def get_assignment_submissions(self, assignment_id: int, onyen: str, git_path="./"):
-        res = requests.get(f"{ self.api_url }api/v1/assignment/{ assignment_id }/submissions", params={
-            "onyen": onyen
+        res = requests.get(f"{ self.api_url }api/v1/submissions", params={
+            "onyen": onyen,
+            "assignment_id": assignment_id
         })
         submissions = res.json()
         for submission in submissions:

@@ -127,7 +127,7 @@ class AssignmentsHandler(BaseHandler):
         current_path_abs = os.path.realpath(current_path)
 
         student = self.api.get_student()
-        assignments = self.api.get_assignments(student["student_onyen"])
+        assignments = self.api.get_assignments(student["onyen"])
         course = self.api.get_course()
 
         value = {
@@ -159,7 +159,7 @@ class AssignmentsHandler(BaseHandler):
         # The student is in their repo, but we still need to check if they're actually in an assignment directory.
         current_assignment = student_repo.current_assignment
         if current_assignment is not None:
-            submissions = self.api.get_assignment_submissions(current_assignment["id"], student["student_onyen"], git_path=student_repo.repo_root)
+            submissions = self.api.get_assignment_submissions(current_assignment["id"], student["onyen"], git_path=student_repo.repo_root)
             current_assignment["submissions"] = submissions
 
             value["current_assignment"] = current_assignment
@@ -178,7 +178,7 @@ class SubmissionHandler(BaseHandler):
         current_path_abs = os.path.realpath(current_path)
 
         student = self.api.get_student()
-        assignments = self.api.get_assignments(student["student_onyen"])
+        assignments = self.api.get_assignments(student["onyen"])
         course = self.api.get_course()
 
         try:
@@ -213,7 +213,7 @@ class SubmissionHandler(BaseHandler):
         push("origin", "master", path=student_repo.repo_root)
         try:
             self.api.post_submission(
-                student["student_onyen"],
+                student["onyen"],
                 student_repo.current_assignment["id"],
                 commit_id
             )
