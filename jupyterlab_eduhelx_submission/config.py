@@ -86,6 +86,6 @@ class ExtensionConfig(Config):
                 # Jupyter doesn't allow config variables to start with capitals, so they are passed
                 # as camelCase and converted into their actual CONSTANT_CASE form.
                 key_constant_case = ''.join(['_' + c if c.isupper() else c for c in key]).lstrip('_').upper()
-                data_source[key_constant_case] = server_app.config["EduhelxSubmission"][key].get_value()
+                data_source[key_constant_case] = server_app.config["EduhelxSubmission"][key].get_value(None)
 
         super().__init__(data_source)

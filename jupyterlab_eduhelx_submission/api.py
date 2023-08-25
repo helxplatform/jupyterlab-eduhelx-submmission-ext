@@ -21,9 +21,12 @@ class Api:
         self.access_token_exp = None
         self._refresh_token = None
         self.refresh_token_exp = None
-        self.client = httpx.AsyncClient(headers={
-            "User-Agent": f"jupyter_eduhelx_extension/{ __version__ }"
-        })
+        self.client = httpx.AsyncClient(
+            base_url=f"{ self.api_url }api/v1/",
+            headers={
+                "User-Agent": f"jupyter_eduhelx_extension/{ __version__ }"
+            }
+        )
 
     @property
     def api_url(self) -> str:
@@ -47,13 +50,13 @@ class Api:
         self._refresh_token = value
         self.refresh_token_exp = jwt.decode(self._refresh_token, options={"verify_signature": False})["exp"]
 
-    async def ensure_access_token(self):
+    async def _ensure_access_token(self):
         if (
             self.refresh_token is None
             or self.refresh_token_exp is None
-            or self.refresh_token_exp - time.time() <= self.JWT_REFRESH_LEEWAY_SECONDS
+            or self.refresh_token_exp - time.time() <= self.config.JWT_REFRESH_LEEWAY_SECONDS
         ):
-            self.login()
+            await self.login()
 
         elif (
             self.access_token is None
@@ -70,18 +73,20 @@ class Api:
         elif response.status_code == 403:
             raise ForbiddenException("You lack the permission to make this API request")
         else:
-            raise APIException(f"API request failed with status code { response.status_code }")
+            raise APIException(f"API request to { response.request.url } failed with status code { response.status_code } { response.text }")
 
-    async def _make_request(self, method: str, endpoint: str, headers={}, **kwargs):
-        url = f"{ self.api_url }api/v1/{ endpoint }"
-        await self._ensure_access_token()
-        async with self.client.request(
+    async def _make_request(self, method: str, endpoint: str, verify_credentials=True, headers={}, **kwargs):
+        if verify_credentials: await self._ensure_access_token()
+        res = await self.client.request(
             method,
-            url,
-            headers={"Authorization": f"Bearer { self.access_token }", **headers},
+            endpoint,
+            headers={
+                **({"Authorization": f"Bearer { self.access_token }"} if self.access_token is not None else {}),
+                **headers
+            },
             **kwargs
-        ) as res:
-            return await self._handle_response(res)
+        )
+        return await self._handle_response(res)
 
     async def _get(self, endpoint: str, **kwargs):
         return await self._make_request("GET", endpoint, **kwargs)
@@ -89,13 +94,13 @@ class Api:
     async def _post(self, endpoint: str, **kwargs):
         return await self._make_request("POST", endpoint, **kwargs)
 
-    async def refresh_access_token(self):
-        self.access_token = await self._post("refresh", json={
+    async def _refresh_access_token(self):
+        self.access_token = await self._post("refresh", verify_credentials=False, json={
             "refresh_token": self.refresh_token
         })
 
     async def login(self):
-        res = await self._post("login", json={
+        res = await self._post("login", verify_credentials=False, json={
             "onyen": self.config.USER_ONYEN,
             "password": self.config.USER_PASSWORD
         })
@@ -103,16 +108,16 @@ class Api:
         self.refresh_token = res.get("refresh_token")
 
     async def get_assignments(self):
-        return self._get("assignments/self")
+        return await self._get("assignments/self")
 
     async def get_course(self):
-        return self._get("course")
+        return await self._get("course")
 
     async def get_student(self):
-        return self._get("student/self")
+        return await self._get("student/self")
 
     async def get_assignment_submissions(self, assignment_id: int, git_path="./"):
-        submissions = self._get("submissions/self", params={
+        submissions = await self._get("submissions/self", params={
             "assignment_id": assignment_id
         })
         for submission in submissions:
@@ -121,7 +126,7 @@ class Api:
         return submissions
 
     async def post_submission(self, assignment_id: str, commit_id: str):
-        return self._post("submission", json={
+        return await self._post("submission", json={
             "assignment_id": assignment_id,
             "commit_id": commit_id
         })
