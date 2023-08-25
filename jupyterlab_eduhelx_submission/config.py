@@ -13,6 +13,11 @@ def _parse_bool(value: Union[str, bool]) -> bool:
 """
 class Config:
     GRADER_API_URL: str
+    USER_ONYEN: str
+    USER_PASSWORD: str
+    # How far ahead of time the API should refresh the access token
+    # (proactively refreshing using a buffer deals with issues such as latency and clock sync)
+    JWT_REFRESH_LEEWAY_SECONDS: int = 60
 
     """
     Map environment variables to class fields according to these rules:
@@ -63,9 +68,11 @@ class Config:
 """
 By default, use environment variables to instantiate the config.
 Override with any values specified in the extension's config.
+Note that extension config values are specified in camelCase,
+and converted into SCREAMING_SNAKE_CASE/CONSTANT_CASE.
 E.g.
     export GRADER_API_URL="url_A"
-    jupyter lab --EduhelxSubmission.GRADER_API_URL="url_B"
+    jupyter lab --EduhelxSubmission.graderApiUrl="url_B"
     # Then we'll use "url_B" for GRADER_API_URL, since it's specified directly inside the config.
 """
 class ExtensionConfig(Config):
@@ -76,6 +83,9 @@ class ExtensionConfig(Config):
         data_source = os.environ.copy()
         if server_app is not None:
             for key in server_app.config["EduhelxSubmission"].keys():
-                data_source[key] = server_app.config["EduhelxSubmission"][key].get_value()
+                # Jupyter doesn't allow config variables to start with capitals, so they are passed
+                # as camelCase and converted into their actual CONSTANT_CASE form.
+                key_constant_case = ''.join(['_' + c if c.isupper() else c for c in key]).lstrip('_').upper()
+                data_source[key_constant_case] = server_app.config["EduhelxSubmission"][key].get_value()
 
         super().__init__(data_source)

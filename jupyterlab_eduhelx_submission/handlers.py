@@ -20,25 +20,33 @@ from .student_repo import StudentClassRepo, NotStudentClassRepositoryException
 from .process import execute
 from ._version import __version__
 
+class DependencyContainer:
+    def __init__(self, serverapp):
+        self.serverapp = serverapp
+        self.config = ExtensionConfig(self.serverapp)
+        self.api = Api(self.config)
+
 class BaseHandler(APIHandler):
+    context: DependencyContainer = None
+
     @property
     def config(self) -> ExtensionConfig:
-        return ExtensionConfig(self.serverapp)
+        return self.context.config
 
     @property
     def api(self) -> Api:
-        return Api(self.config)
+        return self.context.api
 
 
 class CloneStudentRepositoryHandler(BaseHandler):
     @tornado.web.authenticated
-    def post(self):
+    async def post(self):
         data = json.loads(self.request.body)
         repository_url: str = data["repository_url"]
         current_path: str = data["current_path"]
         current_path_abs = os.path.realpath(current_path)
         
-        course = self.api.get_course()
+        course = await self.api.get_course()
         master_repository_url = course["master_remote_url"]
 
         # Get the name of the master repo and the first commit id 
@@ -112,9 +120,9 @@ class CloneStudentRepositoryHandler(BaseHandler):
 
 class CourseAndStudentHandler(BaseHandler):
     @tornado.web.authenticated
-    def get(self):
-        student = self.api.get_student()
-        course = self.api.get_course()
+    async def get(self):
+        student = await self.api.get_student()
+        course = await self.api.get_course()
         self.finish(json.dumps({
             "student": student,
             "course": course
@@ -122,13 +130,13 @@ class CourseAndStudentHandler(BaseHandler):
 
 class AssignmentsHandler(BaseHandler):
     @tornado.web.authenticated
-    def get(self):
+    async def get(self):
         current_path: str = self.get_argument("path")
         current_path_abs = os.path.realpath(current_path)
 
-        student = self.api.get_student()
-        assignments = self.api.get_assignments(student["onyen"])
-        course = self.api.get_course()
+        student = await self.api.get_student()
+        assignments = await self.api.get_assignments(student["onyen"])
+        course = await self.api.get_course()
 
         value = {
             "current_assignment": None,
@@ -159,7 +167,7 @@ class AssignmentsHandler(BaseHandler):
         # The student is in their repo, but we still need to check if they're actually in an assignment directory.
         current_assignment = student_repo.current_assignment
         if current_assignment is not None:
-            submissions = self.api.get_assignment_submissions(current_assignment["id"], student["onyen"], git_path=student_repo.repo_root)
+            submissions = await self.api.get_assignment_submissions(current_assignment["id"], student["onyen"], git_path=student_repo.repo_root)
             current_assignment["submissions"] = submissions
 
             value["current_assignment"] = current_assignment
@@ -170,16 +178,16 @@ class AssignmentsHandler(BaseHandler):
 
 class SubmissionHandler(BaseHandler):
     @tornado.web.authenticated
-    def post(self):
+    async def post(self):
         data = json.loads(self.request.body)
         submission_summary: str = data["summary"]
         submission_description: str | None = data.get("description")
         current_path: str = data["current_path"]
         current_path_abs = os.path.realpath(current_path)
 
-        student = self.api.get_student()
-        assignments = self.api.get_assignments(student["onyen"])
-        course = self.api.get_course()
+        student = await self.api.get_student()
+        assignments = await self.api.get_assignments(student["onyen"])
+        course = await self.api.get_course()
 
         try:
             student_repo = StudentClassRepo(course, assignments, current_path_abs)
@@ -212,7 +220,7 @@ class SubmissionHandler(BaseHandler):
         )
         push("origin", "master", path=student_repo.repo_root)
         try:
-            self.api.post_submission(
+            await self.api.post_submission(
                 student["onyen"],
                 student_repo.current_assignment["id"],
                 commit_id
@@ -225,7 +233,7 @@ class SubmissionHandler(BaseHandler):
 
 class SettingsHandler(BaseHandler):
     @tornado.web.authenticated
-    def get(self):
+    async def get(self):
         server_version = str(__version__)
 
         self.finish(json.dumps({
@@ -235,6 +243,7 @@ class SettingsHandler(BaseHandler):
 
 def setup_handlers(server_app):
     web_app = server_app.web_app
+    BaseHandler.context = DependencyContainer(server_app)
     
     host_pattern = ".*$"
 
