@@ -6,7 +6,9 @@ from .git import get_commit_info
 from ._version import __version__
 
 class APIException(Exception):
-    pass
+    def __init__(self, response, message):
+        super().__init__(message)
+        self.response = response
 
 class UnauthorizedException(APIException):
     pass
@@ -56,24 +58,25 @@ class Api:
             or self.refresh_token_exp is None
             or self.refresh_token_exp - time.time() <= self.config.JWT_REFRESH_LEEWAY_SECONDS
         ):
-            await self.login()
+            await self._login()
 
         elif (
             self.access_token is None
             or self.access_token_exp is None
             or self.access_token_exp - time.time() <= self.config.JWT_REFRESH_LEEWAY_SECONDS  
         ):
-            await self.refresh_access_token()
+            await self._refresh_access_token()
 
     async def _handle_response(self, response: httpx.Response):
         if response.status_code == 200:
             return response.json()
         elif response.status_code == 401:
-            raise UnauthorizedException("You aren't logged in")
+            self.access_token = None
+            raise UnauthorizedException(response, "You aren't logged in")
         elif response.status_code == 403:
-            raise ForbiddenException("You lack the permission to make this API request")
+            raise ForbiddenException(response, "You lack the permission to make this API request")
         else:
-            raise APIException(f"API request to { response.request.url } failed with status code { response.status_code } { response.text }")
+            raise APIException(response, f"API request to { response.request.url } failed with status code { response.status_code } { response.text }")
 
     async def _make_request(self, method: str, endpoint: str, verify_credentials=True, headers={}, **kwargs):
         if verify_credentials: await self._ensure_access_token()
@@ -95,11 +98,16 @@ class Api:
         return await self._make_request("POST", endpoint, **kwargs)
 
     async def _refresh_access_token(self):
-        self.access_token = await self._post("refresh", verify_credentials=False, json={
-            "refresh_token": self.refresh_token
-        })
+        try:
+            self.access_token = await self._post("refresh", verify_credentials=False, json={
+                "refresh_token": self.refresh_token
+            })
+        except:
+            self.access_token = None
+            self.refresh_token = None
+            
 
-    async def login(self):
+    async def _login(self):
         res = await self._post("login", verify_credentials=False, json={
             "onyen": self.config.USER_ONYEN,
             "password": self.config.USER_PASSWORD
