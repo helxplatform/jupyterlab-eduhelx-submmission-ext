@@ -14,7 +14,7 @@ def _parse_bool(value: Union[str, bool]) -> bool:
 class Config:
     GRADER_API_URL: str
     USER_ONYEN: str
-    USER_PASSWORD: str
+    USER_AUTOGEN_PASSWORD: str
     # How far ahead of time the API should refresh the access token
     # (proactively refreshing using a buffer deals with issues such as latency and clock sync)
     JWT_REFRESH_LEEWAY_SECONDS: int = 60

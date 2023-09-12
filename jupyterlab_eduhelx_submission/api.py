@@ -110,7 +110,7 @@ class Api:
     async def _login(self):
         res = await self._post("login", verify_credentials=False, json={
             "onyen": self.config.USER_ONYEN,
-            "password": self.config.USER_PASSWORD
+            "autogen_password": self.config.USER_AUTOGEN_PASSWORD
         })
         self.access_token = res.get("access_token")
         self.refresh_token = res.get("refresh_token")
