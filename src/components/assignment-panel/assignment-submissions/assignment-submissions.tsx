@@ -43,7 +43,7 @@ export const AssignmentSubmissions = ({ ...props }: AssignmentSubmissionsProps) 
                         <ExpansionPanelSummary expandIcon={ <ExpandMoreSharp /> }>
                             <ListItem>
                                 <ListItemIcon style={{ minWidth: 0, marginRight: 16 }}>
-                                    <span>{ `#${ i + 1 }` }</span>
+                                    <span>{ `#${ submissionSource!.length - i }` }</span>
                                 </ListItemIcon>
                                 <ListItemText disableTypography>
                                     <div style={{ fontSize: 12, color: 'var(--jp-ui-font-color2)', marginBottom: 4 }}>
