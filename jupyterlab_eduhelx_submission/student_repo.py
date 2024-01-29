@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
-from .git import InvalidGitRepositoryException
-from . import git
+from eduhelx_utils.git import InvalidGitRepositoryException
+from eduhelx_utils import git
 
 class NotStudentClassRepositoryException(Exception):
     pass

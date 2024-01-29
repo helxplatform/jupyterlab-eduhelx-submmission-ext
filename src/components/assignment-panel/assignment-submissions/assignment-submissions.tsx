@@ -38,12 +38,12 @@ export const AssignmentSubmissions = ({ ...props }: AssignmentSubmissionsProps) 
         <div className={ assignmentSubmissionsContainerClass } { ...props }>
             <TextDivider innerStyle={{ fontSize: 'var(--jp-ui-font-size2)' }} style={{ padding: '0 12px' }}>Submissions</TextDivider>
             <div className={ assignmentsListClass }>
-                { submissionSource!.map((submission) => (
+                { submissionSource!.map((submission, i) => (
                     <ExpansionPanel key={ submission.id } square>
                         <ExpansionPanelSummary expandIcon={ <ExpandMoreSharp /> }>
                             <ListItem>
                                 <ListItemIcon style={{ minWidth: 0, marginRight: 16 }}>
-                                    <span>{ `#${ submission.id }` }</span>
+                                    <span>{ `#${ i + 1 }` }</span>
                                 </ListItemIcon>
                                 <ListItemText disableTypography>
                                     <div style={{ fontSize: 12, color: 'var(--jp-ui-font-color2)', marginBottom: 4 }}>
