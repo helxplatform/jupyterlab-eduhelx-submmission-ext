@@ -4,22 +4,22 @@ import {
   JupyterFrontEnd,
   JupyterFrontEndPlugin
 } from '@jupyterlab/application'
-import { IFileBrowserFactory, FileBrowserModel } from '@jupyterlab/filebrowser'
+import { FileBrowserModel, IDefaultFileBrowser } from '@jupyterlab/filebrowser'
 import { Dialog, showErrorMessage } from '@jupyterlab/apputils'
 import { IChangedArgs } from '@jupyterlab/coreutils'
 import { getServerSettings, IServerSettings } from './api'
 import { AssignmentWidget } from './widgets'
 import { EduhelxSubmissionModel } from './model'
 import { submissionIcon } from './style/icons'
+import { IFileBrowserFactory } from '@jupyterlab/filebrowser'
 
 async function activate (
   app: JupyterFrontEnd,
+  fileBrowser: IDefaultFileBrowser,
   restorer: ILayoutRestorer,
   shell: ILabShell,
-  fileBrowserFactory: IFileBrowserFactory
 ) {
   let serverSettings: IServerSettings
-  const fileBrowser = fileBrowserFactory.defaultBrowser
   try {
     serverSettings = await getServerSettings()
   } catch (e: any) {
@@ -31,7 +31,7 @@ async function activate (
     )
     return
   }
-
+  // await (fileBrowser.model as any)._restored.promise
   const model = new EduhelxSubmissionModel()
   Promise.all([app.restored, fileBrowser.model.restored]).then(() => {
     model.currentPath = fileBrowser.model.path
@@ -61,9 +61,9 @@ const plugin: JupyterFrontEndPlugin<void> = {
   description: 'A JupyterLab extension tfor submitting assignments in EduHeLx',
   autoStart: true,
   requires: [
+    IDefaultFileBrowser,
     ILayoutRestorer,
     ILabShell,
-    IFileBrowserFactory
   ],
   activate
 };

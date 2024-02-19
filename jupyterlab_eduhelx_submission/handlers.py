@@ -9,25 +9,30 @@ from jupyter_server.base.handlers import APIHandler
 from jupyter_server.utils import url_path_join
 from pathlib import Path
 from .config import ExtensionConfig
-from .api import Api
-from .git import (
+from eduhelx_utils.git import (
     InvalidGitRepositoryException,
-    get_remote, get_repo_root, clone_repository,
+    clone_repository,
     get_tail_commit_id, get_repo_name, add_remote,
-    stage_files, commit, push
+    stage_files, commit, push, get_commit_info
 )
+from eduhelx_utils.api import Api
 from .student_repo import StudentClassRepo, NotStudentClassRepositoryException
 from .process import execute
 from ._version import __version__
 
-class DependencyContainer:
+class AppContext:
     def __init__(self, serverapp):
         self.serverapp = serverapp
         self.config = ExtensionConfig(self.serverapp)
-        self.api = Api(self.config)
+        self.api = Api(
+            api_url=self.config.GRADER_API_URL,
+            user_onyen=self.config.USER_ONYEN,
+            user_autogen_password=self.config.USER_AUTOGEN_PASSWORD,
+            jwt_refresh_leeway_seconds=self.config.JWT_REFRESH_LEEWAY_SECONDS
+        )
 
 class BaseHandler(APIHandler):
-    context: DependencyContainer = None
+    context: AppContext = None
 
     @property
     def config(self) -> ExtensionConfig:
@@ -121,7 +126,7 @@ class CloneStudentRepositoryHandler(BaseHandler):
 class CourseAndStudentHandler(BaseHandler):
     @tornado.web.authenticated
     async def get(self):
-        student = await self.api.get_student()
+        student = await self.api.get_my_user()
         course = await self.api.get_course()
         self.finish(json.dumps({
             "student": student,
@@ -134,8 +139,8 @@ class AssignmentsHandler(BaseHandler):
         current_path: str = self.get_argument("path")
         current_path_abs = os.path.realpath(current_path)
 
-        student = await self.api.get_student()
-        assignments = await self.api.get_assignments()
+        student = await self.api.get_my_user()
+        assignments = await self.api.get_my_assignments()
         course = await self.api.get_course()
 
         value = {
@@ -167,7 +172,9 @@ class AssignmentsHandler(BaseHandler):
         # The student is in their repo, but we still need to check if they're actually in an assignment directory.
         current_assignment = student_repo.current_assignment
         if current_assignment is not None:
-            submissions = await self.api.get_assignment_submissions(current_assignment["id"], git_path=student_repo.repo_root)
+            submissions = await self.api.get_my_submissions(current_assignment["id"])
+            for submission in submissions:
+                submission["commit"] = get_commit_info(submission["commit_id"], path=student_repo.repo_root)
             current_assignment["submissions"] = submissions
 
             value["current_assignment"] = current_assignment
@@ -185,8 +192,8 @@ class SubmissionHandler(BaseHandler):
         current_path: str = data["current_path"]
         current_path_abs = os.path.realpath(current_path)
 
-        student = await self.api.get_student()
-        assignments = await self.api.get_assignments()
+        student = await self.api.get_my_user()
+        assignments = await self.api.get_my_assignments()
         course = await self.api.get_course()
 
         try:
@@ -220,7 +227,7 @@ class SubmissionHandler(BaseHandler):
         )
         push("origin", "master", path=student_repo.repo_root)
         try:
-            await self.api.post_submission(
+            await self.api.create_submission(
                 student_repo.current_assignment["id"],
                 commit_id
             )
@@ -242,7 +249,7 @@ class SettingsHandler(BaseHandler):
 
 def setup_handlers(server_app):
     web_app = server_app.web_app
-    BaseHandler.context = DependencyContainer(server_app)
+    BaseHandler.context = AppContext(server_app)
     
     host_pattern = ".*$"
 

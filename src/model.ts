@@ -163,7 +163,8 @@ export class EduhelxSubmissionModel implements IEduhelxSubmissionModel {
         this.currentAssignment = undefined
         this.assignments = undefined
         this.student = undefined
-        await this._assignmentPoll.refresh()
+        // await this._assignmentPoll.refresh()
+        this._refreshModel()
         await this._assignmentPoll.tick
     }
 
