@@ -63,7 +63,7 @@ export async function getServerSettings(): Promise<IServerSettings> {
             if (response.status === 404) {
                 const message =
                     'EduHeLx Submission server extension is unavailable. Please ensure you have installed the ' +
-                    'JupyterLab EduHeLx Submission server extension by running: pip install --upgrade jupyterlab_eduhelx_submission. ' +
+                    'JupyterLab EduHeLx Submission server extension by running: pip install --upgrade eduhelx_jupyterlab_student. ' +
                     'To confirm that the server extension is installed, run: jupyter server extension list.'
                 throw new ServerConnection.ResponseError(response, message);
             } else {

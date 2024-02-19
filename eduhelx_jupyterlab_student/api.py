@@ -26,7 +26,7 @@ class Api:
         self.client = httpx.AsyncClient(
             base_url=f"{ self.api_url }api/v1/",
             headers={
-                "User-Agent": f"jupyter_eduhelx_extension/{ __version__ }"
+                "User-Agent": f"jls-ext/{ __version__ }"
             }
         )
 

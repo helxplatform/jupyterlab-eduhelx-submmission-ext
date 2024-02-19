@@ -1,10 +1,10 @@
-# jupyterlab_eduhelx_submission
+# eduhelx-jupyterlab-student-ext (JLS-ext)
 
-[![Github Actions Status](https://github.com/helxplatform/jupyterlab_eduhelx_submission/workflows/Build/badge.svg)](https://github.com/helxplatform/jupyterlab_eduhelx_submission/actions/workflows/build.yml)
+[![Github Actions Status](https://github.com/helxplatform/eduhelx_jupyterlab_student/workflows/Build/badge.svg)](https://github.com/helxplatform/eduhelx_jupyterlab_student/actions/workflows/build.yml)
 A JupyterLab extension for managing assignments/submissions in EduHeLx
 
-This extension is composed of a Python package named `jupyterlab_eduhelx_submission`
-for the server extension and a NPM package named `jupyterlab_eduhelx_submission`
+This extension is composed of a Python package named `eduhelx_jupyterlab_student`
+for the server extension and a NPM package named `eduhelx_jupyterlab_student`
 for the frontend extension.
 
 ## Requirements
@@ -16,7 +16,7 @@ for the frontend extension.
 To install the extension, execute:
 
 ```bash
-pip install jupyterlab_eduhelx_submission
+pip install eduhelx_jupyterlab_student
 ```
 
 ## Uninstall
@@ -24,7 +24,7 @@ pip install jupyterlab_eduhelx_submission
 To remove the extension, execute:
 
 ```bash
-pip uninstall jupyterlab_eduhelx_submission
+pip uninstall eduhelx_jupyterlab_student
 ```
 
 ## Troubleshoot
@@ -56,13 +56,13 @@ The `jlpm` command is JupyterLab's pinned version of
 Installing the extension
 ```bash
 # Clone the repo to your local environment
-# Change directory to the jupyterlab_eduhelx_submission directory
+# Change directory to the eduhelx_jupyterlab_student directory
 # Install package in development mode
 pip install -ve ".[test]"
 # Link your development version of the extension with JupyterLab
 jupyter labextension develop . --overwrite
 # Server extension must be manually installed in develop mode
-jupyter server extension enable jupyterlab_eduhelx_submission
+jupyter server extension enable eduhelx_jupyterlab_student
 ```
 
 Frontend Development (after install)
@@ -90,13 +90,13 @@ jupyter lab build --minimize=False
 
 ```bash
 # Server extension must be manually disabled in develop mode
-jupyter server extension disable jupyterlab_eduhelx_submission
-pip uninstall jupyterlab_eduhelx_submission
+jupyter server extension disable eduhelx_jupyterlab_student
+pip uninstall eduhelx_jupyterlab_student
 ```
 
 In development mode, you will also need to remove the symlink created by `jupyter labextension develop`
 command. To find its location, you can run `jupyter labextension list` to figure out where the `labextensions`
-folder is located. Then you can remove the symlink named `jupyterlab_eduhelx_submission` within that folder.
+folder is located. Then you can remove the symlink named `eduhelx_jupyterlab_student` within that folder.
 
 ### Testing the extension
 
@@ -115,7 +115,7 @@ jupyter labextension develop . --overwrite
 To execute them, run:
 
 ```sh
-pytest -vv -r ap --cov jupyterlab_eduhelx_submission
+pytest -vv -r ap --cov eduhelx_jupyterlab_student
 ```
 
 #### Frontend tests

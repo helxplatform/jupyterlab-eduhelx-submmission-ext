@@ -6,13 +6,13 @@ from .handlers import setup_handlers
 def _jupyter_labextension_paths():
     return [{
         "src": "labextension",
-        "dest": "jupyterlab_eduhelx_submission"
+        "dest": "eduhelx_jupyterlab_student"
     }]
 
 
 def _jupyter_server_extension_points():
     return [{
-        "module": "jupyterlab_eduhelx_submission"
+        "module": "eduhelx_jupyterlab_student"
     }]
 
 
@@ -25,7 +25,7 @@ def _load_jupyter_server_extension(server_app: ServerApp):
         JupyterLab application instance
     """
     setup_handlers(server_app)
-    name = "jupyterlab_eduhelx_submission"
+    name = "eduhelx_jupyterlab_student"
     server_app.log.info(f"Registered {name} server extension")
 
 

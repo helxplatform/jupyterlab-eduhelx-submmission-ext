@@ -23,9 +23,9 @@ async function activate (
   try {
     serverSettings = await getServerSettings()
   } catch (e: any) {
-    console.error('Failed to load the jupyterlab_eduhelx_submission extension settings', e)
+    console.error('Failed to load the eduhelx_jupyterlab_student extension settings', e)
     showErrorMessage(
-      'Failed to load the jupyterlab_eduhelx_submission server extension',
+      'Failed to load the eduhelx_jupyterlab_student server extension',
       e.message,
       [Dialog.warnButton({ label: 'Dismiss' })]
     )
@@ -54,10 +54,10 @@ async function activate (
 }
 
 /**
- * Initialization data for the jupyterlab_eduhelx_submission extension.
+ * Initialization data for the eduhelx_jupyterlab_student extension.
  */
 const plugin: JupyterFrontEndPlugin<void> = {
-  id: 'jupyterlab_eduhelx_submission:plugin',
+  id: 'eduhelx_jupyterlab_student:plugin',
   description: 'A JupyterLab extension tfor submitting assignments in EduHeLx',
   autoStart: true,
   requires: [

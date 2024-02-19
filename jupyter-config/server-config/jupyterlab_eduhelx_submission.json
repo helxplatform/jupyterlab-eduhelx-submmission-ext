@@ -1,7 +1,7 @@
 {
   "ServerApp": {
     "jpserver_extensions": {
-      "jupyterlab_eduhelx_submission": true
+      "eduhelx_jupyterlab_student": true
     }
   }
 }
