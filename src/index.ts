@@ -31,7 +31,7 @@ async function activate (
     )
     return
   }
-
+  // await (fileBrowser.model as any)._restored.promise
   const model = new EduhelxSubmissionModel()
   Promise.all([app.restored, fileBrowser.model.restored]).then(() => {
     model.currentPath = fileBrowser.model.path
