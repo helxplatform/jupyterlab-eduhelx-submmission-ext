@@ -8,7 +8,7 @@ def jp_server_config(jp_server_config):
     return {
         "ServerApp": {
             "jpserver_extensions": {
-                "jupyterlab_eduhelx_submission": True
+                "eduhelx_jupyterlab_student": True
             }
         }
     }

@@ -2,8 +2,8 @@
  * Example of [Jest](https://jestjs.io/docs/getting-started) unit tests
  */
 
-describe('jupyterlab_eduhelx_submission', () => {
-  it('should be tested', () => {
+describe('eduhelx_jupyterlab_student', () => {
+  it('should have some tests written at some point maybe?', () => {
     expect(1 + 1).toEqual(2);
   });
 });

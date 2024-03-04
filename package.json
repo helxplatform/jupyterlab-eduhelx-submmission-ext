@@ -1,15 +1,15 @@
 {
-  "name": "jupyterlab_eduhelx_submission",
+  "name": "eduhelx_jupyterlab_student",
   "version": "0.1.0",
-  "description": "A JupyterLab extension tfor submitting assignments in EduHeLx",
+  "description": "A JupyterLab extension for submitting assignments in EduHeLx",
   "keywords": [
     "jupyter",
     "jupyterlab",
     "jupyterlab-extension"
   ],
-  "homepage": "https://github.com/helxplatform/jupyterlab_eduhelx_submission",
+  "homepage": "https://github.com/helxplatform/eduhelx-jupyterlab-student-ext",
   "bugs": {
-    "url": "https://github.com/helxplatform/jupyterlab_eduhelx_submission/issues"
+    "url": "https://github.com/helxplatform/eduhelx-jupyterlab-student-ext/issues"
   },
   "license": "BSD-3-Clause",
   "author": {
@@ -25,7 +25,7 @@
   "style": "style/index.css",
   "repository": {
     "type": "git",
-    "url": "https://github.com/helxplatform/jupyterlab_eduhelx_submission.git"
+    "url": "https://github.com/helxplatform/eduhelx-jupyterlab-student-ext.git"
   },
   "workspaces": [
     "ui-tests"
@@ -40,7 +40,7 @@
     "clean": "jlpm clean:lib",
     "clean:lib": "rimraf lib tsconfig.tsbuildinfo",
     "clean:lintcache": "rimraf .eslintcache .stylelintcache",
-    "clean:labextension": "rimraf jupyterlab_eduhelx_submission/labextension jupyterlab_eduhelx_submission/_version.py",
+    "clean:labextension": "rimraf eduhelx_jupyterlab_student/labextension eduhelx_jupyterlab_student/_version.py",
     "clean:all": "jlpm clean:lib && jlpm clean:labextension && jlpm clean:lintcache",
     "eslint": "jlpm eslint:check --fix",
     "eslint:check": "eslint . --cache --ext .ts,.tsx",
@@ -126,7 +126,7 @@
           "pip"
         ],
         "base": {
-          "name": "jupyterlab_eduhelx_submission"
+          "name": "eduhelx_jupyterlab_student"
         }
       }
     },
@@ -150,6 +150,6 @@
         "singleton": true
       }
     },
-    "outputDir": "jupyterlab_eduhelx_submission/labextension"
+    "outputDir": "eduhelx_jupyterlab_student/labextension"
   }
 }
