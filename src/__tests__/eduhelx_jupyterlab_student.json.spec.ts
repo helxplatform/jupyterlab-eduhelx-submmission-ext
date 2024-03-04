@@ -3,7 +3,7 @@
  */
 
 describe('eduhelx_jupyterlab_student', () => {
-  it('should be tested', () => {
+  it('should have some tests written at some point maybe?', () => {
     expect(1 + 1).toEqual(2);
   });
 });
