@@ -25,11 +25,15 @@ export interface IAssignment {
     // Indicates if an assignment is no longer available to work on (e.g. date is greater than adjusted_due_date)
     readonly isClosed: boolean
     readonly submissions?: ISubmission[]
+    // `null` if there are no submissions
+    readonly activeSubmission?: ISubmission | null
 }
 
 // Submissions are definitely defined in an ICurrentAssignment
 export interface ICurrentAssignment extends IAssignment {
-    readonly submissions: ISubmission[] 
+    readonly submissions: ISubmission[]
+    // `null` if there are no submissions
+    readonly activeSubmission: ISubmission | null
 }
 
 export class Assignment implements IAssignment {
@@ -68,6 +72,11 @@ export class Assignment implements IAssignment {
     get isClosed() { return this._isClosed }
 
     get submissions() { return this._submissions }
+    get activeSubmission() {
+        if (this._submissions === undefined) return undefined
+        if (this._submissions.length === 0) return null
+        return this._submissions.sort((a, b) => b.submissionTime.getTime() - a.submissionTime.getTime())[0]
+    }
     
 
     static fromResponse(data: AssignmentResponse): IAssignment {

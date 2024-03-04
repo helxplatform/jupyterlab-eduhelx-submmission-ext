@@ -33,5 +33,20 @@ export const assignmentInfoSectionClass = (style as any)({
 export const assignmentInfoSectionHeaderClass = style({
     margin: 0,
     marginBottom: 4,
-    fontWeight: 600
+    fontWeight: 600,
+})
+
+export const assignmentInfoSectionWarningClass = style({
+    color: "var(--jp-warn-color-normal)"
+})
+
+export const tagClass = style({
+    height: "auto",
+    // border: "1px solid #d9d9d9",
+    borderRadius: 2,
+    display: "inline-block",
+    fontSize: 12,
+    lineHeight: "20px",
+    padding: "0 7px",
+    whiteSpace: "nowrap"
 })

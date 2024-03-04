@@ -1,4 +1,4 @@
-import React, { createContext, useContext, ReactNode, useState, Fragment } from 'react'
+import React, { createContext, useContext, ReactNode, ReactElement, useState, Fragment } from 'react'
 import { Portal, Snackbar, SnackbarOrigin } from '@material-ui/core'
 import { Alert, Color } from '@material-ui/lab'
 import { v4 as uuidv4 } from 'uuid'
@@ -11,7 +11,7 @@ interface CreateSnackbarProps {
     message?: string
     alignment?: SnackbarOrigin
     // Override type/message
-    content?: ReactNode
+    content?: ReactElement
 }
 
 interface CreateSnackbar {
