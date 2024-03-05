@@ -1,6 +1,7 @@
 import { IStudent, Student } from './student'
 import { ISubmission, Submission } from './submission'
 import { AssignmentResponse } from './api-responses'
+import { IStagedChange, StagedChange } from './staged-change'
 
 export interface IAssignment {
     readonly id: number
@@ -27,7 +28,7 @@ export interface IAssignment {
     readonly submissions?: ISubmission[]
     // `null` if there are no submissions
     readonly activeSubmission?: ISubmission | null
-    readonly stagedChanges?: string[]
+    readonly stagedChanges?: IStagedChange[]
 }
 
 // Submissions and staged changes are definitely defined in an ICurrentAssignment
@@ -35,7 +36,7 @@ export interface ICurrentAssignment extends IAssignment {
     readonly submissions: ISubmission[]
     // `null` if there are no submissions
     readonly activeSubmission: ISubmission | null
-    readonly stagedChanges: string[]
+    readonly stagedChanges: IStagedChange[]
 }
 
 export class Assignment implements IAssignment {
@@ -55,7 +56,7 @@ export class Assignment implements IAssignment {
         private _isAvailable: boolean,
         private _isClosed: boolean,
         private _submissions?: ISubmission[],
-        private _stagedChanges?: string[]
+        private _stagedChanges?: IStagedChange[]
     ) {}
     
     get id() { return this._id }
@@ -101,7 +102,7 @@ export class Assignment implements IAssignment {
             data.is_available,
             data.is_closed,
             data.submissions?.map((res) => Submission.fromResponse(res)),
-            data.staged_changes
+            data.staged_changes?.map((res) => StagedChange.fromResponse(res))
         )
     }
 }

@@ -12,7 +12,7 @@ export const AssignmentStagedChanges = ({ }: AssignmentStagedChangesProps) => {
             Changed files:
             <ul>
             {
-                assignment!.stagedChanges.map((file) => <li>{ file }</li>)
+                assignment!.stagedChanges.map((file) => <li>{ file.path }</li>)
             }
             </ul>
         </div>

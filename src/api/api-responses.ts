@@ -31,6 +31,12 @@ export interface StudentResponse extends UserResponse {
     exit_date: string | null
 }
 
+export interface StagedChangeResponse {
+    path: string
+    modification_type: string
+    type: "file" | "directory"
+}
+
 export interface SubmissionResponse {
     id: number
     active: boolean
@@ -57,7 +63,7 @@ export interface AssignmentResponse {
     is_closed: boolean
 
     submissions?: SubmissionResponse[]
-    staged_changes?: string[]
+    staged_changes?: StagedChangeResponse[]
 }
 
 export interface CourseResponse {
