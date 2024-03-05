@@ -170,21 +170,22 @@ class AssignmentsHandler(BaseHandler):
             assignment["absolute_directory_path"] = os.path.join("/", rel_assignment_path)
         value["assignments"] = assignments
 
-        # The student is in their repo, but we still need to check if they're actually in an assignment directory.
         current_assignment = student_repo.current_assignment
+        # The student is in their repo, but we still need to check if they're actually in an assignment directory.
         if current_assignment is not None:
             submissions = await self.api.get_my_submissions(current_assignment["id"])
             for submission in submissions:
                 submission["commit"] = get_commit_info(submission["commit_id"], path=student_repo.repo_root)
             current_assignment["submissions"] = submissions
-            # current_assignment["staged_changes"] = [
-            #     file for file in
-            #     get_modified_paths(path=student_repo.repo_root)
-            #     if file["path"].lower().startswith(st)
-            # ]
-            # print(12341234124312)
-            # print(student_repo.repo_root)
-            # print(get_modified_paths(path=student_repo.repo_root)[0]["path"])
+            current_assignment["staged_changes"] = [
+                file for file in
+                get_modified_paths(path=student_repo.repo_root)
+                if os.path.commonpath([
+                    rel_assignment_path,
+                    os.path.relpath(os.path.join(student_repo.repo_root, file["path"]))
+                ]) == rel_assignment_path
+            ]
+            # print(rel_assignment_path, os.path.relpath(student_repo.repo_root + get_modified_paths(path=student_repo.repo_root)[0]["path"], cwd))
 
             value["current_assignment"] = current_assignment
             self.finish(json.dumps(value))
@@ -272,7 +273,7 @@ def setup_handlers(server_app):
     ]
     handlers_with_path = [
         (
-            url_path_join(base_url, "jupyterlab-eduhelx-submission", uri),
+            url_path_join(base_url, "eduhelx-jupyterlab-student", uri),
             handler
         ) for (uri, handler) in handlers
     ]
