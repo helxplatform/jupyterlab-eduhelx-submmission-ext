@@ -27,13 +27,15 @@ export interface IAssignment {
     readonly submissions?: ISubmission[]
     // `null` if there are no submissions
     readonly activeSubmission?: ISubmission | null
+    readonly stagedChanges?: string[]
 }
 
-// Submissions are definitely defined in an ICurrentAssignment
+// Submissions and staged changes are definitely defined in an ICurrentAssignment
 export interface ICurrentAssignment extends IAssignment {
     readonly submissions: ISubmission[]
     // `null` if there are no submissions
     readonly activeSubmission: ISubmission | null
+    readonly stagedChanges: string[]
 }
 
 export class Assignment implements IAssignment {
@@ -52,7 +54,8 @@ export class Assignment implements IAssignment {
         private _isCreated: boolean,
         private _isAvailable: boolean,
         private _isClosed: boolean,
-        private _submissions?: ISubmission[]
+        private _submissions?: ISubmission[],
+        private _stagedChanges?: string[]
     ) {}
     
     get id() { return this._id }
@@ -77,6 +80,8 @@ export class Assignment implements IAssignment {
         if (this._submissions.length === 0) return null
         return this._submissions.sort((a, b) => b.submissionTime.getTime() - a.submissionTime.getTime())[0]
     }
+
+    get stagedChanges() { return this._stagedChanges }
     
 
     static fromResponse(data: AssignmentResponse): IAssignment {
@@ -95,7 +100,8 @@ export class Assignment implements IAssignment {
             data.is_created,
             data.is_available,
             data.is_closed,
-            data.submissions?.map((res) => Submission.fromResponse(res))
+            data.submissions?.map((res) => Submission.fromResponse(res)),
+            data.staged_changes
         )
     }
 }

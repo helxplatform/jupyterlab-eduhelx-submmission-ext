@@ -57,6 +57,7 @@ export interface AssignmentResponse {
     is_closed: boolean
 
     submissions?: SubmissionResponse[]
+    staged_changes?: string[]
 }
 
 export interface CourseResponse {

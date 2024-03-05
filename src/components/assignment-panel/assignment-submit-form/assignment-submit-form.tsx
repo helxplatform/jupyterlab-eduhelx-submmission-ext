@@ -25,12 +25,12 @@ export const AssignmentSubmitForm = ({ }: AssignmentSubmitFormProps) => {
 
     const disabled = submitting || summaryText === "" || !assignment?.isAvailable || assignment?.isClosed
     const disabledReason = disabled ? (
-        submitting ? `Disabled: currently uploading submission` :
-        summaryText === "" ? `Disabled: Please enter a summary for the submission` :
-        !assignment?.isAvailable ? `Disabled: Assignment is not available for you to work on yet` :
-        assignment?.isClosed ?
-            `Disabled: Past due. Please contact your instructor${course!.instructors.length > 1 ? "s" : ""} if you need an extension` :
-            `Disabled`
+        !assignment ? undefined :
+        submitting ? `Currently uploading submission` :
+        !assignment.isAvailable ? `Assignment is not available for you to work on yet` :
+        assignment.isClosed ?
+            `Past due. Please contact your instructor${course!.instructors.length > 1 ? "s" : ""} if you need an extension` :
+        summaryText === "" ? `Please enter a summary for the submission` : undefined
     ) : undefined
     
     const submitAssignment = async () => {

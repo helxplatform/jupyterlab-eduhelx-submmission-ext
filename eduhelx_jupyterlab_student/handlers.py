@@ -13,7 +13,8 @@ from eduhelx_utils.git import (
     InvalidGitRepositoryException,
     clone_repository,
     get_tail_commit_id, get_repo_name, add_remote,
-    stage_files, commit, push, get_commit_info
+    stage_files, commit, push, get_commit_info,
+    get_modified_paths
 )
 from eduhelx_utils.api import Api
 from .student_repo import StudentClassRepo, NotStudentClassRepositoryException
@@ -145,7 +146,7 @@ class AssignmentsHandler(BaseHandler):
 
         value = {
             "current_assignment": None,
-            "assignments": None
+            "assignments": None,
         }
 
         try:
@@ -176,6 +177,14 @@ class AssignmentsHandler(BaseHandler):
             for submission in submissions:
                 submission["commit"] = get_commit_info(submission["commit_id"], path=student_repo.repo_root)
             current_assignment["submissions"] = submissions
+            # current_assignment["staged_changes"] = [
+            #     file for file in
+            #     get_modified_paths(path=student_repo.repo_root)
+            #     if file["path"].lower().startswith(st)
+            # ]
+            # print(12341234124312)
+            # print(student_repo.repo_root)
+            # print(get_modified_paths(path=student_repo.repo_root)[0]["path"])
 
             value["current_assignment"] = current_assignment
             self.finish(json.dumps(value))

@@ -5,6 +5,7 @@ import { NoAssignmentWarning } from '../no-assignment-warning'
 import { AssignmentInfo } from '../assignment-info'
 import { AssignmentSubmissions } from '../assignment-submissions'
 import { AssignmentSubmitForm } from '../assignment-submit-form'
+import { AssignmentStagedChanges } from '../assignment-staged-changes'
 import { useAssignment } from '../../../contexts'
 
 export const AssignmentContent = () => {
@@ -36,6 +37,7 @@ export const AssignmentContent = () => {
                 ) : (
                     <div className={ assignmentContainerClass }>
                         <AssignmentInfo />
+                        <AssignmentStagedChanges />
                         <AssignmentSubmissions style={{ flexGrow: 1 }} />
                         <AssignmentSubmitForm />
                     </div>

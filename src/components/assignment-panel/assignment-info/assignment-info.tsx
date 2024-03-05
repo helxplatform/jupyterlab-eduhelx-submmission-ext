@@ -42,7 +42,7 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                 backgroundColor = "var(--jp-success-color1)"
                 text = (
                     <span>
-                        Submitted { new DateFormat(assignment.activeSubmission.submissionTime).toRelativeDatetime() } ago
+                        Submitted { new DateFormat(assignment.activeSubmission.submissionTime).toRelativeDatetimeNoArticle() } ago
                     </span>
                 )
                 tooltip = `You submitted this assignment before it closed. Please contact your instructor${ course.instructors.length > 1 ? "s" : "" } if you need to resubmit`
