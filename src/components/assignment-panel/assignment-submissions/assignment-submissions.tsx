@@ -36,7 +36,7 @@ export const AssignmentSubmissions = ({ ...props }: AssignmentSubmissionsProps) 
     )
     return (
         <div className={ assignmentSubmissionsContainerClass } { ...props }>
-            <TextDivider innerStyle={{ fontSize: 'var(--jp-ui-font-size2)' }} style={{ padding: '0 12px' }}>Submissions</TextDivider>
+            {/* <TextDivider innerStyle={{ fontSize: 'var(--jp-ui-font-size2)' }} style={{ padding: '0 12px' }}>Submissions</TextDivider> */}
             <div className={ assignmentsListClass }>
                 { submissionSource!.map((submission, i) => (
                     <ExpansionPanel key={ submission.id } square>

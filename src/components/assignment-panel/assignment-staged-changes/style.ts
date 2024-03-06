@@ -2,7 +2,7 @@ import { style } from 'typestyle'
 
 export const assignmentStagedChangesClass = style({
     fontSize: 'var(--jp-ui-font-size1)',
-    color: 'var(--jp-ui-font-color2)',
+    color: 'var(--jp-ui-font-color0)',
     display: 'flex',
     flexDirection: 'column',
     padding: '0 12px'
@@ -44,5 +44,26 @@ export const assignmentStagedChangesFolderIconClass = (style as any)({
         fill: "rgba(0, 0, 0, 0) !important",
         stroke: "var(--jp-inverse-layout-color3)",
         strokeWidth: "2.5px"
+    }
+})
+
+export const showMoreBtnClass = (style as any)({
+    fontSize: "var(--jp-ui-font-size1)",
+    color: "#1890ff",
+    background: "transparent",
+    borderColor: "transparent",
+    boxShadow: "none",
+    cursor: "pointer",
+    display: "inline-block",
+    fontWeight: 400,
+    position: "relative",
+    textAlign: "center",
+    touchAction: "manipulation",
+    userSelect: "none",
+    whiteSpace: "nowrap",
+    padding: 0,
+
+    "& > span": {
+        display: "inline-block"
     }
 })

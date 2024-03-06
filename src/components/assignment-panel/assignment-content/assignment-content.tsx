@@ -7,6 +7,7 @@ import { AssignmentSubmissions } from '../assignment-submissions'
 import { AssignmentSubmitForm } from '../assignment-submit-form'
 import { AssignmentStagedChanges } from '../assignment-staged-changes'
 import { useAssignment } from '../../../contexts'
+import { Tabs } from '../../tabs'
 
 export const AssignmentContent = () => {
     const { loading, path, assignment, student, assignments } = useAssignment()!
@@ -37,8 +38,25 @@ export const AssignmentContent = () => {
                 ) : (
                     <div className={ assignmentContainerClass }>
                         <AssignmentInfo />
-                        <AssignmentStagedChanges />
-                        <AssignmentSubmissions style={{ flexGrow: 1 }} />
+                        <Tabs
+                            tabs={[
+                                {
+                                    key: 0,
+                                    label: "Unsubmitted changes",
+                                    content: <AssignmentStagedChanges style={{ maxHeight: 140, overflow: "auto" }} />,
+                                    containerProps: { style: { width: "100%" } }
+                                },
+                                {
+                                    key: 1,
+                                    label: "Submissions",
+                                    content: <AssignmentSubmissions style={{ maxHeight: 140, overflow: "auto" }} />,
+                                    containerProps: { style: { width: "100%" } }
+                                }
+                            ]}
+                            style={{ flexGrow: 1 }}
+                        />
+                        {/* <AssignmentStagedChanges />
+                        <AssignmentSubmissions style={{ flexGrow: 1 }} /> */}
                         <AssignmentSubmitForm />
                     </div>
                 )

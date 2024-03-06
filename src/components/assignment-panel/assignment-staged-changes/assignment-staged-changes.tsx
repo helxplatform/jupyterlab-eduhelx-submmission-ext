@@ -1,17 +1,17 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { folderIcon, fileIcon } from '@jupyterlab/ui-components'
-import { assignmentStagedChangesClass, assignmentStagedChangesFolderIconClass, largeBulletClass, modifiedTypeBadgeClass, stagedChangeListItemClass, stagedChangesListClass } from './style'
+import { assignmentStagedChangesClass, assignmentStagedChangesFolderIconClass, largeBulletClass, modifiedTypeBadgeClass, showMoreBtnClass, stagedChangeListItemClass, stagedChangesListClass } from './style'
 import { TextDivider } from '../../text-divider'
 import { useAssignment } from '../../../contexts'
 import { IStagedChange } from '../../../api/staged-change'
 
-const SHOW_MORE_CUTOFF = 4
+const SHOW_MORE_CUTOFF = 8
 
 interface ModifiedTypeBadgeProps {
     modificationType: IStagedChange["modificationType"]
 }
 
-interface AssignmentStagedChangesProps {
+interface AssignmentStagedChangesProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 const ModifiedTypeBadge = ({ modificationType }: ModifiedTypeBadgeProps) => {
@@ -58,7 +58,7 @@ const ModifiedTypeBadge = ({ modificationType }: ModifiedTypeBadgeProps) => {
     )
 }
 
-export const AssignmentStagedChanges = ({ }: AssignmentStagedChangesProps) => {
+export const AssignmentStagedChanges = ({ ...props }: AssignmentStagedChangesProps) => {
     const { assignment } = useAssignment()!
     const [showMore, setShowMore] = useState<boolean>(false)
 
@@ -91,15 +91,21 @@ export const AssignmentStagedChanges = ({ }: AssignmentStagedChangesProps) => {
                 const bIdx = unknownTypeOrder.indexOf(b.modificationType)
                 return aIdx - bIdx
             }
-        }).slice(0, showMore ? undefined : SHOW_MORE_CUTOFF)
+        })
     }, [assignment?.stagedChanges, showMore])
 
+    const hideShowMoreButton = useMemo(() => !showMore && stagedChangesSource.length <= SHOW_MORE_CUTOFF, [showMore, stagedChangesSource])
+
+    useEffect(() => {
+        if (stagedChangesSource.length <= SHOW_MORE_CUTOFF) setShowMore(false)
+    }, [stagedChangesSource])
+
     return (
-        <div className={ assignmentStagedChangesClass }>
-            <TextDivider innerStyle={{ fontSize: 'var(--jp-ui-font-size2)' }} style={{ marginBottom: 4 }}>Unsubmitted changes</TextDivider>
+        <div className={ assignmentStagedChangesClass } { ...props }>
+            {/* <TextDivider innerStyle={{ fontSize: 'var(--jp-ui-font-size2)' }} style={{ marginBottom: 4 }}>Unsubmitted changes</TextDivider> */}
             <div className={ stagedChangesListClass }>
             {
-                stagedChangesSource.map((change) => (
+                stagedChangesSource.slice(0, showMore ? undefined : SHOW_MORE_CUTOFF).map((change) => (
                     <div className={ stagedChangeListItemClass }>
                         <div style={{ display: "flex", alignItems: "center" }}>
                             { change.type === "directory" ? (
@@ -120,6 +126,15 @@ export const AssignmentStagedChanges = ({ }: AssignmentStagedChangesProps) => {
                     </div>
                 ))
             }
+            { assignment && !hideShowMoreButton && (
+                <button
+                    className={ showMoreBtnClass }
+                    onClick={ () => setShowMore(!showMore) }
+                    style={{ marginTop: 2 }}
+                >
+                    { showMore ? "Show less" : `Show ${ stagedChangesSource.length - SHOW_MORE_CUTOFF  } more` }
+                </button>
+            ) }
             </div>
         </div>
     )
