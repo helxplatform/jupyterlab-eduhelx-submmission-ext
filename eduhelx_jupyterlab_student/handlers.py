@@ -167,6 +167,7 @@ class AssignmentsHandler(BaseHandler):
                 cwd
             )
             # The cwd is the root in the frontend, so treat the path as such.
+            # NOTE: IMPORTANT: this field is NOT absolute on the server. It's only the absolute path for the webapp.
             assignment["absolute_directory_path"] = os.path.join("/", rel_assignment_path)
         value["assignments"] = assignments
 
@@ -177,16 +178,19 @@ class AssignmentsHandler(BaseHandler):
             for submission in submissions:
                 submission["commit"] = get_commit_info(submission["commit_id"], path=student_repo.repo_root)
             current_assignment["submissions"] = submissions
-            current_assignment["staged_changes"] = [
-                file for file in
-                get_modified_paths(path=student_repo.repo_root)
-                if os.path.commonpath([
-                    rel_assignment_path,
-                    os.path.relpath(os.path.join(student_repo.repo_root, file["path"]))
-                ]) == rel_assignment_path
-            ]
-            # print(rel_assignment_path, os.path.relpath(student_repo.repo_root + get_modified_paths(path=student_repo.repo_root)[0]["path"], cwd))
-
+            current_assignment["staged_changes"] = []
+            for modified_path in get_modified_paths(True, path=student_repo.repo_root):
+                full_modified_path = Path(student_repo.repo_root) / modified_path["path"]
+                abs_assn_path = Path(student_repo.repo_root) / assignment["directory_path"]
+                try:
+                    path_relative_to_assn = full_modified_path.relative_to(abs_assn_path)
+                    modified_path["path_from_repo"] = modified_path["path"]
+                    modified_path["path_from_assn"] = str(path_relative_to_assn)
+                    current_assignment["staged_changes"].append(modified_path)
+                except ValueError:
+                    # This path is not part of the current assignment directory
+                    pass
+            
             value["current_assignment"] = current_assignment
             self.finish(json.dumps(value))
         else:
