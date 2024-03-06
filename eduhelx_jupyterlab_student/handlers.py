@@ -179,7 +179,7 @@ class AssignmentsHandler(BaseHandler):
                 submission["commit"] = get_commit_info(submission["commit_id"], path=student_repo.repo_root)
             current_assignment["submissions"] = submissions
             current_assignment["staged_changes"] = []
-            for modified_path in get_modified_paths(True, path=student_repo.repo_root):
+            for modified_path in get_modified_paths(path=student_repo.repo_root):
                 full_modified_path = Path(student_repo.repo_root) / modified_path["path"]
                 abs_assn_path = Path(student_repo.repo_root) / assignment["directory_path"]
                 try:

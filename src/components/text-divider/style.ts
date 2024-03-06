@@ -6,6 +6,7 @@ export const textDividerContainerClass = (style as any)({
     color: 'var(--jp-ui-font-color0)',
     fontWeight: 500,
     textAlign: 'center',
+    whiteSpace: 'nowrap',
 
     '&::before, &::after': {
         content: '""',

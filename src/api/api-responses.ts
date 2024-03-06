@@ -32,7 +32,8 @@ export interface StudentResponse extends UserResponse {
 }
 
 export interface StagedChangeResponse {
-    path: string
+    path_from_repo: string
+    path_from_assn: string
     modification_type: string
     type: "file" | "directory"
 }
