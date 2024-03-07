@@ -19,7 +19,7 @@ const ModifiedTypeBadge = ({ modificationType }: ModifiedTypeBadgeProps) => {
         switch (modificationType) {
             case "??": {
                 return [
-                    "+",
+                    <span style={{ fontWeight: 500 }}>+</span>,
                     "Added (untracked)",
                     "var(--md-green-500)"
                 ]
@@ -35,7 +35,7 @@ const ModifiedTypeBadge = ({ modificationType }: ModifiedTypeBadgeProps) => {
                 return [
                     // Could also use a minus and boost its font-size to like 18px and make its line-height to 1
                     // but its too small at normal font size
-                    "D",
+                    <span style={{ fontWeight: 500}}>D</span>,
                     "Deleted",
                     "var(--md-red-500)"
                 ]
@@ -76,6 +76,26 @@ export const AssignmentStagedChanges = ({ ...props }: AssignmentStagedChangesPro
         if (stagedChangesSource.length <= SHOW_MORE_CUTOFF) setShowMore(false)
     }, [stagedChangesSource])
 
+    if (stagedChangesSource.length === 0) return (
+        <div className={ assignmentStagedChangesClass } { ...props }>
+            <div style={{
+                color: "var(--jp-content-font-color2)",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                textAlign: "center",
+                padding: "8px 12px",
+                paddingTop: 4
+            }}>
+                <h3 style={{ fontSize: 15, marginBottom: 12, fontWeight: 500 }}>
+                    No Changes
+                </h3>
+                <p style={{ fontSize: 13, marginTop: 0 }}>
+                    Files you've changed since your last submission will appear here.
+                </p>
+            </div>
+        </div>
+    )
     return (
         <div className={ assignmentStagedChangesClass } { ...props }>
             {/* <TextDivider innerStyle={{ fontSize: 'var(--jp-ui-font-size2)' }} style={{ marginBottom: 4 }}>Unsubmitted changes</TextDivider> */}

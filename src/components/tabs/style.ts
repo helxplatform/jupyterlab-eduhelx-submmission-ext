@@ -7,13 +7,16 @@ export const tabsClass = style({
 
 export const tabsHeaderClass = style({
     display: 'flex',
-    alignItems: 'center',
+    alignItems: 'stretch',
     color: 'var(--jp-ui-font-color0)',
     position: 'relative',
     padding: 2
 })
 
 export const tabsHeaderTabClass = (style as any)({
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
     fontSize: 15,
     fontWeight: 500,
     padding: '8px 4px',
