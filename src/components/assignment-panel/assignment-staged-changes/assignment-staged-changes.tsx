@@ -5,7 +5,7 @@ import { TextDivider } from '../../text-divider'
 import { useAssignment } from '../../../contexts'
 import { IStagedChange } from '../../../api/staged-change'
 
-const SHOW_MORE_CUTOFF = 8
+const SHOW_MORE_CUTOFF = Infinity
 
 interface ModifiedTypeBadgeProps {
     modificationType: IStagedChange["modificationType"]
@@ -33,7 +33,9 @@ const ModifiedTypeBadge = ({ modificationType }: ModifiedTypeBadgeProps) => {
             }
             case "D": {
                 return [
-                    "-",
+                    // Could also use a minus and boost its font-size to like 18px and make its line-height to 1
+                    // but its too small at normal font size
+                    "D",
                     "Deleted",
                     "var(--md-red-500)"
                 ]
@@ -46,7 +48,8 @@ const ModifiedTypeBadge = ({ modificationType }: ModifiedTypeBadgeProps) => {
                 ]
             }
         }
-    }, [])
+    }, [modificationType])
+
     return (
         <div
             className={ modifiedTypeBadgeClass }
@@ -64,34 +67,7 @@ export const AssignmentStagedChanges = ({ ...props }: AssignmentStagedChangesPro
 
     const stagedChangesSource = useMemo<IStagedChange[]>(() => {
         if (!assignment) return []
-        const unknownTypeOrder: string[] = []
-        // Sort directories first, then files. Sort these internally by modification type
-        return assignment.stagedChanges.sort((a, b) => {
-            // Sort directories preferentially
-            if (a.type !== b.type) {
-                return a.type === "directory" ? -1 : 1
-            }
-            const modificationOrder = { "M": 0, "??": 1, "D": 2 } as any
-            const aModificationOrder = modificationOrder[a.modificationType]
-            const bModificationOrder = modificationOrder[b.modificationType]
-            // Both have recognized modificationType
-            if (aModificationOrder !== undefined && bModificationOrder !== undefined) {
-                return aModificationOrder - bModificationOrder
-            } else if (aModificationOrder !== undefined) {
-                // `b` has an unrecognized modificationType
-                return -1
-            } else if (bModificationOrder !== undefined) {
-                // `a` has an unrecognized modificationType
-                return 1
-            } else {
-                // Both have an unrecognized `modificationType`
-                if (!unknownTypeOrder.includes(a.modificationType)) unknownTypeOrder.push(a.modificationType)
-                if (!unknownTypeOrder.includes(b.modificationType)) unknownTypeOrder.push(b.modificationType)
-                const aIdx = unknownTypeOrder.indexOf(a.modificationType)
-                const bIdx = unknownTypeOrder.indexOf(b.modificationType)
-                return aIdx - bIdx
-            }
-        })
+        return assignment.stagedChanges
     }, [assignment?.stagedChanges, showMore])
 
     const hideShowMoreButton = useMemo(() => !showMore && stagedChangesSource.length <= SHOW_MORE_CUTOFF, [showMore, stagedChangesSource])

@@ -43,13 +43,20 @@ export const AssignmentContent = () => {
                                 {
                                     key: 0,
                                     label: "Unsubmitted changes",
-                                    content: <AssignmentStagedChanges style={{ maxHeight: 140, overflow: "auto" }} />,
+                                    content: (
+                                        <AssignmentStagedChanges style={{
+                                            flexGrow: 1,
+                                            height: 0,
+                                            overflow: "auto",
+                                            marginTop: 8
+                                        }} />
+                                    ),
                                     containerProps: { style: { width: "100%" } }
                                 },
                                 {
                                     key: 1,
                                     label: "Submissions",
-                                    content: <AssignmentSubmissions style={{ maxHeight: 140, overflow: "auto" }} />,
+                                    content: <AssignmentSubmissions style={{ flexGrow: 1, height: 0, overflow: "auto" }} />,
                                     containerProps: { style: { width: "100%" } }
                                 }
                             ]}

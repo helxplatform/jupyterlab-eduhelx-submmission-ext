@@ -1,7 +1,8 @@
 import { style } from 'typestyle'
 
 export const tabsClass = style({
-
+    display: "flex",
+    flexDirection: "column"
 })
 
 export const tabsHeaderClass = style({
@@ -9,14 +10,13 @@ export const tabsHeaderClass = style({
     alignItems: 'center',
     color: 'var(--jp-ui-font-color0)',
     position: 'relative',
-    padding: 2,
-    marginBottom: 8
+    padding: 2
 })
 
 export const tabsHeaderTabClass = (style as any)({
     fontSize: 15,
     fontWeight: 500,
-    padding: '8px',
+    padding: '8px 4px',
     borderRadius: 4,
     textAlign: 'center',
     cursor: 'pointer',
