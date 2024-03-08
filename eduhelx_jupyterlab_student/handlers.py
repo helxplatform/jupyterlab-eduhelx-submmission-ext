@@ -162,6 +162,7 @@ class CourseAndStudentHandler(BaseHandler):
 class PollAssignmentsHandler(BaseHandler):
     @tornado.web.authenticated
     async def get(self):
+        current_path: str = self.get_argument("path")
         # If this is the first poll the client has made, the `current_value` argument will not be present.
         # Note: we are not deserializing `current_value`; it is a JSON-serialized string.
         current_value: str | None = None
@@ -170,7 +171,7 @@ class PollAssignmentsHandler(BaseHandler):
 
         start = time.time()
         while (elapsed := time.time() - start) < self.config.LONG_POLLING_TIMEOUT_SECONDS:
-            new_value = await AssignmentsHandler.get_value(self)
+            new_value = await AssignmentsHandler.get_value(self, current_path)
             if new_value != current_value:
                 self.finish(new_value)
                 return
