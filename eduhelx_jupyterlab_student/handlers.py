@@ -5,9 +5,12 @@ import subprocess
 import tempfile
 import shutil
 import tornado
+import time
+import asyncio
 from jupyter_server.base.handlers import APIHandler
 from jupyter_server.utils import url_path_join
 from pathlib import Path
+from collections.abc import Iterable
 from .config import ExtensionConfig
 from eduhelx_utils.git import (
     InvalidGitRepositoryException,
@@ -124,20 +127,59 @@ class CloneStudentRepositoryHandler(BaseHandler):
         
         self.finish(json.dumps(os.path.join("/", frontend_cloned_path)))
 
-class CourseAndStudentHandler(BaseHandler):
+class PollCourseStudentHandler(BaseHandler):
     @tornado.web.authenticated
     async def get(self):
+        # If this is the first poll the client has made, the `current_value` argument will not be present.
+        # Note: we are not deserializing `current_value`; it is a JSON-serialized string.
+        current_value: str | None = None
+        if "current_value" in self.request.arguments:
+            current_value = self.get_argument("current_value")
+
+        start = time.time()
+        while (elapsed := time.time() - start) < self.config.LONG_POLLING_TIMEOUT_SECONDS:
+            new_value = await CourseAndStudentHandler.get_value(self)
+            if new_value != current_value:
+                self.finish(new_value)
+                return
+            asyncio.sleep(self.config.LONG_POLLING_SLEEP_INTERVAL_SECONDS)
+            
+        self.finish(new_value)
+
+class CourseAndStudentHandler(BaseHandler):
+    async def get_value(self):
         student = await self.api.get_my_user()
         course = await self.api.get_course()
-        self.finish(json.dumps({
+        return json.dumps({
             "student": student,
             "course": course
-        }))
-
-class AssignmentsHandler(BaseHandler):
+        })
+    
     @tornado.web.authenticated
     async def get(self):
-        current_path: str = self.get_argument("path")
+        self.finish(await self.get_value())
+
+class PollAssignmentsHandler(BaseHandler):
+    @tornado.web.authenticated
+    async def get(self):
+        # If this is the first poll the client has made, the `current_value` argument will not be present.
+        # Note: we are not deserializing `current_value`; it is a JSON-serialized string.
+        current_value: str | None = None
+        if "current_value" in self.request.arguments:
+            current_value = self.get_argument("current_value")
+
+        start = time.time()
+        while (elapsed := time.time() - start) < self.config.LONG_POLLING_TIMEOUT_SECONDS:
+            new_value = await AssignmentsHandler.get_value(self)
+            if new_value != current_value:
+                self.finish(new_value)
+                return
+            asyncio.sleep(self.config.LONG_POLLING_SLEEP_INTERVAL_SECONDS)
+            
+        self.finish(new_value)
+
+class AssignmentsHandler(BaseHandler):
+    async def get_value(self, current_path: str):
         current_path_abs = os.path.realpath(current_path)
 
         student = await self.api.get_my_user()
@@ -152,8 +194,7 @@ class AssignmentsHandler(BaseHandler):
         try:
             student_repo = StudentClassRepo(course, assignments, current_path_abs)
         except Exception:
-            self.finish(json.dumps(value))
-            return
+            return json.dumps(value)
 
         # Add absolute path to assignment so that the frontend
         # extension knows how to open the assignment without having
@@ -173,28 +214,34 @@ class AssignmentsHandler(BaseHandler):
 
         current_assignment = student_repo.current_assignment
         # The student is in their repo, but we still need to check if they're actually in an assignment directory.
-        if current_assignment is not None:
-            submissions = await self.api.get_my_submissions(current_assignment["id"])
-            for submission in submissions:
-                submission["commit"] = get_commit_info(submission["commit_id"], path=student_repo.repo_root)
-            current_assignment["submissions"] = submissions
-            current_assignment["staged_changes"] = []
-            for modified_path in get_modified_paths(path=student_repo.repo_root):
-                full_modified_path = Path(student_repo.repo_root) / modified_path["path"]
-                abs_assn_path = Path(student_repo.repo_root) / assignment["directory_path"]
-                try:
-                    path_relative_to_assn = full_modified_path.relative_to(abs_assn_path)
-                    modified_path["path_from_repo"] = modified_path["path"]
-                    modified_path["path_from_assn"] = str(path_relative_to_assn)
-                    current_assignment["staged_changes"].append(modified_path)
-                except ValueError:
-                    # This path is not part of the current assignment directory
-                    pass
-            
-            value["current_assignment"] = current_assignment
-            self.finish(json.dumps(value))
-        else:
-            self.finish(json.dumps(value))
+        if current_assignment is None:
+            # If user is not in an assignment, we're done. Just leave current_assignment as None.
+            return json.dumps(value)
+        
+        submissions = await self.api.get_my_submissions(current_assignment["id"])
+        for submission in submissions:
+            submission["commit"] = get_commit_info(submission["commit_id"], path=student_repo.repo_root)
+        current_assignment["submissions"] = submissions
+        current_assignment["staged_changes"] = []
+        for modified_path in get_modified_paths(path=student_repo.repo_root):
+            full_modified_path = Path(student_repo.repo_root) / modified_path["path"]
+            abs_assn_path = Path(student_repo.repo_root) / assignment["directory_path"]
+            try:
+                path_relative_to_assn = full_modified_path.relative_to(abs_assn_path)
+                modified_path["path_from_repo"] = modified_path["path"]
+                modified_path["path_from_assn"] = str(path_relative_to_assn)
+                current_assignment["staged_changes"].append(modified_path)
+            except ValueError:
+                # This path is not part of the current assignment directory
+                pass
+        
+        value["current_assignment"] = current_assignment
+        return json.dumps(value)
+
+    @tornado.web.authenticated
+    async def get(self):
+        current_path: str = self.get_argument("path")
+        self.finish(await self.get_value(current_path))
             
 
 class SubmissionHandler(BaseHandler):
@@ -270,14 +317,17 @@ def setup_handlers(server_app):
     base_url = web_app.settings["base_url"]
     handlers = [
         ("assignments", AssignmentsHandler),
+        (("assignments", "poll"), PollAssignmentsHandler),
         ("course_student", CourseAndStudentHandler),
+        (("course_student", "poll"), PollCourseStudentHandler),
         ("submit_assignment", SubmissionHandler),
         ("clone_student_repository", CloneStudentRepositoryHandler),
         ("settings", SettingsHandler)
     ]
+
     handlers_with_path = [
         (
-            url_path_join(base_url, "eduhelx-jupyterlab-student", uri),
+            url_path_join(base_url, "eduhelx-jupyterlab-student", *(uri if not isinstance(uri, str) else [uri])),
             handler
         ) for (uri, handler) in handlers
     ]
