@@ -30,8 +30,10 @@ export const AssignmentSubmissions = ({ ...props }: AssignmentSubmissionsProps) 
     if (!assignment) return null
     if (assignment.submissions.length === 0) return (
         <div className={ noSubmissionsTextContainerClass }>
-            You haven't made any submissions for this assignment yet.
-            To submit your work, press the "Submit" button at the bottom of the page.
+            <div style={{ marginTop: 12, textAlign: "center" }}>
+                You haven't made any submissions for this assignment yet.
+                To submit your work, press the "Submit" button at the bottom of the page.
+            </div>
         </div>
     )
     return (

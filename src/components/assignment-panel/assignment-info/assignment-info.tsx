@@ -53,7 +53,7 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                 backgroundColor = "var(--jp-error-color1)"
                 text = (
                     <span>
-                        { new DateFormat(assignment.adjustedDueDate!).toRelativeDatetime() } past due
+                        { new DateFormat(assignment.adjustedDueDate!).toRelativeDatetimeNoArticle() } past due
                     </span>
                 )
                 tooltip = `You never submitted this assignment. Please contact your instructor${ course.instructors.length > 1 ? "s" : "" } to request an extension`
