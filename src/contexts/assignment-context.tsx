@@ -1,7 +1,8 @@
 import React, { createContext, useContext, ReactNode, useState, useMemo, useEffect } from 'react'
 import { IChangedArgs } from '@jupyterlab/coreutils'
+import { FileBrowserModel, IDefaultFileBrowser } from '@jupyterlab/filebrowser'
 import { IEduhelxSubmissionModel } from '../tokens'
-import { IAssignment, IStudent, ICurrentAssignment, ICourse } from '../api'
+import { IAssignment, IStudent, ICurrentAssignment, ICourse, getAssignmentsPolled, GetAssignmentsResponse, getStudentAndCoursePolled } from '../api'
 
 interface IAssignmentContext {
     assignments: IAssignment[] | null | undefined
@@ -13,13 +14,13 @@ interface IAssignmentContext {
 }
 
 interface IAssignmentProviderProps {
-    model: IEduhelxSubmissionModel
+    fileBrowser: IDefaultFileBrowser
     children?: ReactNode
 }
 
 export const AssignmentContext = createContext<IAssignmentContext|undefined>(undefined)
 
-export const AssignmentProvider = ({ model, children }: IAssignmentProviderProps) => {
+export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProviderProps) => {
     const [currentPath, setCurrentPath] = useState<string|null>(null)
     const [currentAssignment, setCurrentAssignment] = useState<ICurrentAssignment|null|undefined>(undefined)
     const [assignments, setAssignments] = useState<IAssignment[]|null|undefined>(undefined)
@@ -34,39 +35,72 @@ export const AssignmentProvider = ({ model, children }: IAssignmentProviderProps
     ), [currentAssignment, assignments, student, course])
 
     useEffect(() => {
-        setCurrentPath(model.currentPath)
-        setCurrentAssignment(model.currentAssignment)
-        setAssignments(model.assignments)
-        setStudent(model.student)
-        setCourse(model.course)
-        const onCurrentPathChanged = (model: IEduhelxSubmissionModel, change: IChangedArgs<string|null>) => {
+        setCurrentPath(fileBrowser.model.path)
+
+        const onCurrentPathChanged = (model: FileBrowserModel, change: IChangedArgs<string|null>) => {
             setCurrentPath(change.newValue)
         }
-        const onCurrentAssignmentChanged = (model: IEduhelxSubmissionModel, change: IChangedArgs<ICurrentAssignment|null|undefined>) => {
-            setCurrentAssignment(change.newValue)
-        }
-        const onAssignmentsChanged = (model: IEduhelxSubmissionModel, change: IChangedArgs<IAssignment[]|null|undefined>) => {
-            setAssignments(change.newValue)
-        }
-        const onStudentChanged = (model: IEduhelxSubmissionModel, change: IChangedArgs<IStudent|undefined>) => {
-            setStudent(change.newValue)
-        }
-        const onCourseChanged = (model: IEduhelxSubmissionModel, change: IChangedArgs<ICourse|undefined>) => {
-            setCourse(change.newValue)
-        }
-        model.currentPathChanged.connect(onCurrentPathChanged)
-        model.currentAssignmentChanged.connect(onCurrentAssignmentChanged)
-        model.assignmentsChanged.connect(onAssignmentsChanged)
-        model.studentChanged.connect(onStudentChanged)
-        model.courseChanged.connect(onCourseChanged)
+        fileBrowser.model.pathChanged.connect(onCurrentPathChanged)
         return () => {
-            model.currentPathChanged.disconnect(onCurrentPathChanged)
-            model.currentAssignmentChanged.disconnect(onCurrentAssignmentChanged)
-            model.assignmentsChanged.disconnect(onAssignmentsChanged)
-            model.studentChanged.disconnect(onStudentChanged)
-            model.courseChanged.disconnect(onCourseChanged)
+            fileBrowser.model.pathChanged.disconnect(onCurrentPathChanged)
         }
-    }, [model])
+    }, [fileBrowser])
+
+    useEffect(() => {
+        setAssignments(undefined)
+        setCurrentAssignment(undefined)
+        
+        let cancelled = false
+        void async function poll(currentValue?: object) {
+            let newValue = undefined
+            if (currentPath !== null) {
+                try {
+                    newValue = await getAssignmentsPolled(currentPath, currentValue)
+                } catch (e: any) {
+                    console.error(e)
+                }
+            }
+            if (cancelled) return
+            if (newValue !== undefined) {
+                setAssignments(newValue.assignments)
+                setCurrentAssignment(newValue.currentAssignment)
+            } else {
+                setAssignments(undefined)
+                setCurrentAssignment(undefined)
+            }
+            poll(newValue)
+        }()
+        return () => {
+            cancelled = true
+        }
+    }, [currentPath])
+
+    useEffect(() => {
+        setCourse(undefined)
+        setStudent(undefined)
+
+        let cancelled = false
+        void async function poll(currentValue?: object) {
+            let newValue = undefined
+            try {
+                newValue = await getStudentAndCoursePolled(currentValue)
+            } catch (e: any) {
+                console.error(e)
+            }
+            if (cancelled) return
+            if (newValue !== undefined) {
+                setCourse(newValue.course)
+                setStudent(newValue.student)
+            } else {
+                setCourse(undefined)
+                setStudent(undefined)
+            }
+            poll(newValue)
+        }()
+        return () => {
+            cancelled = true
+        }
+    }, [])
 
     return (
         <AssignmentContext.Provider value={{

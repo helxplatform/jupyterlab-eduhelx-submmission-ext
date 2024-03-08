@@ -37,12 +37,41 @@ export async function getStudentAndCourse(): Promise<GetStudentAndCourseResponse
     }
 }
 
+export async function getStudentAndCoursePolled(currentValue?: object): Promise<GetStudentAndCourseResponse> {
+    const queryString = qs.stringify({ current_value: JSON.stringify(currentValue) })
+    const { student, course } = await requestAPI<{
+        student: StudentResponse
+        course: CourseResponse
+    }>(`/course_student/poll?${ queryString }`, {
+        method: 'GET'
+    })
+    return {
+        student: Student.fromResponse(student),
+        course: Course.fromResponse(course)
+    }
+}
+
 
 export async function getAssignments(path: string): Promise<GetAssignmentsResponse> {
+    const queryString = qs.stringify({ path })
     const { assignments, current_assignment } = await requestAPI<{
         assignments: AssignmentResponse[] | null
         current_assignment: AssignmentResponse | null
-    }>(`/assignments?${ qs.stringify({ path }) }`, {
+    }>(`/assignments?${ queryString }`, {
+        method: 'GET'
+    })
+    return {
+        assignments: assignments ? assignments.map((data) => Assignment.fromResponse(data)) : null,
+        currentAssignment: current_assignment ? Assignment.fromResponse(current_assignment) as ICurrentAssignment : null
+    }
+}
+
+export async function getAssignmentsPolled(path: string, currentValue?: object): Promise<GetAssignmentsResponse> {
+    const queryString = qs.stringify({ path, current_value: JSON.stringify(currentValue) })
+    const { assignments, current_assignment } = await requestAPI<{
+        assignments: AssignmentResponse[] | null
+        current_assignment: AssignmentResponse | null
+    }>(`/assignments/poll?${ queryString }`, {
         method: 'GET'
     })
     return {
