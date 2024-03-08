@@ -37,11 +37,6 @@ export class DateFormat implements IDateFormat {
         return this._moment.format("MMM DD [at] h[:]mm A")
     }
 
-    foobar(test?: string) {
-        if (test === undefined) test = "1234"
-        return test.charAt(1)
-    }
-
     toRelativeDatetime(
         referenceTime?: Date,
         postprocess?: (humanizedDuration: string) => string
