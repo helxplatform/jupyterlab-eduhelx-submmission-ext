@@ -53,11 +53,13 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
         let cancelled = false
         void async function poll(currentValue?: object) {
             let newValue = undefined
+            let error = false
             if (currentPath !== null) {
                 try {
                     newValue = await getAssignmentsPolled(currentPath, currentValue)
                 } catch (e: any) {
                     console.error(e)
+                    error = true
                 }
             }
             if (cancelled) return
@@ -68,7 +70,10 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
                 setAssignments(undefined)
                 setCurrentAssignment(undefined)
             }
-            poll(newValue)
+            // This endpoint should never return an error, which means it will likely return it immediately.
+            // If we don't delay our next request upon erroring, it may immediately fail and rerequest, which is bad.
+            if (!error) poll(newValue)
+            else setTimeout(() => poll(newValue), 1000)
         }()
         return () => {
             cancelled = true
@@ -82,10 +87,12 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
         let cancelled = false
         void async function poll(currentValue?: object) {
             let newValue = undefined
+            let error = false
             try {
                 newValue = await getStudentAndCoursePolled(currentValue)
             } catch (e: any) {
                 console.error(e)
+                error = true
             }
             if (cancelled) return
             if (newValue !== undefined) {
@@ -95,7 +102,10 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
                 setCourse(undefined)
                 setStudent(undefined)
             }
-            poll(newValue)
+            // This endpoint should never return an error, which means it will likely return it immediately.
+            // If we don't delay our next request upon erroring, it may immediately fail and rerequest, which is bad.
+            if (!error) poll(newValue)
+            else setTimeout(() => poll(newValue), 1000)
         }()
         return () => {
             cancelled = true
