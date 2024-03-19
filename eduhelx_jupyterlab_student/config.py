@@ -18,6 +18,10 @@ class Config:
     # How far ahead of time the API should refresh the access token
     # (proactively refreshing using a buffer deals with issues such as latency and clock sync)
     JWT_REFRESH_LEEWAY_SECONDS: int = 60
+    # How long to keep long-polling connections alive before dropping the client.
+    LONG_POLLING_TIMEOUT_SECONDS: int = 60
+    # For polling that depends on unobservable data, how long to sleep in between data fetches.
+    LONG_POLLING_SLEEP_INTERVAL_SECONDS: int = 5
 
     """
     Map environment variables to class fields according to these rules:

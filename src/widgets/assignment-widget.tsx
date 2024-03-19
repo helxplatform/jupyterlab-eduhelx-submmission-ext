@@ -1,5 +1,6 @@
 import React from 'react'
 import { ReactWidget } from '@jupyterlab/apputils'
+import { IDefaultFileBrowser } from '@jupyterlab/filebrowser'
 import { CommandRegistry } from '@lumino/commands'
 import { StylesProvider } from '@material-ui/core/styles'
 import { AssignmentPanel } from '../components'
@@ -8,18 +9,18 @@ import { AssignmentProvider, CommandsProvider, SettingsProvider, BackdropProvide
 import { IEduhelxSubmissionModel } from '../tokens'
 
 export class AssignmentWidget extends ReactWidget {
-    private model: IEduhelxSubmissionModel
+    private fileBrowser: IDefaultFileBrowser
     private commands: CommandRegistry
     private serverSettings: IServerSettings
 
     constructor(
-        model: IEduhelxSubmissionModel,
+        fileBrowser: IDefaultFileBrowser,
         commands: CommandRegistry,
         serverSettings: IServerSettings
     ) {
         super()
-        
-        this.model = model
+
+        this.fileBrowser = fileBrowser
         this.commands = commands
         this.serverSettings = serverSettings
     }
@@ -31,7 +32,7 @@ export class AssignmentWidget extends ReactWidget {
                     <SettingsProvider settings={ this.serverSettings }>
                         <BackdropProvider>
                             <SnackbarProvider>
-                                <AssignmentProvider model={ this.model }>
+                                <AssignmentProvider fileBrowser={ this.fileBrowser }>
                                     <AssignmentPanel />
                                 </AssignmentProvider>
                             </SnackbarProvider>

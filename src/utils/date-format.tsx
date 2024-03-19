@@ -37,9 +37,30 @@ export class DateFormat implements IDateFormat {
         return this._moment.format("MMM DD [at] h[:]mm A")
     }
 
-    toRelativeDatetime(referenceTime?: Date): ReactNode | string {
-        const getDuration = (date: Date) => duration(this._moment.diff(moment(date))).humanize()
+    toRelativeDatetime(
+        referenceTime?: Date,
+        postprocess?: (humanizedDuration: string) => string
+    ): ReactNode | string {
+        if (!postprocess) postprocess = (s: string) => s
+        // For whatever reason TSC type-narrowing is completely broken here and still considers postprocess possibly undefined...
+        const getDuration = (date: Date) => postprocess!(duration(this._moment.diff(moment(date))).humanize())
+        
+        // const getDuration = (date: Date) => postprocess(duration(this._moment.diff(moment(date))).humanize())
         if (referenceTime) return getDuration(referenceTime)
         return <ReactiveTime getTime={ () => getDuration(new Date()) } />
+    }
+
+    toRelativeDatetimeNoArticle(
+        referenceTime?: Date,
+        postprocess?: (humanizedDuration: string) => string
+    ): ReactNode | string {
+        if (!postprocess) postprocess = (s: string) => s
+        const removeArticle = (s: string) => {
+            if (s.startsWith("a ")) return "1 " + s.substring(2)
+            if (s.startsWith("an ")) return "1 " + s.substring(3)
+            return s
+        }
+        // For whatever reason TSC type-narrowing is completely broken here and still considers postprocess possibly undefined...
+        return this.toRelativeDatetime(referenceTime, (s) => postprocess!(removeArticle(s)))
     }
 }

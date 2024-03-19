@@ -15,7 +15,7 @@ interface AssignmentSubmitFormProps {
 }
 
 export const AssignmentSubmitForm = ({ }: AssignmentSubmitFormProps) => {
-    const { assignment, path } = useAssignment()!
+    const { assignment, course, path } = useAssignment()!
     const backdrop = useBackdrop()!
     const snackbar = useSnackbar()!
 
@@ -24,6 +24,14 @@ export const AssignmentSubmitForm = ({ }: AssignmentSubmitFormProps) => {
     const [submitting, setSubmitting] = useState<boolean>(false)
 
     const disabled = submitting || summaryText === "" || !assignment?.isAvailable || assignment?.isClosed
+    const disabledReason = disabled ? (
+        !assignment ? undefined :
+        submitting ? `Currently uploading submission` :
+        !assignment.isAvailable ? `Assignment is not available for you to work on yet` :
+        assignment.isClosed ?
+            `Past due. Please contact your instructor${course!.instructors.length > 1 ? "s" : ""} if you need an extension` :
+        summaryText === "" ? `Please enter a summary for the submission` : undefined
+    ) : undefined
     
     const submitAssignment = async () => {
         if (!path) {
@@ -103,6 +111,7 @@ export const AssignmentSubmitForm = ({ }: AssignmentSubmitFormProps) => {
             />
             <AssignmentSubmitButton
                 onClick={ submitAssignment }
+                title={ disabledReason }
                 disabled={ disabled }
             />
         </div>
