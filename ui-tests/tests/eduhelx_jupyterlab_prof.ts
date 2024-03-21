@@ -16,6 +16,6 @@ test('should emit an activation console message', async ({ page }) => {
   await page.goto();
 
   expect(
-    logs.filter(s => s === 'JupyterLab extension eduhelx_jupyterlab_student is activated!')
+    logs.filter(s => s === 'JupyterLab extension eduhelx_jupyterlab_prof is activated!')
   ).toHaveLength(1);
 });

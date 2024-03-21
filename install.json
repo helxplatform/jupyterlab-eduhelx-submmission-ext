@@ -1,5 +1,5 @@
 {
   "packageManager": "python",
-  "packageName": "eduhelx_jupyterlab_student",
-  "uninstallInstructions": "Use your Python package manager (pip, conda, etc.) to uninstall the package eduhelx_jupyterlab_student"
+  "packageName": "eduhelx_jupyterlab_prof",
+  "uninstallInstructions": "Use your Python package manager (pip, conda, etc.) to uninstall the package eduhelx_jupyterlab_prof"
 }

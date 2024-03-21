@@ -328,7 +328,7 @@ def setup_handlers(server_app):
 
     handlers_with_path = [
         (
-            url_path_join(base_url, "eduhelx-jupyterlab-student", *(uri if not isinstance(uri, str) else [uri])),
+            url_path_join(base_url, "eduhelx-jupyterlab-prof", *(uri if not isinstance(uri, str) else [uri])),
             handler
         ) for (uri, handler) in handlers
     ]

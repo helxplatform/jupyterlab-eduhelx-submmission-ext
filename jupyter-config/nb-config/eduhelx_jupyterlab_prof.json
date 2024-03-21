@@ -1,7 +1,7 @@
 {
   "NotebookApp": {
     "nbserver_extensions": {
-      "eduhelx_jupyterlab_student": true
+      "eduhelx_jupyterlab_prof": true
     }
   }
 }
