@@ -16,7 +16,7 @@ export async function requestAPI<T>(
   const settings = ServerConnection.makeSettings()
   const requestUrl = URLExt.join(
     settings.baseUrl,
-    'eduhelx-jupyterlab-student', // API Namespace
+    'eduhelx-jupyterlab-prof', // API Namespace
     endPoint
   )
 

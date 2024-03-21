@@ -1,5 +1,5 @@
 {
-  "name": "eduhelx-jupyterlab-student-ui-tests",
+  "name": "eduhelx-jupyterlab-prof-ui-tests",
   "version": "1.0.0",
   "description": "JLS Extension Integration Tests",
   "private": true,

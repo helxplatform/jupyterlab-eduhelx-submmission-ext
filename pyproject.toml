@@ -3,7 +3,7 @@ requires = ["hatchling==1.10.0", "jupyterlab>=4.0.0,<5", "hatch-nodejs-version"]
 build-backend = "hatchling.build"
 
 [project]
-name = "eduhelx_jupyterlab_student"
+name = "eduhelx_jupyterlab_prof"
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.8"
@@ -49,26 +49,26 @@ allow-direct-references = true
 fields = ["description", "authors", "urls"]
 
 [tool.hatch.build.targets.sdist]
-artifacts = ["eduhelx_jupyterlab_student/labextension"]
+artifacts = ["eduhelx_jupyterlab_prof/labextension"]
 exclude = [".github", "binder"]
 
 [tool.hatch.build.targets.wheel.shared-data]
-"eduhelx_jupyterlab_student/labextension" = "share/jupyter/labextensions/eduhelx_jupyterlab_student"
-"install.json" = "share/jupyter/labextensions/eduhelx_jupyterlab_student/install.json"
+"eduhelx_jupyterlab_prof/labextension" = "share/jupyter/labextensions/eduhelx_jupyterlab_prof"
+"install.json" = "share/jupyter/labextensions/eduhelx_jupyterlab_prof/install.json"
 "jupyter-config/server-config" = "etc/jupyter/jupyter_server_config.d"
 "jupyter-config/nb-config" = "etc/jupyter/jupyter_notebook_config.d"
 
 [tool.hatch.build.hooks.version]
-path = "eduhelx_jupyterlab_student/_version.py"
+path = "eduhelx_jupyterlab_prof/_version.py"
 
 [tool.hatch.build.hooks.jupyter-builder]
 dependencies = ["hatch-jupyter-builder>=0.5"]
 build-function = "hatch_jupyter_builder.npm_builder"
 ensured-targets = [
-    "eduhelx_jupyterlab_student/labextension/static/style.js",
-    "eduhelx_jupyterlab_student/labextension/package.json",
+    "eduhelx_jupyterlab_prof/labextension/static/style.js",
+    "eduhelx_jupyterlab_prof/labextension/package.json",
 ]
-skip-if-exists = ["eduhelx_jupyterlab_student/labextension/static/style.js"]
+skip-if-exists = ["eduhelx_jupyterlab_prof/labextension/static/style.js"]
 
 [tool.hatch.build.hooks.jupyter-builder.build-kwargs]
 build_cmd = "build:prod"
@@ -78,7 +78,7 @@ npm = ["jlpm"]
 build_cmd = "install:extension"
 npm = ["jlpm"]
 source_dir = "src"
-build_dir = "eduhelx_jupyterlab_student/labextension"
+build_dir = "eduhelx_jupyterlab_prof/labextension"
 
 [tool.jupyter-releaser.options]
 version_cmd = "hatch version"
