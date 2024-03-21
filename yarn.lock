@@ -6169,7 +6169,7 @@ jss@^10.5.1, jss@10.10.0:
     object.assign "^4.1.4"
     object.values "^1.1.6"
 
-"eduhelx-jupyterlab-prof-ui-tests@file:/Users/groupe/helxplatform/eduhelx/jupyterlab-eduhelx-submission-ext/ui-tests":
+"eduhelx-jupyterlab-prof-ui-tests@file:/Users/groupe/helxplatform/eduhelx/eduhelx-jupyterlab-prof-ext/ui-tests":
   version "1.0.0"
   resolved "file:ui-tests"
 

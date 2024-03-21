@@ -4,7 +4,7 @@ import { IDisposable } from '@lumino/disposable'
 import { ISignal } from '@lumino/signaling'
 import { IAssignment, IStudent, ICurrentAssignment, ICourse } from './api'
 
-export const IEduhelxSubmissionModel = new Token<IEduhelxSubmissionModel>("jupyter.extensions.eduhelx_submission_plugin")
+export const IEduhelxSubmissionModel = new Token<IEduhelxSubmissionModel>("jupyter.extensions.eduhelx_jupyterlab_prof")
 
 export interface IEduhelxSubmissionModel extends IDisposable {
     currentPath: string | null
