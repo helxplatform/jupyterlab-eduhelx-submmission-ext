@@ -29,10 +29,10 @@ export const AssignmentPanel = ({}: IAssignmentPanelProps) => {
     /** On page load, we want to `cd` to the repo root. */
     useEffect(() => {
         console.log("CDing to repo root", repoRoot)
-        setTimeout(() => commands.execute('filebrowser:go-to-path', {
+        commands.execute('filebrowser:go-to-path', {
             path: repoRoot,
             dontShowBrowser: true
-        }), 1000)
+        })
     }, [repoRoot])
     return (
         <div className={ panelWrapperClass }>

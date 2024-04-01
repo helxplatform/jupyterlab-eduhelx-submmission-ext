@@ -33,8 +33,17 @@ export class DateFormat implements IDateFormat {
         this._moment = moment(date)
     }
 
-    toBasicDatetime(): string {
-        return this._moment.format("MMM DD [at] h[:]mm A")
+    get moment(): Moment {
+        return this._moment
+    }
+
+    toBasicDatetime(year: boolean=false, time: boolean=true): string {
+        `MMM DD, 2024`
+        return this._moment.format(`MMM DD${ year ? "," : "" } ${ year ? "YYYY " : "" }${ time ? "[at] h[:]mm A" : "" }`)
+    }
+
+    toNumberDatetime(time: boolean=true) {
+        return this._moment.format(`MM/DD/YYYY ${ time ? "[at] h[:]mm A" : "" }`)
     }
 
     toRelativeDatetime(
