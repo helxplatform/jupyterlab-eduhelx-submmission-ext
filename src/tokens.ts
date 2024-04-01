@@ -2,7 +2,7 @@ import { IChangedArgs } from '@jupyterlab/coreutils'
 import { Token } from '@lumino/coreutils'
 import { IDisposable } from '@lumino/disposable'
 import { ISignal } from '@lumino/signaling'
-import { IAssignment, IStudent, ICurrentAssignment, ICourse } from './api'
+import { IAssignment, IInstructor, ICurrentAssignment, ICourse } from './api'
 
 export const IEduhelxSubmissionModel = new Token<IEduhelxSubmissionModel>("jupyter.extensions.eduhelx_jupyterlab_prof")
 
@@ -16,8 +16,8 @@ export interface IEduhelxSubmissionModel extends IDisposable {
     readonly assignments: IAssignment[] | null | undefined
     readonly assignmentsChanged: ISignal<IEduhelxSubmissionModel, IChangedArgs<IAssignment[] | null | undefined>>
     
-    readonly student: IStudent | undefined
-    readonly studentChanged: ISignal<IEduhelxSubmissionModel, IChangedArgs<IStudent | undefined>>
+    readonly instructor: IInstructor | undefined
+    readonly instructorChanged: ISignal<IEduhelxSubmissionModel, IChangedArgs<IInstructor | undefined>>
 
     readonly course: ICourse | undefined
     readonly courseChanged: ISignal<IEduhelxSubmissionModel, IChangedArgs<ICourse | undefined>>

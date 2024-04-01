@@ -10,7 +10,7 @@ import { useAssignment } from '../../../contexts'
 import { Tabs } from '../../tabs'
 
 export const AssignmentContent = () => {
-    const { loading, path, assignment, student, assignments } = useAssignment()!
+    const { loading, path, assignment, instructor, assignments } = useAssignment()!
 
     /*
     const [showSelectionView, setShowSelectionView] = useState<boolean>(true)

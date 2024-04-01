@@ -2,12 +2,13 @@ import React, { createContext, useContext, ReactNode, useState, useMemo, useEffe
 import { IChangedArgs } from '@jupyterlab/coreutils'
 import { FileBrowserModel, IDefaultFileBrowser } from '@jupyterlab/filebrowser'
 import { IEduhelxSubmissionModel } from '../tokens'
-import { IAssignment, IStudent, ICurrentAssignment, ICourse, getAssignmentsPolled, GetAssignmentsResponse, getStudentAndCoursePolled } from '../api'
+import { IAssignment, IInstructor, ICurrentAssignment, ICourse, getAssignmentsPolled, GetAssignmentsResponse, GetInstructorAndStudentsAndCourseResponse, IStudent, getInstructorAndStudentsAndCoursePolled } from '../api'
 
 interface IAssignmentContext {
     assignments: IAssignment[] | null | undefined
     assignment: ICurrentAssignment | null | undefined
-    student: IStudent | undefined
+    instructor: IInstructor | undefined
+    students: IStudent[] | undefined
     course: ICourse | undefined
     path: string | null
     loading: boolean
@@ -24,15 +25,17 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
     const [currentPath, setCurrentPath] = useState<string|null>(null)
     const [currentAssignment, setCurrentAssignment] = useState<ICurrentAssignment|null|undefined>(undefined)
     const [assignments, setAssignments] = useState<IAssignment[]|null|undefined>(undefined)
-    const [student, setStudent] = useState<IStudent|undefined>(undefined)
+    const [instructor, setInstructor] = useState<IInstructor|undefined>(undefined)
+    const [students, setStudents] = useState<IStudent[]|undefined>(undefined)
     const [course, setCourse] = useState<ICourse|undefined>(undefined)
 
     const loading = useMemo(() => (
         currentAssignment === undefined ||
         assignments === undefined ||
-        student === undefined ||
+        instructor === undefined ||
+        students === undefined ||
         course === undefined
-    ), [currentAssignment, assignments, student, course])
+    ), [currentAssignment, assignments, instructor, students, course])
 
     useEffect(() => {
         setCurrentPath(fileBrowser.model.path)
@@ -51,12 +54,13 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
         setCurrentAssignment(undefined)
         
         let cancelled = false
-        void async function poll(currentValue?: object) {
-            let newValue = undefined
+        void async function poll(currentRawValue?: object) {
+            let newValue: GetAssignmentsResponse | undefined = undefined
+            let newRawValue: any = undefined
             let error = false
             if (currentPath !== null) {
                 try {
-                    newValue = await getAssignmentsPolled(currentPath, currentValue)
+                    ({ data: newValue, rawData: newRawValue } = await getAssignmentsPolled(currentPath, currentRawValue))
                 } catch (e: any) {
                     console.error(e)
                     error = true
@@ -72,8 +76,8 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
             }
             // This endpoint should never return an error, which means it will likely return it immediately.
             // If we don't delay our next request upon erroring, it may immediately fail and rerequest, which is bad.
-            if (!error) poll(newValue)
-            else setTimeout(() => poll(newValue), 1000)
+            if (!error) poll(newRawValue)
+            else setTimeout(() => poll(newRawValue), 1000)
         }()
         return () => {
             cancelled = true
@@ -82,14 +86,16 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
 
     useEffect(() => {
         setCourse(undefined)
-        setStudent(undefined)
+        setInstructor(undefined)
+        setStudents(undefined)
 
         let cancelled = false
-        void async function poll(currentValue?: object) {
-            let newValue = undefined
+        void async function poll(currentRawValue?: object) {
+            let newValue: GetInstructorAndStudentsAndCourseResponse | undefined = undefined
+            let newRawValue: any = undefined
             let error = false
             try {
-                newValue = await getStudentAndCoursePolled(currentValue)
+                ({ data: newValue, rawData: newRawValue } = await getInstructorAndStudentsAndCoursePolled(currentRawValue))
             } catch (e: any) {
                 console.error(e)
                 error = true
@@ -97,15 +103,17 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
             if (cancelled) return
             if (newValue !== undefined) {
                 setCourse(newValue.course)
-                setStudent(newValue.student)
+                setInstructor(newValue.instructor)
+                setStudents(newValue.students)
             } else {
                 setCourse(undefined)
-                setStudent(undefined)
+                setInstructor(undefined)
+                setStudents(undefined)
             }
             // This endpoint should never return an error, which means it will likely return it immediately.
             // If we don't delay our next request upon erroring, it may immediately fail and rerequest, which is bad.
-            if (!error) poll(newValue)
-            else setTimeout(() => poll(newValue), 1000)
+            if (!error) poll(newRawValue)
+            else setTimeout(() => poll(newRawValue), 1000)
         }()
         return () => {
             cancelled = true
@@ -116,7 +124,8 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
         <AssignmentContext.Provider value={{
             assignment: currentAssignment,
             assignments,
-            student,
+            instructor,
+            students,
             course,
             path: currentPath,
             loading

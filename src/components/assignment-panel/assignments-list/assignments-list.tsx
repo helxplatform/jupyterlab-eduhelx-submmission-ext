@@ -59,12 +59,12 @@ const AssignmentListItem = ({ assignment }: AssignmentListItemProps) => {
                             <span>No release date yet</span>
                         ) :
                         assignment.isClosed ? (
-                            <span title={ new DateFormat(assignment.adjustedDueDate!).toBasicDatetime() }>
-                                Closed on { new DateFormat(assignment.adjustedDueDate!).toBasicDatetime() }
+                            <span title={ new DateFormat(assignment.dueDate!).toBasicDatetime() }>
+                                Closed on { new DateFormat(assignment.dueDate!).toBasicDatetime() }
                             </span>
                         ) : assignment.isAvailable ? (
-                            <span title={ new DateFormat(assignment.adjustedDueDate!).toBasicDatetime() }>
-                                Closes in { new DateFormat(assignment.adjustedDueDate!).toRelativeDatetime() }
+                            <span title={ new DateFormat(assignment.dueDate!).toBasicDatetime() }>
+                                Closes in { new DateFormat(assignment.dueDate!).toRelativeDatetime() }
                                 { assignment.isExtended && (
                                     <i>&nbsp;(extended)</i>
                                 ) }
@@ -72,16 +72,17 @@ const AssignmentListItem = ({ assignment }: AssignmentListItemProps) => {
                         ) : (
                             <div style={{ display: 'flex', flexDirection: 'column' }}>
                                 <div
-                                    title={ new DateFormat(assignment.adjustedAvailableDate!).toBasicDatetime() }
+                                    title={ new DateFormat(assignment.availableDate!).toBasicDatetime() }
                                 >
-                                    Opens in { new DateFormat(assignment.adjustedAvailableDate!).toRelativeDatetime() }
+                                    { (console.log(assignment, "foobar", "fix this to work for past dates..."),"foobar") }
+                                    Opens in { new DateFormat(assignment.availableDate!).toRelativeDatetime() }
                                 </div>
                                 <div
-                                    title={ new DateFormat(assignment.adjustedDueDate!).toBasicDatetime() }
+                                    title={ new DateFormat(assignment.dueDate!).toBasicDatetime() }
                                     style={{ marginTop: 4, fontSize: 12, display: 'flex', alignItems: 'center' }}
                                 >
                                     <QueryBuilderOutlined style={{ fontSize: 16 }} />
-                                    &nbsp;Lasts { new DateFormat(assignment.adjustedDueDate!).toRelativeDatetime(assignment.adjustedAvailableDate!) }
+                                    &nbsp;Lasts { new DateFormat(assignment.dueDate!).toRelativeDatetime(assignment.availableDate!) }
                                 </div>
                             </div>
                         )
@@ -115,7 +116,7 @@ const AssignmentsBucket = ({
     const [expanded, setExpanded] = useState<boolean>(defaultExpanded)
 
     const assignmentsSource = useMemo(() => (
-        assignments?.sort((a, b) => (a.adjustedAvailableDate?.getTime() ?? 0) - (b.adjustedAvailableDate?.getTime() ?? 0))
+        assignments?.sort((a, b) => (a.availableDate?.getTime() ?? 0) - (b.availableDate?.getTime() ?? 0))
     ), [assignments])
 
     const isEmpty = useMemo(() => !assignmentsSource || assignmentsSource.length === 0, [assignmentsSource])
@@ -153,30 +154,23 @@ const AssignmentsBucket = ({
 export const AssignmentsList = () => {
     const { assignments } = useAssignment()!
 
-    const upcomingAssignments = useMemo(() => assignments?.filter((assignment) => !assignment.isAvailable), [assignments])
-    const activeAssignments = useMemo(() => assignments?.filter((assignment) => assignment.isAvailable && !assignment.isClosed), [assignments])
-    const pastAssignments = useMemo(() => assignments?.filter((assignment) => assignment.isAvailable && assignment.isClosed), [assignments])
-
+    const publishedAssignments = useMemo(() => assignments?.filter((assignment) => assignment.isCreated), [assignments])
+    const unpublishedAssignments = useMemo(() => assignments?.filter((assignment) => !assignment.isCreated), [assignments])
+    
     return (
         <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', width: 'calc(100% + 22px)' }}>
             <div className={ assignmentsListClass }>
                 <AssignmentsBucket
-                    title={ `Active${ activeAssignments ? " (" + activeAssignments.length + ")" : "" }` }
-                    assignments={ activeAssignments }
-                    emptyText="There aren't any assignments available to work on at the moment."
+                    title={ `Published${ publishedAssignments ? " (" + publishedAssignments.length + ")" : "" }` }
+                    assignments={ publishedAssignments }
+                    emptyText="There are not any published assignments currently."
                     defaultExpanded={ true }
                 />
                 <AssignmentsBucket
-                    title={ `Upcoming${ upcomingAssignments ? " (" + upcomingAssignments.length + ")" : "" }` }
-                    assignments={ upcomingAssignments }
-                    emptyText="There aren't any upcoming assignments right now."
+                    title={ `Unpublished${ unpublishedAssignments ? " (" + unpublishedAssignments.length + ")" : "" }` }
+                    assignments={ unpublishedAssignments }
+                    emptyText="There are not any unpublished assignments currently."
                     defaultExpanded={ true }
-                />
-                <AssignmentsBucket
-                    title={ `Past${ pastAssignments ? " (" + pastAssignments.length + ")" : "" }` }
-                    assignments={ pastAssignments }
-                    emptyText="There aren't any past assignments."
-                    defaultExpanded={ false }
                 />
             </div>
         </div>

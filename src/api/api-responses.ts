@@ -52,9 +52,7 @@ export interface AssignmentResponse {
     absolute_directory_path: string
     created_date: string
     available_date: string | null
-    adjusted_available_date: string | null
     due_date: string | null
-    adjusted_due_date: string | null
     last_modified_date: string
 
     is_deferred: boolean
@@ -62,9 +60,6 @@ export interface AssignmentResponse {
     is_created: boolean
     is_available: boolean
     is_closed: boolean
-
-    submissions?: SubmissionResponse[]
-    staged_changes?: StagedChangeResponse[]
 }
 
 export interface CourseResponse {
@@ -72,6 +67,10 @@ export interface CourseResponse {
     name: string
     master_remote_url: string
     instructors: InstructorResponse[]
+    students: StudentResponse[]
 }
 
-export interface ServerSettingsResponse {}
+export interface ServerSettingsResponse {
+    serverVersion: string
+    repoRoot: string
+}

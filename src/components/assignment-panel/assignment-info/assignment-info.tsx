@@ -11,12 +11,12 @@ interface AssignmentInfoProps {
 }
 
 export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
-    const { assignment, student, course } = useAssignment()!
-    if (!student || !assignment || !course) return null
+    const { assignment, instructor, course } = useAssignment()!
+    if (!instructor || !assignment || !course) return null
 
     const hoursUntilDue = useMemo(() => (
         assignment.isCreated ? (
-            (assignment.adjustedDueDate!.getTime() - Date.now()) / MS_IN_HOURS
+            (assignment.dueDate!.getTime() - Date.now()) / MS_IN_HOURS
         ) : Infinity
     ), [assignment])
 
@@ -53,7 +53,7 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                 backgroundColor = "var(--jp-error-color1)"
                 text = (
                     <span>
-                        { new DateFormat(assignment.adjustedDueDate!).toRelativeDatetimeNoArticle() } past due
+                        { new DateFormat(assignment.dueDate!).toRelativeDatetimeNoArticle() } past due
                     </span>
                 )
                 tooltip = `You never submitted this assignment. Please contact your instructor${ course.instructors.length > 1 ? "s" : "" } to request an extension`
@@ -100,15 +100,15 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                             border: `1px solid var(--jp-warn-color-normal)`,
                             textTransform: "capitalize"
                         }}
-                        title={ new DateFormat(assignment.adjustedDueDate!).toBasicDatetime() }
+                        title={ new DateFormat(assignment.dueDate!).toBasicDatetime() }
                     >
-                        Due in { new DateFormat(assignment.adjustedDueDate!).toRelativeDatetimeNoArticle() }
+                        Due in { new DateFormat(assignment.dueDate!).toRelativeDatetimeNoArticle() }
                     </span>
                 ) }
             </div>
             <div className={ assignmentInfoSectionClass } style={{ marginTop: 16 }}>
                 <h5 className={ assignmentInfoSectionHeaderClass }>Student</h5>
-                <span>{ student.firstName } { student.lastName }</span>
+                {/* <span>{ student.firstName } { student.lastName }</span> */}
             </div>
             <div className={ assignmentInfoSectionClass }>
                 <h5 className={ assignmentInfoSectionHeaderClass }>
@@ -120,7 +120,7 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                 <h5 className={ assignmentInfoSectionHeaderClass }>Due date</h5>
                 <div>
                     { assignment.isCreated ? (
-                        new DateFormat(assignment.adjustedDueDate!).toBasicDatetime()
+                        new DateFormat(assignment.dueDate!).toBasicDatetime()
                     ) : (
                         `To be determined`
                     ) }

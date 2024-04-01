@@ -7,6 +7,7 @@ import shutil
 import tornado
 import time
 import asyncio
+import deepdiff
 from jupyter_server.base.handlers import APIHandler
 from jupyter_server.utils import url_path_join
 from pathlib import Path
@@ -20,9 +21,11 @@ from eduhelx_utils.git import (
     get_modified_paths
 )
 from eduhelx_utils.api import Api
-from .student_repo import StudentClassRepo, NotStudentClassRepositoryException
+from .instructor_repo import InstructorClassRepo
 from .process import execute
 from ._version import __version__
+
+FIXED_REPO_ROOT = "eduhelx/{}" # <class_name>
 
 class AppContext:
     def __init__(self, serverapp):
@@ -127,31 +130,34 @@ class CloneStudentRepositoryHandler(BaseHandler):
         
         self.finish(json.dumps(os.path.join("/", frontend_cloned_path)))
 
-class PollCourseStudentHandler(BaseHandler):
+class PollCourseInstructorStudentsHandler(BaseHandler):
     @tornado.web.authenticated
     async def get(self):
         # If this is the first poll the client has made, the `current_value` argument will not be present.
         # Note: we are not deserializing `current_value`; it is a JSON-serialized string.
-        current_value: str | None = None
+        current_value: str = 'null'
         if "current_value" in self.request.arguments:
             current_value = self.get_argument("current_value")
 
         start = time.time()
         while (elapsed := time.time() - start) < self.config.LONG_POLLING_TIMEOUT_SECONDS:
-            new_value = await CourseAndStudentHandler.get_value(self)
-            if new_value != current_value:
+            new_value = await CourseAndInstructorAndStudentsHandler.get_value(self)
+            if deepdiff.DeepDiff(json.loads(new_value), json.loads(current_value)):
+                # print(12341341234132, deepdiff.DeepDiff(new_value, current_value))
                 self.finish(new_value)
                 return
             asyncio.sleep(self.config.LONG_POLLING_SLEEP_INTERVAL_SECONDS)
             
         self.finish(new_value)
 
-class CourseAndStudentHandler(BaseHandler):
+class CourseAndInstructorAndStudentsHandler(BaseHandler):
     async def get_value(self):
-        student = await self.api.get_my_user()
+        instructor = await self.api.get_my_user()
+        students = await self.api.list_students()
         course = await self.api.get_course()
         return json.dumps({
-            "student": student,
+            "instructor": instructor,
+            "students": students,
             "course": course
         })
     
@@ -165,14 +171,14 @@ class PollAssignmentsHandler(BaseHandler):
         current_path: str = self.get_argument("path")
         # If this is the first poll the client has made, the `current_value` argument will not be present.
         # Note: we are not deserializing `current_value`; it is a JSON-serialized string.
-        current_value: str | None = None
+        current_value: str = 'null'
         if "current_value" in self.request.arguments:
             current_value = self.get_argument("current_value")
 
         start = time.time()
         while (elapsed := time.time() - start) < self.config.LONG_POLLING_TIMEOUT_SECONDS:
             new_value = await AssignmentsHandler.get_value(self, current_path)
-            if new_value != current_value:
+            if deepdiff.DeepDiff(json.loads(new_value), json.loads(current_value)):
                 self.finish(new_value)
                 return
             asyncio.sleep(self.config.LONG_POLLING_SLEEP_INTERVAL_SECONDS)
@@ -193,7 +199,7 @@ class AssignmentsHandler(BaseHandler):
         }
 
         try:
-            student_repo = StudentClassRepo(course, assignments, current_path_abs)
+            student_repo = InstructorClassRepo(course, assignments, current_path_abs)
         except Exception:
             return json.dumps(value)
 
@@ -219,10 +225,10 @@ class AssignmentsHandler(BaseHandler):
             # If user is not in an assignment, we're done. Just leave current_assignment as None.
             return json.dumps(value)
         
-        submissions = await self.api.get_my_submissions(current_assignment["id"])
-        for submission in submissions:
-            submission["commit"] = get_commit_info(submission["commit_id"], path=student_repo.repo_root)
-        current_assignment["submissions"] = submissions
+        # submissions = await self.api.get_my_submissions(current_assignment["id"])
+        # for submission in submissions:
+        #     submission["commit"] = get_commit_info(submission["commit_id"], path=student_repo.repo_root)
+        # current_assignment["submissions"] = submissions
         current_assignment["staged_changes"] = []
         for modified_path in get_modified_paths(path=student_repo.repo_root):
             full_modified_path = Path(student_repo.repo_root) / modified_path["path"]
@@ -243,75 +249,43 @@ class AssignmentsHandler(BaseHandler):
     async def get(self):
         current_path: str = self.get_argument("path")
         self.finish(await self.get_value(current_path))
-            
-
-class SubmissionHandler(BaseHandler):
-    @tornado.web.authenticated
-    async def post(self):
-        data = json.loads(self.request.body)
-        submission_summary: str = data["summary"]
-        submission_description: str | None = data.get("description")
-        current_path: str = data["current_path"]
-        current_path_abs = os.path.realpath(current_path)
-
-        student = await self.api.get_my_user()
-        assignments = await self.api.get_my_assignments()
-        course = await self.api.get_course()
-
-        try:
-            student_repo = StudentClassRepo(course, assignments, current_path_abs)
-        except InvalidGitRepositoryException:
-            self.set_status(400)
-            self.finish(json.dumps({
-                "message": "Not in a git repository"
-            }))
-            return
-        except NotStudentClassRepositoryException:
-            self.set_status(400)
-            self.finish(json.dumps({
-                "message": "Not in student's class repository"
-            }))
-            return
-        
-        if student_repo.current_assignment is None:
-            self.set_status(400)
-            self.finish(json.dumps({
-                "message": "Not in an assignment directory"
-            }))
-            return
-
-        current_assignment_path = student_repo.get_assignment_path(student_repo.current_assignment)
-        stage_files(".", path=student_repo.repo_root)
-        commit_id = commit(
-            submission_summary,
-            submission_description if submission_description else None,
-            path=student_repo.repo_root
-        )
-        push("origin", "master", path=student_repo.repo_root)
-        try:
-            await self.api.create_submission(
-                student_repo.current_assignment["id"],
-                commit_id
-            )
-            self.finish()
-        except requests.exceptions.HTTPError as e:
-            self.set_status(e.response.status_code)
-            self.finish(e.response.text)
 
 
 class SettingsHandler(BaseHandler):
     @tornado.web.authenticated
     async def get(self):
         server_version = str(__version__)
+        course_name = (await self.api.get_course())["name"]
+        repo_root = FIXED_REPO_ROOT.format(course_name) # note: the relative path for the server is the root path for the UI
 
         self.finish(json.dumps({
-            "serverVersion": server_version
+            "serverVersion": server_version,
+            "repoRoot": repo_root
         }))
+
+
+async def clone_repo_if_not_exists(context: AppContext):
+    course = await context.api.get_course()
+    repo_root = Path(FIXED_REPO_ROOT.format(course["name"])) # note: the relative path for the server is the root path for the UI
+    if not repo_root.exists():
+        repo_root.mkdir(parents=True)
+        print("132409812094813240913281092384", "CLONING MASTER REPOSITORY TO", repo_root)
+        master_repository_url = course["master_remote_url"]
+        clone_repository(master_repository_url, repo_root)
+        execute(["chown", "root", repo_root.parent])
+        execute(["chmod", "+t", repo_root.parent])
+        execute(["chmod", "a-w", repo_root.parent])
+        # This is only a fork for students, not instructors
+        # add_remote("upstream", master_repository_url, path=repo_root)
 
 
 def setup_handlers(server_app):
     web_app = server_app.web_app
     BaseHandler.context = AppContext(server_app)
+
+    # Important we run it thread-safe for Tornado.
+    loop = asyncio.get_event_loop()
+    asyncio.run_coroutine_threadsafe(clone_repo_if_not_exists(BaseHandler.context), loop)
     
     host_pattern = ".*$"
 
@@ -319,9 +293,8 @@ def setup_handlers(server_app):
     handlers = [
         ("assignments", AssignmentsHandler),
         (("assignments", "poll"), PollAssignmentsHandler),
-        ("course_student", CourseAndStudentHandler),
-        (("course_student", "poll"), PollCourseStudentHandler),
-        ("submit_assignment", SubmissionHandler),
+        ("course_instructor_students", CourseAndInstructorAndStudentsHandler),
+        (("course_instructor_students", "poll"), PollCourseInstructorStudentsHandler),
         ("clone_student_repository", CloneStudentRepositoryHandler),
         ("settings", SettingsHandler)
     ]

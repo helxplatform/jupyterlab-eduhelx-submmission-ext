@@ -3,10 +3,13 @@ from pathlib import Path
 from eduhelx_utils.git import InvalidGitRepositoryException
 from eduhelx_utils import git
 
-class NotStudentClassRepositoryException(Exception):
+class NotInstructorClassRepositoryException(Exception):
     pass
 
-class StudentClassRepo:
+
+""" Note: this class is naive to the fixed repo path. It is designed for
+relative interaction with class repository filepaths WHILE inside the repository. """
+class InstructorClassRepo:
     def __init__(self, course, assignments, current_path):
         self.course = course
         self.assignments = assignments
@@ -20,13 +23,14 @@ class StudentClassRepo:
 
     @staticmethod
     def _compute_repo_root(course, current_path):
+        # Make sure the path is a git repository and has a remote corresponding to the class repo remote
         try: 
-            master_repo_remote = git.get_remote(name="upstream", path=current_path)
+            master_repo_remote = git.get_remote(name="origin", path=current_path)
             repo_root = os.path.realpath(
                 git.get_repo_root(path=current_path)
             )
             if master_repo_remote != course["master_remote_url"]:
-                raise NotStudentClassRepositoryException()
+                raise NotInstructorClassRepositoryException()
             return repo_root
         except InvalidGitRepositoryException as e:
             raise e
