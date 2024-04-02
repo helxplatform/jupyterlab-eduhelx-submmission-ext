@@ -82,17 +82,15 @@ const AssignmentListItem = ({ assignment }: AssignmentListItemProps) => {
                                     `No close date`
                                 ) }
                             </div>
-                            <div
-                                title={ new DateFormat(assignment.dueDate!).toBasicDatetime() }
-                                style={{ marginTop: 6, fontSize: 12, display: 'flex', alignItems: 'center' }}
-                            >
-                                <QueryBuilderOutlined style={{ fontSize: 16 }} />
-                                &nbsp;Lasts { assignment.isCreated ? (
-                                    new DateFormat(assignment.dueDate!).toRelativeDatetime(assignment.availableDate!)
-                                ) : (
-                                    "N/A"
-                                ) }
-                            </div>
+                            { assignment.isCreated && (
+                                <div
+                                    title={ new DateFormat(assignment.dueDate!).toBasicDatetime() }
+                                    style={{ marginTop: 6, fontSize: 12, display: 'flex', alignItems: 'center' }}
+                                >
+                                    <QueryBuilderOutlined style={{ fontSize: 16 }} />
+                                    &nbsp;Lasts { new DateFormat(assignment.dueDate!).toRelativeDatetime(assignment.availableDate!) }
+                                </div>
+                            ) }
                         </div>
                     }
                 </div>
@@ -150,7 +148,7 @@ const AssignmentsBucket = ({
                         <AssignmentListItem key={ assignment.id } assignment={ assignment } />
                     ))
                 ) : (
-                    <span style={{ color: 'var(--jp-ui-font-color1)' }}>
+                    <span style={{ color: 'var(--jp-ui-font-color1)', paddingLeft: 8 }}>
                         { emptyText }
                     </span>
                 ) }

@@ -78,6 +78,7 @@
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "typestyle": "^2.4.0",
+    "use-debounce": "^10.0.0",
     "uuid": "^9.0.0"
   },
   "devDependencies": {
@@ -151,5 +152,6 @@
       }
     },
     "outputDir": "eduhelx_jupyterlab_prof/labextension"
-  }
+  },
+  "packageManager": "yarn@4.1.1"
 }

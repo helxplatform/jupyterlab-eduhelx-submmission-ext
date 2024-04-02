@@ -27,6 +27,17 @@ from ._version import __version__
 
 FIXED_REPO_ROOT = "eduhelx/{}" # <class_name>
 
+def set_datetime_tz(datetime: str):
+    # NOTE: Postgres is DST aware and will automatically adjust the timezone offset for daylight savings
+    # NOTE: Since time.timezone is *not* DST aware, we will let Postgres handle everything.
+    # e.g. 2024-03-02T19:03 -> 2024-03-02T23:03-05:00
+    utc_offset = -time.timezone / 60
+    if utc_offset == 0: return datetime + "Z"
+    utc_offset_sign = "-" if utc_offset < 0 else "+"
+    utc_offset_hr = str(int(abs(utc_offset) // 60)).zfill(2)
+    utc_offset_min = str(int(abs(utc_offset) % 60)).zfill(2)
+    return datetime + f"{ utc_offset_sign }{utc_offset_hr}:{utc_offset_min}"
+
 class AppContext:
     def __init__(self, serverapp):
         self.serverapp = serverapp
@@ -217,32 +228,22 @@ class AssignmentsHandler(BaseHandler):
             # The cwd is the root in the frontend, so treat the path as such.
             # NOTE: IMPORTANT: this field is NOT absolute on the server. It's only the absolute path for the webapp.
             assignment["absolute_directory_path"] = os.path.join("/", rel_assignment_path)
-        value["assignments"] = assignments
 
-        current_assignment = student_repo.current_assignment
-        # The student is in their repo, but we still need to check if they're actually in an assignment directory.
-        if current_assignment is None:
-            # If user is not in an assignment, we're done. Just leave current_assignment as None.
-            return json.dumps(value)
-        
-        # submissions = await self.api.get_my_submissions(current_assignment["id"])
-        # for submission in submissions:
-        #     submission["commit"] = get_commit_info(submission["commit_id"], path=student_repo.repo_root)
-        # current_assignment["submissions"] = submissions
-        current_assignment["staged_changes"] = []
-        for modified_path in get_modified_paths(path=student_repo.repo_root):
-            full_modified_path = Path(student_repo.repo_root) / modified_path["path"]
-            abs_assn_path = Path(student_repo.repo_root) / assignment["directory_path"]
-            try:
-                path_relative_to_assn = full_modified_path.relative_to(abs_assn_path)
-                modified_path["path_from_repo"] = modified_path["path"]
-                modified_path["path_from_assn"] = str(path_relative_to_assn)
-                current_assignment["staged_changes"].append(modified_path)
-            except ValueError:
-                # This path is not part of the current assignment directory
-                pass
-        
-        value["current_assignment"] = current_assignment
+            assignment["staged_changes"] = []
+            for modified_path in get_modified_paths(path=student_repo.repo_root):
+                full_modified_path = Path(student_repo.repo_root) / modified_path["path"]
+                abs_assn_path = Path(student_repo.repo_root) / assignment["directory_path"]
+                try:
+                    path_relative_to_assn = full_modified_path.relative_to(abs_assn_path)
+                    modified_path["path_from_repo"] = modified_path["path"]
+                    modified_path["path_from_assn"] = str(path_relative_to_assn)
+                    assignment["staged_changes"].append(modified_path)
+                except ValueError:
+                    # This path is not part of the assignment directory
+                    pass
+
+        value["assignments"] = assignments
+        value["current_assignment"] = student_repo.current_assignment
         return json.dumps(value)
 
     @tornado.web.authenticated
@@ -250,6 +251,13 @@ class AssignmentsHandler(BaseHandler):
         current_path: str = self.get_argument("path")
         self.finish(await self.get_value(current_path))
 
+    @tornado.web.authenticated
+    async def patch(self):
+        name = self.get_argument("name")
+        data = self.get_json_body()
+        if "available_date" in data: data["available_date"] = set_datetime_tz(data["available_date"])
+        if "due_date" in data: data["due_date"] = set_datetime_tz(data["due_date"])
+        await self.api.update_assignment(name, **data)
 
 class SettingsHandler(BaseHandler):
     @tornado.web.authenticated

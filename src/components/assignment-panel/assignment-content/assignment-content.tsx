@@ -39,12 +39,12 @@ export const AssignmentContent = () => {
                                     ),
                                     containerProps: { style: { width: "100%" } }
                                 },
-                                {
-                                    key: 1,
-                                    label: "Submissions",
-                                    content: <AssignmentSubmissions style={{ flexGrow: 1, height: 0, overflow: "auto" }} />,
-                                    containerProps: { style: { width: "100%" } }
-                                }
+                                // {
+                                //     key: 1,
+                                //     label: "Submissions",
+                                //     content: <AssignmentSubmissions style={{ flexGrow: 1, height: 0, overflow: "auto" }} />,
+                                //     containerProps: { style: { width: "100%" } }
+                                // }
                             ]}
                             style={{ flexGrow: 1 }}
                         />

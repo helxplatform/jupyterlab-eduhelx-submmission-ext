@@ -69,7 +69,7 @@ export const AssignmentStagedChanges = ({ ...props }: AssignmentStagedChangesPro
         if (!assignment) return []
         return assignment.stagedChanges
     }, [assignment?.stagedChanges, showMore])
-
+    
     const hideShowMoreButton = useMemo(() => !showMore && stagedChangesSource.length <= SHOW_MORE_CUTOFF, [showMore, stagedChangesSource])
 
     useEffect(() => {

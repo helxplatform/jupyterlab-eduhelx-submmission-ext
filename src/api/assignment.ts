@@ -14,6 +14,7 @@ export interface IAssignment {
     readonly availableDate: Date | null
     readonly dueDate: Date | null
     readonly lastModifiedDate: Date
+    readonly stagedChanges: IStagedChange[]
 
     // Indicates that release date has been deferred to a later date for the student
     readonly isDeferred: boolean
@@ -29,10 +30,8 @@ export interface IAssignment {
 
 // Submissions and staged changes are definitely defined in an ICurrentAssignment
 export interface ICurrentAssignment extends IAssignment {
-    readonly submissions: ISubmission[]
-    // `null` if there are no submissions
-    readonly activeSubmission: ISubmission | null
-    readonly stagedChanges: IStagedChange[]
+    readonly submissions: ISubmission[] //DEBUG REMOVE THIS
+    readonly activeSubmission?: ISubmission //DEBUG REMOVE THIS
 }
 
 export class Assignment implements IAssignment {
@@ -45,6 +44,7 @@ export class Assignment implements IAssignment {
         private _availableDate: Date | null,
         private _dueDate: Date | null,
         private _lastModifiedDate: Date,
+        private _stagedChanges: IStagedChange[],
 
         private _isDeferred: boolean,
         private _isExtended: boolean,
@@ -52,6 +52,8 @@ export class Assignment implements IAssignment {
         private _isAvailable: boolean,
         private _isClosed: boolean,
     ) {}
+    get submissions() { return [] } // DEBUG REMOVE THIS
+    get activeSubmission() { return undefined } //DEBUG REMOVE THIS
     
     get id() { return this._id }
     get name() { return this._name }
@@ -61,6 +63,7 @@ export class Assignment implements IAssignment {
     get availableDate() { return this._availableDate }
     get dueDate() { return this._dueDate }
     get lastModifiedDate() { return this._lastModifiedDate }
+    get stagedChanges() { return this._stagedChanges }
     
 
     get isDeferred() { return this._isDeferred }
@@ -80,6 +83,7 @@ export class Assignment implements IAssignment {
             data.available_date ? new Date(data.available_date) : null,
             data.due_date ? new Date(data.due_date) : null,
             new Date(data.last_modified_date),
+            data.staged_changes.map((s) => StagedChange.fromResponse(s)),
 
             data.is_deferred,
             data.is_extended,

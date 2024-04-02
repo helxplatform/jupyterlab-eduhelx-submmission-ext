@@ -1,17 +1,35 @@
-import React, { Fragment, useMemo } from 'react'
+import React, { ChangeEvent, Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import moment from 'moment'
+import TextField from '@material-ui/core/TextField'
 import { ArrowBackSharp } from '@material-ui/icons'
+import { useDebouncedCallback } from 'use-debounce'
 import { assignmentInfoClass, assignmentInfoSectionClass, assignmentInfoSectionHeaderClass, assignmentInfoSectionWarningClass, assignmentNameClass, tagClass } from './style'
 import { useAssignment } from '../../../contexts'
 import { DateFormat } from '../../../utils'
+import { updateAssignment } from '../../../api'
+import { ExpectedValue } from '../../expected-value'
 
 const MS_IN_HOURS = 3.6e6
 
 interface AssignmentInfoProps {
 }
 
+const formatDateToMui = (date: Date | null | undefined): string => {
+    if (date === null || date === undefined) return ""
+    return moment(date).format("YYYY-MM-DDTHH:mm")
+}
+
+const formatMuiToDate = (date: string): Date | null => {
+    if (date === "") return null
+    return new Date(date)
+}
+
 export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
     const { assignment, instructor, course } = useAssignment()!
+    // We need the raw undebounced value so that other parts of the UI can respond immediately to the expected value
+    const [availableDateControlled, setAvailableDateControlled] = useState<string|undefined>(undefined)
+    const [dueDateControlled, setDueDateControlled] = useState<string|undefined>(undefined)
+
     if (!instructor || !assignment || !course) return null
 
     const hoursUntilDue = useMemo(() => (
@@ -20,52 +38,26 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
         ) : Infinity
     ), [assignment])
 
-    const assignmentStatusTag = useMemo(() => {
+    const assignmentReleasedTag = useMemo(() => {
         let color = undefined
         let backgroundColor = undefined
+        let borderColor = undefined
         let text = undefined
         let tooltip = undefined
         let filled = false
-        if (!assignment.isCreated) {
-            // Upcoming assignment (doesn't have either an open or close date yet)
+        if (assignment.isCreated) {
             color = "white"
             backgroundColor = "#1890ff"
-            text = "Upcoming"
-            tooltip = `Your instructor${ course.instructors.length > 1 ? "s" : "" } has not released this assignment yet`
+            text = "Released"
+            tooltip = `Clear the available date or due date to unrelease the assignment`
             filled = true
-        }
-        else if (assignment.isClosed) {
-            // Not available to work on anymore
-            if (assignment.activeSubmission) {
-                // Closed and submitted
-                color = "var(--jp-success-color1)"
-                backgroundColor = "var(--jp-success-color1)"
-                text = (
-                    <span>
-                        Submitted { new DateFormat(assignment.activeSubmission.submissionTime).toRelativeDatetimeNoArticle() } ago
-                    </span>
-                )
-                tooltip = `You submitted this assignment before it closed. Please contact your instructor${ course.instructors.length > 1 ? "s" : "" } if you need to resubmit`
-                filled = false
-            } else {
-                // Closed and never submitted
-                color = "var(--jp-error-color1)"
-                backgroundColor = "var(--jp-error-color1)"
-                text = (
-                    <span>
-                        { new DateFormat(assignment.dueDate!).toRelativeDatetimeNoArticle() } past due
-                    </span>
-                )
-                tooltip = `You never submitted this assignment. Please contact your instructor${ course.instructors.length > 1 ? "s" : "" } to request an extension`
-                filled = false
-            }            
-        } else if (assignment.isAvailable) {
-            // Available
-            color = assignment.activeSubmission ? "var(--jp-success-color1)" : "white"
-            backgroundColor = assignment.activeSubmission ? "var(--jp-success-color1)" : "var(--jp-warn-color1)"
-            text = assignment.activeSubmission ? "Submitted" : "Not Submitted"
-            tooltip = assignment.activeSubmission ? `You have submitted this assignment` : `You haven't submitted this assignment yet`
-            filled = !assignment.activeSubmission
+        } else {
+            color = "rgba(0, 0, 0, 0.88)"
+            backgroundColor = "#fafafa"
+            borderColor = "#d9d9d9"
+            text = "Not Released"
+            tooltip = `Set the available date and due date to release the assignment`
+            filled = true
         }
         return (
             <span
@@ -74,7 +66,49 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                     marginTop: 8,
                     color,
                     backgroundColor: filled ? backgroundColor: "transparent",
-                    border: `1px solid ${ backgroundColor }`,
+                    border: `1px solid ${ borderColor ?? backgroundColor }`,
+                    textTransform: "capitalize"
+                }}
+                title={ tooltip }
+            >
+                { text }
+            </span>
+        )
+    }, [assignment.isCreated])
+
+    const assignmentStatusTag = useMemo(() => {
+        let color = undefined
+        let backgroundColor = undefined
+        let borderColor = undefined
+        let text = undefined
+        let tooltip = undefined
+        let filled = false
+        if (!assignment.isAvailable) {
+            color = "rgba(0, 0, 0, 0.88)"
+            backgroundColor = "#fafafa"
+            borderColor = "#d9d9d9"
+            text = "Not Open Yet"
+            tooltip = "The assignment has not opened yet for students"
+        }
+        else if (!assignment.isClosed) {
+            text = "Open"
+            tooltip = "The assignment is currently open for students to work"
+        } else {
+            color = "var(--jp-error-color1)"
+            backgroundColor = "var(--jp-error-color1)"
+            text = "Closed"
+            tooltip = "The assignment has closed for students"
+            filled = false
+        }
+        return (
+            <span
+                className={ tagClass }
+                style={{
+                    marginTop: 8,
+                    marginLeft: 8,
+                    color,
+                    backgroundColor: filled ? backgroundColor: "transparent",
+                    border: `1px solid ${ borderColor ?? backgroundColor }`,
                     textTransform: "capitalize"
                 }}
                 title={ tooltip }
@@ -84,11 +118,45 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
         )
     }, [course, assignment, hoursUntilDue])
 
+    const onAvailableDateChanged = useDebouncedCallback((e: ChangeEvent<HTMLInputElement>) => {
+        void async function() {
+            const newDate = e.target.value !== "" ? e.target.value : null
+            await updateAssignment(assignment.name, {
+                available_date: newDate
+            })
+        }()
+    }, 1000, { leading: true })
+
+    const onDueDateChanged = useDebouncedCallback((e: ChangeEvent<HTMLInputElement>) => {
+        void async function() {
+            const newDate = e.target.value !== "" ? e.target.value : null
+            await updateAssignment(assignment.name, {
+                due_date: newDate
+            })
+        }()
+    }, 1000, { leading: true })
+
+    useEffect(() => {
+        setAvailableDateControlled(formatDateToMui(assignment.availableDate))
+        setDueDateControlled(formatDateToMui(assignment.dueDate))
+    }, [assignment])
+
     return (
         <div className={ assignmentInfoClass }>
             <div>
                 <header className={ assignmentNameClass }>{ assignment.name }</header>
-                { assignmentStatusTag }
+                {/*
+                if (!assignment.isCreated) {
+                    // Upcoming assignment (doesn't have either an open or close date yet)
+                    color = "white"
+                    backgroundColor = "#1890ff"
+                    text = "Not released"
+                    tooltip = `Set an available date and due date to release the assignment`
+                    filled = true
+                }
+                */}
+                { assignmentReleasedTag }
+                { assignment.isCreated && assignmentStatusTag }
                 { assignment.isCreated && !assignment.isClosed && hoursUntilDue <= 4 && (
                     <span
                         className={ tagClass }
@@ -107,26 +175,49 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                 ) }
             </div>
             <div className={ assignmentInfoSectionClass } style={{ marginTop: 16 }}>
-                <h5 className={ assignmentInfoSectionHeaderClass }>Student</h5>
-                {/* <span>{ student.firstName } { student.lastName }</span> */}
-            </div>
-            <div className={ assignmentInfoSectionClass }>
                 <h5 className={ assignmentInfoSectionHeaderClass }>
-                    Instructor{ course.instructors.length > 1 ? "s" : "" }
+                    Available date
+                    { availableDateControlled === "" && ` (not set)` }
                 </h5>
-                <span>{ course.instructors.map((ins) => ins.fullName).join(", ") }</span>
-            </div>
-            <div className={ assignmentInfoSectionClass }>
-                <h5 className={ assignmentInfoSectionHeaderClass }>Due date</h5>
                 <div>
-                    { assignment.isCreated ? (
-                        new DateFormat(assignment.dueDate!).toBasicDatetime()
-                    ) : (
-                        `To be determined`
-                    ) }
-                    { assignment.isExtended ? (
-                        <i>&nbsp;(extended)</i>
-                    ) : null }
+                    <TextField
+                        type="datetime-local"
+                        defaultValue={ formatDateToMui(assignment.availableDate) }
+                        onChange={ (e: ChangeEvent<HTMLInputElement>) => {
+                            setAvailableDateControlled(e.target.value)
+                            onAvailableDateChanged(e)
+                        } }
+                        InputLabelProps={{
+                            shrink: true,
+                        }}
+                        inputProps={{
+                            step: 900, // 15 min step
+                            style: { boxSizing: "content-box", paddingTop: 4, paddingBottom: 5 }
+                        }}
+                    />
+                </div>
+            </div>
+            <div className={ assignmentInfoSectionClass } style={{ marginTop: 0 }}>
+                <h5 className={ assignmentInfoSectionHeaderClass }>
+                    Due date
+                    { dueDateControlled === "" && ` (not set)` }
+                </h5>
+                <div>
+                    <TextField
+                        type="datetime-local"
+                        defaultValue={ formatDateToMui(assignment.dueDate) }
+                        onChange={ (e: ChangeEvent<HTMLInputElement>) => {
+                            setDueDateControlled(e.target.value)
+                            onDueDateChanged(e)
+                        } }
+                        InputLabelProps={{
+                            shrink: true,
+                        }}
+                        inputProps={{
+                            step: 900, // 15 min step
+                            style: { boxSizing: "content-box", paddingTop: 4, paddingBottom: 5 }
+                        }}
+                    />
                 </div>
             </div>
             { assignment.isCreated && assignment.isClosed && (

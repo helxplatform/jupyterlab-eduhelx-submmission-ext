@@ -54,6 +54,7 @@ export interface AssignmentResponse {
     available_date: string | null
     due_date: string | null
     last_modified_date: string
+    staged_changes: StagedChangeResponse[]
 
     is_deferred: boolean
     is_extended: boolean

@@ -15,15 +15,25 @@ import {
     InstructorResponse,
 } from './api-responses'
 import { IInstructor, Instructor } from './instructor'
+import { addTimezone } from '../utils'
 
-export interface GetAssignmentsResponse {
-    assignments: IAssignment[] | null
-    currentAssignment: ICurrentAssignment | null
-}
+
 
 export interface Polled<T> {
     data: T
     rawData: any
+}
+
+export interface UpdateAssignmentData {
+    new_name?: string | null,
+    directory_path?: string | null,
+    available_date?: string | null,
+    due_date?: string | null
+}
+
+export interface GetAssignmentsResponse {
+    assignments: IAssignment[] | null
+    currentAssignment: ICurrentAssignment | null
 }
 
 export interface GetInstructorAndStudentsAndCourseResponse {
@@ -96,6 +106,14 @@ export async function getAssignmentsPolled(path: string, currentValue?: object):
         },
         rawData: { assignments, current_assignment }
     }
+}
+
+export async function updateAssignment(assignmentName: string, data: UpdateAssignmentData): Promise<void> {
+    const queryString = qs.stringify({ name: assignmentName })
+    await requestAPI<void>(`/assignments?${ queryString }`, {
+        method: 'PATCH',
+        body: JSON.stringify(data)
+    })
 }
 
 export async function getServerSettings(): Promise<IServerSettings> {
