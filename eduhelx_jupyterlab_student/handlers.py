@@ -226,7 +226,7 @@ class AssignmentsHandler(BaseHandler):
         current_assignment["staged_changes"] = []
         for modified_path in get_modified_paths(path=student_repo.repo_root):
             full_modified_path = Path(student_repo.repo_root) / modified_path["path"]
-            abs_assn_path = Path(student_repo.repo_root) / assignment["directory_path"]
+            abs_assn_path = Path(student_repo.repo_root) / current_assignment["directory_path"]
             try:
                 path_relative_to_assn = full_modified_path.relative_to(abs_assn_path)
                 modified_path["path_from_repo"] = modified_path["path"]
