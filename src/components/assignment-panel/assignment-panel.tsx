@@ -47,8 +47,9 @@ export const AssignmentPanel = ({}: IAssignmentPanelProps) => {
                     />
                 ) }
                 { headerName }
+                <div style={{ flexGrow: 1 }} />
                 { students && (
-                    <div style={{ marginLeft: "auto", display: "flex", alignItems: "center" }} title="Immediately sync to servers">
+                    <div style={{ display: "flex", alignItems: "center" }} title="Immediately sync to servers">
                         { students.length } <SupervisorAccountOutlined style={{ fontSize: 20, marginLeft: 4 }} />
                     </div>
                 ) }

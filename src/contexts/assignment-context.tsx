@@ -65,6 +65,8 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
                     console.error(e)
                     error = true
                 }
+            } else {
+                error = true
             }
             if (cancelled) return
             if (newValue !== undefined) {

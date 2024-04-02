@@ -146,7 +146,7 @@ class PollCourseInstructorStudentsHandler(BaseHandler):
                 # print(12341341234132, deepdiff.DeepDiff(new_value, current_value))
                 self.finish(new_value)
                 return
-            asyncio.sleep(self.config.LONG_POLLING_SLEEP_INTERVAL_SECONDS)
+            await asyncio.sleep(self.config.LONG_POLLING_SLEEP_INTERVAL_SECONDS)
             
         self.finish(new_value)
 
@@ -181,7 +181,7 @@ class PollAssignmentsHandler(BaseHandler):
             if deepdiff.DeepDiff(json.loads(new_value), json.loads(current_value)):
                 self.finish(new_value)
                 return
-            asyncio.sleep(self.config.LONG_POLLING_SLEEP_INTERVAL_SECONDS)
+            await asyncio.sleep(self.config.LONG_POLLING_SLEEP_INTERVAL_SECONDS)
             
         self.finish(new_value)
 
