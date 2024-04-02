@@ -3,3 +3,6 @@
 
     https://jupyterlab.readthedocs.io/en/stable/developer/css.html
 */
+:root {
+    --jp-sidebar-min-width: 325px !important;
+}
