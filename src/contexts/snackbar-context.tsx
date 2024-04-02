@@ -75,7 +75,6 @@ export const SnackbarProvider = ({ children }: ISnackbarProviderProps) => {
             return newSnackbars
         })
     }
-    (window as any).open = createSnackbar
     
     return (
         <SnackbarContext.Provider value={{

@@ -5,9 +5,10 @@ import { ArrowBackSharp } from '@material-ui/icons'
 import { useDebouncedCallback } from 'use-debounce'
 import { assignmentInfoClass, assignmentInfoSectionClass, assignmentInfoSectionHeaderClass, assignmentInfoSectionWarningClass, assignmentNameClass, tagClass } from './style'
 import { useAssignment } from '../../../contexts'
-import { DateFormat } from '../../../utils'
+import { getLocalTimezoneAbbr } from '../../../utils'
 import { updateAssignment } from '../../../api'
 import { ExpectedValue } from '../../expected-value'
+import { InputAdornment } from '@material-ui/core'
 
 const MS_IN_HOURS = 3.6e6
 
@@ -157,29 +158,13 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                 */}
                 { assignmentReleasedTag }
                 { assignment.isCreated && assignmentStatusTag }
-                { assignment.isCreated && !assignment.isClosed && hoursUntilDue <= 4 && (
-                    <span
-                        className={ tagClass }
-                        style={{
-                            marginTop: 8,
-                            marginLeft: 6,
-                            color: "white",
-                            backgroundColor: "var(--jp-warn-color-normal)",
-                            border: `1px solid var(--jp-warn-color-normal)`,
-                            textTransform: "capitalize"
-                        }}
-                        title={ new DateFormat(assignment.dueDate!).toBasicDatetime() }
-                    >
-                        Due in { new DateFormat(assignment.dueDate!).toRelativeDatetimeNoArticle() }
-                    </span>
-                ) }
             </div>
             <div className={ assignmentInfoSectionClass } style={{ marginTop: 16 }}>
                 <h5 className={ assignmentInfoSectionHeaderClass }>
                     Available date
                     { availableDateControlled === "" && ` (not set)` }
                 </h5>
-                <div>
+                <div style={{ width: "100%" }}>
                     <TextField
                         type="datetime-local"
                         defaultValue={ formatDateToMui(assignment.availableDate) }
@@ -187,13 +172,12 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                             setAvailableDateControlled(e.target.value)
                             onAvailableDateChanged(e)
                         } }
-                        InputLabelProps={{
-                            shrink: true,
-                        }}
                         inputProps={{
                             step: 900, // 15 min step
-                            style: { boxSizing: "content-box", paddingTop: 4, paddingBottom: 5 }
+                            style: { boxSizing: "content-box", paddingTop: 4, paddingBottom: 5, fontSize: 15 },
                         }}
+                        // helperText={ "(" + getLocalTimezoneAbbr() + ")" }
+                        style={{ width: "100%" }}
                     />
                 </div>
             </div>
@@ -202,7 +186,7 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                     Due date
                     { dueDateControlled === "" && ` (not set)` }
                 </h5>
-                <div>
+                <div style={{ width: "100%" }}>
                     <TextField
                         type="datetime-local"
                         defaultValue={ formatDateToMui(assignment.dueDate) }
@@ -210,29 +194,14 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                             setDueDateControlled(e.target.value)
                             onDueDateChanged(e)
                         } }
-                        InputLabelProps={{
-                            shrink: true,
-                        }}
                         inputProps={{
                             step: 900, // 15 min step
-                            style: { boxSizing: "content-box", paddingTop: 4, paddingBottom: 5 }
+                            style: { boxSizing: "content-box", paddingTop: 4, paddingBottom: 5, fontSize: 15 }
                         }}
+                        style={{ width: "100%" }}
                     />
                 </div>
             </div>
-            { assignment.isCreated && assignment.isClosed && (
-                <div className={ assignmentInfoSectionClass }>
-                    <h5
-                        className={ `${ assignmentInfoSectionHeaderClass} ${ assignmentInfoSectionWarningClass }` }
-                    >
-                        Assignment is past due
-                    </h5>
-                    <div className={ assignmentInfoSectionWarningClass }>
-                        No further changes can be submitted.
-                        Please contact your instructor{ course.instructors.length > 1 ? "s" : "" } for an extension.
-                    </div>
-                </div>
-            ) }
         </div>
     )
 }
