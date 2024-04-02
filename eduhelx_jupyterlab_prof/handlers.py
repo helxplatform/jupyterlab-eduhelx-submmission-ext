@@ -28,6 +28,7 @@ from ._version import __version__
 FIXED_REPO_ROOT = "eduhelx/{}" # <class_name>
 
 def set_datetime_tz(datetime: str):
+    if datetime is None: return None
     # NOTE: Postgres is DST aware and will automatically adjust the timezone offset for daylight savings
     # NOTE: Since time.timezone is *not* DST aware, we will let Postgres handle everything.
     # e.g. 2024-03-02T19:03 -> 2024-03-02T23:03-05:00
