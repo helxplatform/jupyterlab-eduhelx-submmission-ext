@@ -176,6 +176,10 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                             step: 900, // 15 min step
                             style: { boxSizing: "content-box", paddingTop: 4, paddingBottom: 5, fontSize: 15 },
                         }}
+                        InputProps={{ inputProps: {
+                            // Gets overriden in top-level inputProps
+                            max: "9999-12-31T11:59"
+                        } }}
                         // helperText={ "(" + getLocalTimezoneAbbr() + ")" }
                         style={{ width: "100%" }}
                     />
@@ -198,6 +202,10 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                             step: 900, // 15 min step
                             style: { boxSizing: "content-box", paddingTop: 4, paddingBottom: 5, fontSize: 15 }
                         }}
+                        InputProps={{ inputProps: {
+                            // Gets overriden in top-level inputProps
+                            max: "9999-12-31T11:59"
+                        } }}
                         style={{ width: "100%" }}
                     />
                 </div>
