@@ -24,32 +24,8 @@ export const AssignmentContent = () => {
                 ) : (
                     <div className={ assignmentContainerClass }>
                         <AssignmentInfo />
-                        <Tabs
-                            tabs={[
-                                {
-                                    key: 0,
-                                    label: "Unsubmitted changes",
-                                    content: (
-                                        <AssignmentStagedChanges style={{
-                                            flexGrow: 1,
-                                            height: 0,
-                                            overflow: "auto",
-                                            marginTop: 8
-                                        }} />
-                                    ),
-                                    containerProps: { style: { width: "100%" } }
-                                },
-                                // {
-                                //     key: 1,
-                                //     label: "Submissions",
-                                //     content: <AssignmentSubmissions style={{ flexGrow: 1, height: 0, overflow: "auto" }} />,
-                                //     containerProps: { style: { width: "100%" } }
-                                // }
-                            ]}
-                            style={{ flexGrow: 1 }}
-                        />
-                        {/* <AssignmentStagedChanges />
-                        <AssignmentSubmissions style={{ flexGrow: 1 }} /> */}
+                        <AssignmentStagedChanges />
+                        {/*<AssignmentSubmissions style={{ flexGrow: 1 }} /> */}
                         <AssignmentSubmitForm />
                     </div>
                 )

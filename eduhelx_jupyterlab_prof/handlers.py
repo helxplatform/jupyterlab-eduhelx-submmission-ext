@@ -8,6 +8,7 @@ import tornado
 import time
 import asyncio
 import deepdiff
+import httpx
 from jupyter_server.base.handlers import APIHandler
 from jupyter_server.utils import url_path_join
 from pathlib import Path
@@ -49,6 +50,7 @@ class AppContext:
             user_autogen_password=self.config.USER_AUTOGEN_PASSWORD,
             jwt_refresh_leeway_seconds=self.config.JWT_REFRESH_LEEWAY_SECONDS
         )
+        self.api.client.timeout = httpx.Timeout(15.0, read=15.0)
 
 class BaseHandler(APIHandler):
     context: AppContext = None

@@ -141,16 +141,14 @@ export async function getServerSettings(): Promise<IServerSettings> {
     }
 }
 
-export async function submitAssignment(
+export async function uploadAssignment(
     currentPath: string,
-    summary: string,
-    description?: string
+    summary: string
 ): Promise<void> {
     const res = await requestAPI<void>(`/submit_assignment`, {
         method: 'POST',
         body: JSON.stringify({
             summary,
-            description,
             current_path: currentPath
         })
     })

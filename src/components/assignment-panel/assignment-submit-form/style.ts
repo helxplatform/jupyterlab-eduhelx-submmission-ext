@@ -15,7 +15,9 @@ export const submitRootClass = style({
 })
 
 export const summaryClass = style({
-    height: '2em',
+    minHeight: '2em',
+    resize: 'vertical',
+    alignItems: 'flex-start',
 
     marginBottom: '1em',
     padding: 'var(--jp-code-padding)',

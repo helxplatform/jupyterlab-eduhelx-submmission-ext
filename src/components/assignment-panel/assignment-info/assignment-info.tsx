@@ -92,6 +92,9 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
             tooltip = "The assignment has not opened yet for students"
         }
         else if (!assignment.isClosed) {
+            color = "rgba(0, 0, 0, 0.88)"
+            backgroundColor = "#fafafa"
+            borderColor = "#d9d9d9"
             text = "Open"
             tooltip = "The assignment is currently open for students to work"
         } else {
@@ -172,13 +175,11 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                             setAvailableDateControlled(e.target.value)
                             onAvailableDateChanged(e)
                         } }
-                        inputProps={{
-                            step: 900, // 15 min step
-                            style: { boxSizing: "content-box", paddingTop: 4, paddingBottom: 5, fontSize: 15 },
-                        }}
                         InputProps={{ inputProps: {
                             // Gets overriden in top-level inputProps
-                            max: "9999-12-31T11:59"
+                            max: "9999-12-31T11:59",
+                            step: 900, // 15 min step
+                            style: { boxSizing: "content-box", paddingTop: 4, paddingBottom: 5, fontSize: 15 }
                         } }}
                         // helperText={ "(" + getLocalTimezoneAbbr() + ")" }
                         style={{ width: "100%" }}
@@ -198,13 +199,11 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                             setDueDateControlled(e.target.value)
                             onDueDateChanged(e)
                         } }
-                        inputProps={{
-                            step: 900, // 15 min step
-                            style: { boxSizing: "content-box", paddingTop: 4, paddingBottom: 5, fontSize: 15 }
-                        }}
                         InputProps={{ inputProps: {
                             // Gets overriden in top-level inputProps
-                            max: "9999-12-31T11:59"
+                            max: "9999-12-31T11:59",
+                            step: 900, // 15 min step
+                            style: { boxSizing: "content-box", paddingTop: 4, paddingBottom: 5, fontSize: 15 }
                         } }}
                         style={{ width: "100%" }}
                     />
