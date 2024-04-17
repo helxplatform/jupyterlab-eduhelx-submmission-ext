@@ -262,6 +262,12 @@ class AssignmentsHandler(BaseHandler):
         if "due_date" in data: data["due_date"] = set_datetime_tz(data["due_date"])
         await self.api.update_assignment(name, **data)
 
+class SyncToLMSHandler(BaseHandler):
+    @tornado.web.authenticated
+    async def post(self):
+        await self.api.sync_to_lms()
+        self.finish()
+
 class SettingsHandler(BaseHandler):
     @tornado.web.authenticated
     async def get(self):
@@ -306,6 +312,7 @@ def setup_handlers(server_app):
         ("course_instructor_students", CourseAndInstructorAndStudentsHandler),
         (("course_instructor_students", "poll"), PollCourseInstructorStudentsHandler),
         ("clone_student_repository", CloneStudentRepositoryHandler),
+        ("sync_to_lms", SyncToLMSHandler),
         ("settings", SettingsHandler)
     ]
 

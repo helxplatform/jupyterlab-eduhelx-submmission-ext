@@ -164,3 +164,9 @@ export async function cloneStudentRepository(repositoryUrl: string, currentPath:
     })
     return repositoryRootPath
 }
+
+export async function syncToLMS(): Promise<void> {
+    await requestAPI<void>(`/sync_to_lms`, {
+        method: 'POST'
+    })
+}
