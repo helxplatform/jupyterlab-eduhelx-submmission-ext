@@ -26,6 +26,7 @@ export const AssignmentContent = () => {
                         <AssignmentInfo />
                         <AssignmentStagedChanges />
                         {/*<AssignmentSubmissions style={{ flexGrow: 1 }} /> */}
+                        <div style={{ flexGrow: 1}} />
                         <AssignmentSubmitForm />
                     </div>
                 )

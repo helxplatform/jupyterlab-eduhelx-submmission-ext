@@ -280,7 +280,6 @@ async def clone_repo_if_not_exists(context: AppContext):
     repo_root = Path(FIXED_REPO_ROOT.format(course["name"])) # note: the relative path for the server is the root path for the UI
     if not repo_root.exists():
         repo_root.mkdir(parents=True)
-        print("132409812094813240913281092384", "CLONING MASTER REPOSITORY TO", repo_root)
         master_repository_url = course["master_remote_url"]
         clone_repository(master_repository_url, repo_root)
         execute(["chown", "root", repo_root.parent])

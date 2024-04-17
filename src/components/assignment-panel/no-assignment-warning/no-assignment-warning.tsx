@@ -9,7 +9,7 @@ import {
 import { AssignmentsList } from '../assignments-list'
 import { TextDivider } from '../../text-divider'
 import { cloneStudentRepository } from '../../../api'
-import { useAssignment, useCommands } from '../../../contexts'
+import { useAssignment, useCommands, useSettings } from '../../../contexts'
 import { DateFormat } from '../../../utils'
 import { activeStyle, disabledStyle, submitRootClass, summaryClass } from '../assignment-submit-form/style'
 
@@ -19,29 +19,12 @@ interface NoAssignmentWarningProps {
 
 export const NoAssignmentWarning = ({ noRepository }: NoAssignmentWarningProps) => {
     const commands = useCommands()!
-    const { path } = useAssignment()!
+    const { path, course } = useAssignment()!
+    const { repoRoot } = useSettings()!
 
     const [repositoryUrl, setRepositoryUrl] = useState<string>('')
     const [loading, setLoading] = useState<boolean>(false)
     const [errorMessage, setErrorMessage] = useState<string | null>(null)
-
-    const cloneRepository = async (repositoryUrl: string) => {
-        if (!path) {
-            console.log("Unknown cwd, can't clone")
-            return
-        }
-        setLoading(true)
-        try {
-            const repositoryRootPath = await cloneStudentRepository(repositoryUrl, path)
-            commands.execute('filebrowser:go-to-path', {
-                path: repositoryRootPath,
-                dontShowBrowser: true
-            })
-        } catch (e: any) {
-            setErrorMessage(e.message)
-        }
-        setLoading(false)
-    }
 
     if (noRepository) return (
         <div className={ containerClass }>
@@ -50,9 +33,12 @@ export const NoAssignmentWarning = ({ noRepository }: NoAssignmentWarningProps) 
             </div>
             <button
                 className={ openFileBrowserButtonClass }
-                onClick={ () => commands.execute('filebrowser:toggle-main') }
+                onClick={ () => commands.execute('filebrowser:go-to-path', {
+                    path: repoRoot,
+                    dontShowBrowser: true
+                }) }
             >
-                Open the FileBrowser
+                Open { course?.name }
             </button>
         </div>
     )

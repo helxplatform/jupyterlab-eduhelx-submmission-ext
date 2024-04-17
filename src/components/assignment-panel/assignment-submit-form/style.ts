@@ -16,7 +16,7 @@ export const submitRootClass = style({
 
 export const summaryClass = style({
     minHeight: '2em',
-    resize: 'vertical',
+    // resize: 'vertical',
     alignItems: 'flex-start',
 
     marginBottom: '1em',
