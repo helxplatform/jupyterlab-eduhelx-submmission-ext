@@ -19,7 +19,7 @@ interface NoAssignmentWarningProps {
 
 export const NoAssignmentWarning = ({ noRepository }: NoAssignmentWarningProps) => {
     const commands = useCommands()!
-    const { path, course } = useAssignment()!
+    const { course } = useAssignment()!
     const { repoRoot } = useSettings()!
 
     const [repositoryUrl, setRepositoryUrl] = useState<string>('')
