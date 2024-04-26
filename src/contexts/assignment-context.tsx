@@ -36,7 +36,7 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
         students === undefined ||
         course === undefined
     ), [currentAssignment, assignments, instructor, students, course])
-
+    
     useEffect(() => {
         setCurrentPath(fileBrowser.model.path)
 
@@ -58,17 +58,12 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
         let cancelled = false
         let timeoutId: number | undefined = undefined
         async function timeout() {
-            if (currentPath) {
+            if (currentPath !== null) {
                 try {
                     const data = await getAssignments(currentPath)
                     if (!cancelled) {
-                        if (data) {
-                            setAssignments(data.assignments)
-                            setCurrentAssignment(data.currentAssignment)
-                        } else {
-                            setAssignments(undefined)
-                            setCurrentAssignment(undefined)
-                        }
+                        setAssignments(data.assignments)
+                        setCurrentAssignment(data.currentAssignment)
                         timeoutId = window.setTimeout(timeout, delay)
                     }
                 } catch (e: any) {
@@ -99,15 +94,9 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
             try {
                 const data = await getInstructorAndStudentsAndCourse()
                 if (!cancelled) {
-                    if (data) {
-                        setCourse(data.course)
-                        setInstructor(data.instructor)
-                        setStudents(data.students)
-                    } else {
-                        setCourse(undefined)
-                        setInstructor(undefined)
-                        setStudents(undefined)
-                    }
+                    setCourse(data.course)
+                    setInstructor(data.instructor)
+                    setStudents(data.students)
                     timeoutId = window.setTimeout(timeout, delay)
                 }
             } catch (e: any) {

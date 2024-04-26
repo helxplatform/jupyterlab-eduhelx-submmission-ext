@@ -100,15 +100,7 @@ export const AssignmentSubmissionInfo = ({ }: AssignmentSubmissionInfoProps) => 
                 disabled={ graded.length === 0 && submitted.length === 0 }
                 onClick={ () => {} }
             >
-                { `${ submitted.length === 0 && graded.length > 0 ? "Regrade" : "Grade" } Submitted Assignments` }
-            </button>
-            <button
-                className={ assignmentSubmitButton }
-                style={{ marginTop: 8, height: 28 }}
-                disabled={ graded.length === 0 }
-                onClick={ () => {} }
-            >
-                Upload Grades to Canvas
+                { `${ submitted.length === 0 && graded.length > 0 ? "Regrade" : "Grade" } and Upload Submissions` }
             </button>
             
         </div>
