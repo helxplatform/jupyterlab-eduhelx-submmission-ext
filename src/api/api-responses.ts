@@ -27,6 +27,8 @@ export interface InstructorResponse extends UserResponse {
 
 export interface StudentResponse extends UserResponse {
     user_type: UserType.STUDENT
+    fork_remote_url: string
+    fork_cloned: boolean
     join_date: string
     exit_date: string | null
 }
@@ -36,6 +38,13 @@ export interface StagedChangeResponse {
     path_from_assn: string
     modification_type: string
     type: "file" | "directory"
+}
+
+export interface SubmissionResponse {
+    id: number
+    active: boolean
+    submission_time: string
+    commit: CommitResponse
 }
 
 export interface SubmissionResponse {
@@ -61,6 +70,8 @@ export interface AssignmentResponse {
     is_created: boolean
     is_available: boolean
     is_closed: boolean
+
+    student_submissions?: { [onyen: string]: SubmissionResponse[] }
 }
 
 export interface CourseResponse {

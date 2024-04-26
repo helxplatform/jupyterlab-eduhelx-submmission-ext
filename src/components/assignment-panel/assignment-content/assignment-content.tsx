@@ -3,9 +3,9 @@ import { CircularProgress, Divider } from '@material-ui/core'
 import { assignmentContainerClass, containerClass, loadingContainerClass } from './style'
 import { NoAssignmentWarning } from '../no-assignment-warning'
 import { AssignmentInfo } from '../assignment-info'
-import { AssignmentSubmissions } from '../assignment-submissions'
 import { AssignmentSubmitForm } from '../assignment-submit-form'
 import { AssignmentStagedChanges } from '../assignment-staged-changes'
+import { AssignmentSubmissionInfo } from '../assignment-submission-info'
 import { useAssignment } from '../../../contexts'
 import { Tabs } from '../../tabs'
 
@@ -24,8 +24,8 @@ export const AssignmentContent = () => {
                 ) : (
                     <div className={ assignmentContainerClass }>
                         <AssignmentInfo />
-                        <AssignmentStagedChanges />
-                        {/*<AssignmentSubmissions style={{ flexGrow: 1 }} /> */}
+                        <AssignmentSubmissionInfo />
+                        <AssignmentStagedChanges style={{ marginTop: 16 }} />
                         <div style={{ flexGrow: 1}} />
                         <AssignmentSubmitForm />
                     </div>

@@ -2,6 +2,8 @@ import { StudentResponse } from './api-responses'
 import { IUser, User } from './user'
 
 export interface IStudent extends IUser {
+    readonly forkRemoteUrl: string
+    readonly forkCloned: boolean
     readonly joinDate: Date
     readonly exitDate: Date | null
 }
@@ -13,11 +15,15 @@ export class Student extends User implements IStudent {
         firstName: string,
         lastName: string,
         email: string,
+        private _forkRemoteUrl: string,
+        private _forkCloned: boolean,
         private _joinDate: Date,
         private _exitDate: Date | null
     ) {
         super(id, onyen, firstName, lastName, email)
     }
+    get forkRemoteUrl() { return this._forkRemoteUrl }
+    get forkCloned() { return this._forkCloned }
     get joinDate() { return this._joinDate }
     get exitDate() { return this._exitDate }
 
@@ -28,6 +34,8 @@ export class Student extends User implements IStudent {
             data.first_name,
             data.last_name,
             data.email,
+            data.fork_remote_url,
+            data.fork_cloned,
             new Date(data.join_date),
             data.exit_date ? new Date(data.exit_date) : null
         )

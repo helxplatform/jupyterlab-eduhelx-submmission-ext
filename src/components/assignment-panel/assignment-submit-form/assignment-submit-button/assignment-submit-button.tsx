@@ -17,7 +17,7 @@ export const AssignmentSubmitButton = ({ onClick, disabled=false, ...props }: As
             disabled={ disabled }
             { ...props }
         >
-            <PublishSharp style={{ fontSize: 22, marginRight: 4 }} />Push Changes
+            <PublishSharp style={{ fontSize: 22, marginRight: 4 }} />Push Changes To Students
         </button>
     )
 }

@@ -3,6 +3,10 @@ import { ISubmission, Submission } from './submission'
 import { AssignmentResponse } from './api-responses'
 import { IStagedChange, StagedChange } from './staged-change'
 
+interface StudentSubmissions {
+    [onyen: string]: ISubmission[]
+}
+
 export interface IAssignment {
     readonly id: number
     readonly name: string
@@ -30,8 +34,7 @@ export interface IAssignment {
 
 // Submissions and staged changes are definitely defined in an ICurrentAssignment
 export interface ICurrentAssignment extends IAssignment {
-    readonly submissions: ISubmission[] //DEBUG REMOVE THIS
-    readonly activeSubmission?: ISubmission //DEBUG REMOVE THIS
+    readonly studentSubmissions: StudentSubmissions
 }
 
 export class Assignment implements IAssignment {
@@ -51,9 +54,10 @@ export class Assignment implements IAssignment {
         private _isCreated: boolean,
         private _isAvailable: boolean,
         private _isClosed: boolean,
+
+        private _studentSubmissions: StudentSubmissions | undefined
     ) {}
-    get submissions() { return [] } // DEBUG REMOVE THIS
-    get activeSubmission() { return undefined } //DEBUG REMOVE THIS
+    get studentSubmissions() { return this._studentSubmissions }
     
     get id() { return this._id }
     get name() { return this._name }
@@ -74,6 +78,10 @@ export class Assignment implements IAssignment {
     
 
     static fromResponse(data: AssignmentResponse): IAssignment {
+        let studentSubmissions: any = data.student_submissions ? {} : undefined
+        if (data.student_submissions) Object.keys(data.student_submissions).forEach((onyen) => {
+            studentSubmissions[onyen] = data.student_submissions![onyen].map((res) => Submission.fromResponse(res))
+        })
         return new Assignment(
             data.id,
             data.name,
@@ -89,7 +97,9 @@ export class Assignment implements IAssignment {
             data.is_extended,
             data.is_created,
             data.is_available,
-            data.is_closed
+            data.is_closed,
+
+            studentSubmissions
         )
     }
 }

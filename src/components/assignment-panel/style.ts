@@ -25,3 +25,11 @@ export const panelHeaderClass = style({
     padding: '8px 12px',
     textTransform: 'uppercase'
 })
+
+export const studentManagementPopoverOverlayClass = style({
+    $nest: {
+        '& .ant-popover-title': {
+            marginBottom: 4
+        }
+    }
+})

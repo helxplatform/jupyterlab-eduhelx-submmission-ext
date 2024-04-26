@@ -72,6 +72,7 @@
     "@material-ui/core": "^4.12.4",
     "@material-ui/icons": "^4.5.1",
     "@material-ui/lab": "^4.0.0-alpha.39",
+    "antd": "^5.16.4",
     "csx": "^10.0.2",
     "moment": "^2.29.4",
     "qs": "^6.11.2",

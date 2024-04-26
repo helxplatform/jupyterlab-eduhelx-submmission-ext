@@ -16,13 +16,6 @@ import {
 } from './api-responses'
 import { IInstructor, Instructor } from './instructor'
 
-
-
-export interface Polled<T> {
-    data: T
-    rawData: any
-}
-
 export interface UpdateAssignmentData {
     new_name?: string | null,
     directory_path?: string | null,
@@ -56,25 +49,6 @@ export async function getInstructorAndStudentsAndCourse(): Promise<GetInstructor
     }
 }
 
-export async function getInstructorAndStudentsAndCoursePolled(currentValue?: object): Promise<Polled<GetInstructorAndStudentsAndCourseResponse>> {
-    const queryString = qs.stringify({ current_value: JSON.stringify(currentValue) })
-    const { instructor, students, course } = await requestAPI<{
-        instructor: InstructorResponse
-        students: StudentResponse[]
-        course: CourseResponse
-    }>(`/course_instructor_students/poll?${ queryString }`, {
-        method: 'GET'
-    })
-    return {
-        data: {
-            instructor: Instructor.fromResponse(instructor),
-            students: students.map((student) => Student.fromResponse(student)),
-            course: Course.fromResponse(course)
-        },
-        rawData: { instructor, students, course }
-    }
-}
-
 
 export async function getAssignments(path: string): Promise<GetAssignmentsResponse> {
     const queryString = qs.stringify({ path })
@@ -87,23 +61,6 @@ export async function getAssignments(path: string): Promise<GetAssignmentsRespon
     return {
         assignments: assignments ? assignments.map((data) => Assignment.fromResponse(data)) : null,
         currentAssignment: current_assignment ? Assignment.fromResponse(current_assignment) as ICurrentAssignment : null
-    }
-}
-
-export async function getAssignmentsPolled(path: string, currentValue?: object): Promise<Polled<GetAssignmentsResponse>> {
-    const queryString = qs.stringify({ path, current_value: JSON.stringify(currentValue) })
-    const { assignments, current_assignment } = await requestAPI<{
-        assignments: AssignmentResponse[] | null
-        current_assignment: AssignmentResponse | null
-    }>(`/assignments/poll?${ queryString }`, {
-        method: 'GET'
-    })
-    return {
-        data: {
-            assignments: assignments ? assignments.map((data) => Assignment.fromResponse(data)) : null,
-            currentAssignment: current_assignment ? Assignment.fromResponse(current_assignment) as ICurrentAssignment : null
-        },
-        rawData: { assignments, current_assignment }
     }
 }
 

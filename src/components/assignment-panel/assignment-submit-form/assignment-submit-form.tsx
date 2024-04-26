@@ -26,7 +26,7 @@ export const AssignmentSubmitForm = ({ }: AssignmentSubmitFormProps) => {
     const disabledReason = disabled ? (
         !assignment ? undefined :   
         submitting ? `Currently uploading assignment` :
-        summaryText === "" ? `Please enter a summary for the submission` : undefined
+        summaryText === "" ? `Please enter a summary describing your changes` : undefined
     ) : undefined
     
     const submitAssignment = async () => {

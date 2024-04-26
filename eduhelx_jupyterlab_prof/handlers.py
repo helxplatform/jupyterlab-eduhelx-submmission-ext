@@ -22,7 +22,7 @@ from eduhelx_utils.git import (
     get_modified_paths
 )
 from eduhelx_utils.api import Api
-from .instructor_repo import InstructorClassRepo
+from .instructor_repo import InstructorClassRepo, NotInstructorClassRepositoryException
 from .process import execute
 from ._version import __version__
 
@@ -144,26 +144,6 @@ class CloneStudentRepositoryHandler(BaseHandler):
         
         self.finish(json.dumps(os.path.join("/", frontend_cloned_path)))
 
-class PollCourseInstructorStudentsHandler(BaseHandler):
-    @tornado.web.authenticated
-    async def get(self):
-        # If this is the first poll the client has made, the `current_value` argument will not be present.
-        # Note: we are not deserializing `current_value`; it is a JSON-serialized string.
-        current_value: str = 'null'
-        if "current_value" in self.request.arguments:
-            current_value = self.get_argument("current_value")
-
-        start = time.time()
-        while (elapsed := time.time() - start) < self.config.LONG_POLLING_TIMEOUT_SECONDS:
-            new_value = await CourseAndInstructorAndStudentsHandler.get_value(self)
-            if deepdiff.DeepDiff(json.loads(new_value), json.loads(current_value)):
-                # print(12341341234132, deepdiff.DeepDiff(new_value, current_value))
-                self.finish(new_value)
-                return
-            await asyncio.sleep(self.config.LONG_POLLING_SLEEP_INTERVAL_SECONDS)
-            
-        self.finish(new_value)
-
 class CourseAndInstructorAndStudentsHandler(BaseHandler):
     async def get_value(self):
         instructor = await self.api.get_my_user()
@@ -178,26 +158,6 @@ class CourseAndInstructorAndStudentsHandler(BaseHandler):
     @tornado.web.authenticated
     async def get(self):
         self.finish(await self.get_value())
-
-class PollAssignmentsHandler(BaseHandler):
-    @tornado.web.authenticated
-    async def get(self):
-        current_path: str = self.get_argument("path")
-        # If this is the first poll the client has made, the `current_value` argument will not be present.
-        # Note: we are not deserializing `current_value`; it is a JSON-serialized string.
-        current_value: str = 'null'
-        if "current_value" in self.request.arguments:
-            current_value = self.get_argument("current_value")
-
-        start = time.time()
-        while (elapsed := time.time() - start) < self.config.LONG_POLLING_TIMEOUT_SECONDS:
-            new_value = await AssignmentsHandler.get_value(self, current_path)
-            if deepdiff.DeepDiff(json.loads(new_value), json.loads(current_value)):
-                self.finish(new_value)
-                return
-            await asyncio.sleep(self.config.LONG_POLLING_SLEEP_INTERVAL_SECONDS)
-            
-        self.finish(new_value)
 
 class AssignmentsHandler(BaseHandler):
     async def get_value(self, current_path: str):
@@ -246,7 +206,22 @@ class AssignmentsHandler(BaseHandler):
                     pass
 
         value["assignments"] = assignments
-        value["current_assignment"] = student_repo.current_assignment
+        
+        current_assignment = student_repo.current_assignment
+        if current_assignment:
+            current_assignment["student_submissions"] = await self.api.get_submissions(current_assignment["id"])
+            for student in current_assignment["student_submissions"]:
+                for submission in current_assignment["student_submissions"][student]:
+                    submission["commit"] = {
+                        "id": submission["commit_id"],
+                        "message": "",
+                        "author_name": "",
+                        "author_email": "",
+                        "committer_name": "",
+                        "committer_email": ""
+                    }
+
+        value["current_assignment"] = current_assignment
         return json.dumps(value)
 
     @tornado.web.authenticated
@@ -261,6 +236,50 @@ class AssignmentsHandler(BaseHandler):
         if "available_date" in data: data["available_date"] = set_datetime_tz(data["available_date"])
         if "due_date" in data: data["due_date"] = set_datetime_tz(data["due_date"])
         await self.api.update_assignment(name, **data)
+
+class SubmissionHandler(BaseHandler):
+    @tornado.web.authenticated
+    async def post(self):
+        data = json.loads(self.request.body)
+        submission_summary: str = data["summary"]
+        current_path: str = data["current_path"]
+        current_path_abs = os.path.realpath(current_path)
+
+        instructor = await self.api.get_my_user()
+        assignments = await self.api.get_my_assignments()
+        course = await self.api.get_course()
+
+        try:
+            instructor_repo = InstructorClassRepo(course, assignments, current_path_abs)
+        except InvalidGitRepositoryException:
+            self.set_status(400)
+            self.finish(json.dumps({
+                "message": "Not in a git repository"
+            }))
+            return
+        except NotInstructorClassRepositoryException:
+            self.set_status(400)
+            self.finish(json.dumps({
+                "message": "Not in your class repository"
+            }))
+            return
+        
+        if instructor_repo.current_assignment is None:
+            self.set_status(400)
+            self.finish(json.dumps({
+                "message": "Not in an assignment directory"
+            }))
+            return
+
+        current_assignment_path = instructor_repo.get_assignment_path(instructor_repo.current_assignment)
+        stage_files(".", path=instructor_repo.repo_root)
+        commit_id = commit(
+            submission_summary,
+            None,
+            path=instructor_repo.repo_root
+        )
+        push("origin", "master", path=instructor_repo.repo_root)
+        self.finish()
 
 class SyncToLMSHandler(BaseHandler):
     @tornado.web.authenticated
@@ -308,10 +327,9 @@ def setup_handlers(server_app):
     base_url = web_app.settings["base_url"]
     handlers = [
         ("assignments", AssignmentsHandler),
-        (("assignments", "poll"), PollAssignmentsHandler),
         ("course_instructor_students", CourseAndInstructorAndStudentsHandler),
-        (("course_instructor_students", "poll"), PollCourseInstructorStudentsHandler),
         ("clone_student_repository", CloneStudentRepositoryHandler),
+        ("submit_assignment", SubmissionHandler),
         ("sync_to_lms", SyncToLMSHandler),
         ("settings", SettingsHandler)
     ]

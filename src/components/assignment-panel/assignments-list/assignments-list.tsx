@@ -5,12 +5,11 @@ import {
 } from '@material-ui/core'
 import { OpenInNewSharp, QueryBuilderOutlined, ExpandMoreSharp } from '@material-ui/icons'
 import { classes } from 'typestyle'
-import { assignmentBucketContainerClass, assignmentListHeaderClass, assignmentListItemClass, downloadAssignmentButtonClass } from './style'
+import { assignmentBucketContainerClass, assignmentListHeaderClass, assignmentListItemClass, assignmentsListClass, downloadAssignmentButtonClass } from './style'
 import { TextDivider } from '../../text-divider'
 import { useAssignment, useCommands } from '../../../contexts'
 import type { IAssignment } from '../../../api'
 import { DateFormat } from '../../../utils'
-import { assignmentsListClass } from '../assignment-submissions/style'
 import { disabledButtonClass } from '../../style'
 
 const ListItemAvatar = _ListItemAvatar as any

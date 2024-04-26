@@ -2,7 +2,7 @@ import React, { createContext, useContext, ReactNode, useState, useMemo, useEffe
 import { IChangedArgs } from '@jupyterlab/coreutils'
 import { FileBrowserModel, IDefaultFileBrowser } from '@jupyterlab/filebrowser'
 import { IEduhelxSubmissionModel } from '../tokens'
-import { IAssignment, IInstructor, ICurrentAssignment, ICourse, getAssignmentsPolled, GetAssignmentsResponse, GetInstructorAndStudentsAndCourseResponse, IStudent, getInstructorAndStudentsAndCoursePolled } from '../api'
+import { IAssignment, IInstructor, ICurrentAssignment, ICourse, getAssignments, GetAssignmentsResponse, GetInstructorAndStudentsAndCourseResponse, IStudent, getInstructorAndStudentsAndCourse } from '../api'
 
 interface IAssignmentContext {
     assignments: IAssignment[] | null | undefined
@@ -53,37 +53,37 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
         setAssignments(undefined)
         setCurrentAssignment(undefined)
         
+        const delay = 5000
+        const retryDelay = 1000
         let cancelled = false
-        void async function poll(currentRawValue?: object) {
-            let newValue: GetAssignmentsResponse | undefined = undefined
-            let newRawValue: any = undefined
-            let error = false
-            if (currentPath !== null) {
+        let timeoutId: number | undefined = undefined
+        async function timeout() {
+            if (currentPath) {
                 try {
-                    ({ data: newValue, rawData: newRawValue } = await getAssignmentsPolled(currentPath, currentRawValue))
+                    const data = await getAssignments(currentPath)
+                    if (!cancelled) {
+                        if (data) {
+                            setAssignments(data.assignments)
+                            setCurrentAssignment(data.currentAssignment)
+                        } else {
+                            setAssignments(undefined)
+                            setCurrentAssignment(undefined)
+                        }
+                        timeoutId = window.setTimeout(timeout, delay)
+                    }
                 } catch (e: any) {
+                    // If the request fails, just maintain whatever state we already have
                     console.error(e)
-                    error = true
+                    if (!cancelled) timeoutId = window.setTimeout(timeout, retryDelay)
                 }
-            } else {
-                error = true
             }
-            if (cancelled) return
-            if (newValue !== undefined) {
-                setAssignments(newValue.assignments)
-                setCurrentAssignment(newValue.currentAssignment)
-            } else {
-                setAssignments(undefined)
-                setCurrentAssignment(undefined)
-            }
-            // This endpoint should never return an error, which means it will likely return it immediately.
-            // If we don't delay our next request upon erroring, it may immediately fail and rerequest, which is bad.
-            if (!error) poll(newRawValue)
-            else setTimeout(() => poll(newRawValue), 1000)
-        }()
+        }
+        timeout()
         return () => {
             cancelled = true
+            window.clearTimeout(timeoutId)
         }
+
     }, [currentPath])
 
     useEffect(() => {
@@ -91,34 +91,35 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
         setInstructor(undefined)
         setStudents(undefined)
 
+        const delay = 5000
+        const retryDelay = 1000
         let cancelled = false
-        void async function poll(currentRawValue?: object) {
-            let newValue: GetInstructorAndStudentsAndCourseResponse | undefined = undefined
-            let newRawValue: any = undefined
-            let error = false
+        let timeoutId: number | undefined = undefined
+        async function timeout() {
             try {
-                ({ data: newValue, rawData: newRawValue } = await getInstructorAndStudentsAndCoursePolled(currentRawValue))
+                const data = await getInstructorAndStudentsAndCourse()
+                if (!cancelled) {
+                    if (data) {
+                        setCourse(data.course)
+                        setInstructor(data.instructor)
+                        setStudents(data.students)
+                    } else {
+                        setCourse(undefined)
+                        setInstructor(undefined)
+                        setStudents(undefined)
+                    }
+                    timeoutId = window.setTimeout(timeout, delay)
+                }
             } catch (e: any) {
+                // If the request fails, just maintain whatever state we already have
                 console.error(e)
-                error = true
+                if (!cancelled) timeoutId = window.setTimeout(timeout, retryDelay)
             }
-            if (cancelled) return
-            if (newValue !== undefined) {
-                setCourse(newValue.course)
-                setInstructor(newValue.instructor)
-                setStudents(newValue.students)
-            } else {
-                setCourse(undefined)
-                setInstructor(undefined)
-                setStudents(undefined)
-            }
-            // This endpoint should never return an error, which means it will likely return it immediately.
-            // If we don't delay our next request upon erroring, it may immediately fail and rerequest, which is bad.
-            if (!error) poll(newRawValue)
-            else setTimeout(() => poll(newRawValue), 1000)
-        }()
+        }
+        timeout()
         return () => {
             cancelled = true
+            window.clearTimeout(timeoutId)
         }
     }, [])
 
