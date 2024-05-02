@@ -368,6 +368,12 @@ async def set_git_authentication(context: AppContext) -> None:
                 "[user]\n" \
                 f"    name = { context.config.USER_ONYEN }\n" \
                 f"    email = { student['email'] }\n" \
+                "[author]\n" \
+                f"    name = { context.config.USER_ONYEN }\n" \
+                f"    email = { student['email'] }\n" \
+                "[committer]\n" \
+                f"    name = { context.config.USER_ONYEN }\n" \
+                f"    email = { student['email'] }\n" \
                 f"[credential]" \
                 f"    helper = ''" \
                 f"    helper = { context.config.CREDENTIAL_HELPER }"
