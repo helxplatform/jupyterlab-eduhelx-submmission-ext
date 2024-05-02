@@ -23,6 +23,7 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
     const assignmentStatusTag = useMemo(() => {
         let color = undefined
         let backgroundColor = undefined
+        let borderColor = undefined
         let text = undefined
         let tooltip = undefined
         let filled = false
@@ -61,8 +62,9 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
             }            
         } else if (assignment.isAvailable) {
             // Available
-            color = assignment.activeSubmission ? "var(--jp-success-color1)" : "white"
-            backgroundColor = assignment.activeSubmission ? "var(--jp-success-color1)" : "var(--jp-warn-color1)"
+            color = assignment.activeSubmission ? "var(--jp-success-color1)" : "var(--jp-ui-font-color1)"
+            backgroundColor = assignment.activeSubmission ? "var(--jp-success-color1)" : "#fafafa"
+            borderColor = assignment.activeSubmission ? undefined : "#d9d9d9"
             text = assignment.activeSubmission ? "Submitted" : "Not Submitted"
             tooltip = assignment.activeSubmission ? `You have submitted this assignment` : `You haven't submitted this assignment yet`
             filled = !assignment.activeSubmission
@@ -74,7 +76,7 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                     marginTop: 8,
                     color,
                     backgroundColor: filled ? backgroundColor: "transparent",
-                    border: `1px solid ${ backgroundColor }`,
+                    border: `1px solid ${ borderColor ?? backgroundColor }`,
                     textTransform: "capitalize"
                 }}
                 title={ tooltip }
