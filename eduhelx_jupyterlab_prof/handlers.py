@@ -1,14 +1,13 @@
 import json
 import os
-import requests
-import subprocess
 import tempfile
 import shutil
 import tornado
 import time
 import asyncio
-import deepdiff
 import httpx
+import traceback
+from urllib.parse import urlparse
 from jupyter_server.base.handlers import APIHandler
 from jupyter_server.utils import url_path_join
 from pathlib import Path
@@ -16,17 +15,19 @@ from collections.abc import Iterable
 from .config import ExtensionConfig
 from eduhelx_utils.git import (
     InvalidGitRepositoryException,
-    clone_repository,
+    clone_repository, init_repository, fetch_repository,
     get_tail_commit_id, get_repo_name, add_remote,
     stage_files, commit, push, get_commit_info,
-    get_modified_paths
+    get_modified_paths, checkout, get_repo_root as get_git_repo_root
 )
 from eduhelx_utils.api import Api
+from eduhelx_utils.process import execute
 from .instructor_repo import InstructorClassRepo, NotInstructorClassRepositoryException
-from .process import execute
 from ._version import __version__
 
-FIXED_REPO_ROOT = "eduhelx/{}" # <class_name>
+FIXED_REPO_ROOT = "eduhelx/{}-prof" # <class_name>
+ORIGIN_REMOTE_NAME = "origin"
+MAIN_BRANCH_NAME = "main"
 
 def set_datetime_tz(datetime: str):
     if datetime is None: return None
@@ -51,6 +52,15 @@ class AppContext:
             jwt_refresh_leeway_seconds=self.config.JWT_REFRESH_LEEWAY_SECONDS
         )
         self.api.client.timeout = httpx.Timeout(15.0, read=15.0)
+
+    async def get_repo_root(self):
+        course = await self.api.get_course()
+        return self._compute_repo_root(course["name"])
+
+    @staticmethod
+    def _compute_repo_root(course_name: str):
+        # NOTE: the relative path for the server is the root path for the UI
+        return Path(FIXED_REPO_ROOT.format(course_name.replace(" ", "_")))
 
 class BaseHandler(APIHandler):
     context: AppContext = None
@@ -278,7 +288,7 @@ class SubmissionHandler(BaseHandler):
             None,
             path=instructor_repo.repo_root
         )
-        push("origin", "master", path=instructor_repo.repo_root)
+        push(ORIGIN_REMOTE_NAME, MAIN_BRANCH_NAME, path=instructor_repo.repo_root)
         self.finish()
 
 class SyncToLMSHandler(BaseHandler):
@@ -291,6 +301,7 @@ class SettingsHandler(BaseHandler):
     @tornado.web.authenticated
     async def get(self):
         server_version = str(__version__)
+        # await asyncio.sleep(5)
         course_name = (await self.api.get_course())["name"]
         repo_root = FIXED_REPO_ROOT.format(course_name) # note: the relative path for the server is the root path for the UI
 
@@ -300,27 +311,89 @@ class SettingsHandler(BaseHandler):
         }))
 
 
-async def clone_repo_if_not_exists(context: AppContext):
-    course = await context.api.get_course()
-    repo_root = Path(FIXED_REPO_ROOT.format(course["name"])) # note: the relative path for the server is the root path for the UI
+async def create_repo_root_if_not_exists(context: AppContext) -> None:
+    repo_root = await context.get_repo_root()
     if not repo_root.exists():
         repo_root.mkdir(parents=True)
-        master_repository_url = course["master_remote_url"]
-        clone_repository(master_repository_url, repo_root)
-        execute(["chown", "root", repo_root.parent])
-        execute(["chmod", "+t", repo_root.parent])
-        execute(["chmod", "a-w", repo_root.parent])
-        # This is only a fork for students, not instructors
-        # add_remote("upstream", master_repository_url, path=repo_root)
 
+async def clone_repo_if_not_exists(context: AppContext) -> None:
+    course = await context.api.get_course()
+    student = await context.api.get_my_user()
+    repo_root = context._compute_repo_root(course["name"])
+    try:
+        get_git_repo_root(path=repo_root)
+    except InvalidGitRepositoryException:
+        """ This could just be an outright clone, but to stay consistent with how JLS fetches,
+        we will also fetch here.
+        """
+        master_repository_url = course["master_remote_url"]
+        init_repository(repo_root)
+        await set_git_authentication(context)
+        add_remote(ORIGIN_REMOTE_NAME, master_repository_url, path=repo_root)
+        fetch_repository(ORIGIN_REMOTE_NAME, path=repo_root)
+        checkout(f"{ MAIN_BRANCH_NAME }", path=repo_root)
+        
+
+async def set_git_authentication(context: AppContext) -> None:
+    repo_root = await context.get_repo_root()
+    student = await context.api.get_my_user()
+    student_repository_url = student["fork_remote_url"]
+
+    try:
+        get_git_repo_root(path=repo_root)
+        execute(["git", "config", "--local", "--unset-all", "credential.helper"], cwd=repo_root)
+        execute(["git", "config", "--local", "credential.helper", ""], cwd=repo_root)
+        execute(["git", "config", "--local", "--add", "credential.helper", context.config.CREDENTIAL_HELPER], cwd=repo_root)
+    except InvalidGitRepositoryException:
+        config_path = repo_root / ".git" / "config"
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(config_path, "w+") as f:
+            credential_config = \
+                "[user]\n" \
+                f"    name = { context.config.USER_ONYEN }\n" \
+                f"    email = { student['email'] }\n" \
+                "[author]\n" \
+                f"    name = { context.config.USER_ONYEN }\n" \
+                f"    email = { student['email'] }\n" \
+                "[committer]\n" \
+                f"    name = { context.config.USER_ONYEN }\n" \
+                f"    email = { student['email'] }\n" \
+                f"[credential]" \
+                f"    helper = ''" \
+                f"    helper = { context.config.CREDENTIAL_HELPER }"
+            f.write(credential_config)
+
+    parsed = urlparse(student_repository_url)
+    protocol, host = parsed.scheme, parsed.netloc
+    credentials = \
+        f"protocol={ protocol }\n" \
+        f"host={ host }\n" \
+        f"username={ context.config.USER_ONYEN }\n" \
+        f"password={ context.config.USER_AUTOGEN_PASSWORD }"
+    execute(["git", "credential", "approve"], stdin_input=credentials, cwd=repo_root)
+
+async def set_root_folder_permissions(context: AppContext) -> None:
+    # repo_root = await context.get_repo_root()
+    # execute(["chown", "root", repo_root.parent])
+    # execute(["chmod", "+t", repo_root.parent])
+    # execute(["chmod", "a-w", repo_root.parent])
+    ...
+
+async def setup_backend(context: AppContext):
+    try:
+        await create_repo_root_if_not_exists(context)
+        await set_git_authentication(context)
+        await clone_repo_if_not_exists(context)
+        await set_root_folder_permissions(context)
+    except:
+        print(traceback.format_exc())
 
 def setup_handlers(server_app):
     web_app = server_app.web_app
     BaseHandler.context = AppContext(server_app)
-
-    # Important we run it thread-safe for Tornado.
+    
     loop = asyncio.get_event_loop()
-    asyncio.run_coroutine_threadsafe(clone_repo_if_not_exists(BaseHandler.context), loop)
+    asyncio.run_coroutine_threadsafe(setup_backend(BaseHandler.context), loop)
     
     host_pattern = ".*$"
 
