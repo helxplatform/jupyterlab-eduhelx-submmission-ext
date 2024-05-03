@@ -141,7 +141,7 @@ const AssignmentsBucket = ({
                         <AssignmentListItem key={ assignment.id } assignment={ assignment } />
                     ))
                 ) : (
-                    <span style={{ color: 'var(--jp-ui-font-color1)' }}>
+                    <span style={{ color: 'var(--jp-ui-font-color1)', paddingLeft: 8 }}>
                         { emptyText }
                     </span>
                 ) }
