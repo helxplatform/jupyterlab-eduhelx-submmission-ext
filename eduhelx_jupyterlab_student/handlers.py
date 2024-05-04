@@ -20,7 +20,7 @@ from eduhelx_utils.git import (
     get_tail_commit_id, get_repo_name, add_remote,
     stage_files, commit, push, get_commit_info,
     get_modified_paths, get_repo_root as get_git_repo_root,
-    checkout
+    checkout, reset, get_head_commit_id
 )
 from eduhelx_utils.api import Api
 from eduhelx_utils.process import execute
@@ -299,22 +299,44 @@ class SubmissionHandler(BaseHandler):
             return
 
         current_assignment_path = student_repo.get_assignment_path(student_repo.current_assignment)
-        stage_files(".", path=student_repo.repo_root)
-        commit_id = commit(
-            submission_summary,
-            submission_description if submission_description else None,
-            path=student_repo.repo_root
-        )
-        push(ORIGIN_REMOTE_NAME, MAIN_BRANCH_NAME, path=student_repo.repo_root)
+        
+        rollback_id = get_head_commit_id(path=student_repo.repo_root)
+        stage_files(".", path=current_assignment_path)
+        
+        try:
+            commit_id = commit(
+                submission_summary,
+                submission_description if submission_description else None,
+                path=current_assignment_path
+            )
+        except:
+            # If the commit fails then unstage the assignment files.
+            reset(".", path=current_assignment_path)
+
         try:
             await self.api.create_submission(
                 student_repo.current_assignment["id"],
                 commit_id
             )
-            self.finish()
-        except requests.exceptions.HTTPError as e:
+        except Exception as e:
+            # If the submission fails create in the API, rollback the local commit to the previous head.
+            reset(rollback_id, path=student_repo.repo_root)
             self.set_status(e.response.status_code)
             self.finish(e.response.text)
+            return
+        
+        # We need to create the submission in the API before we push the changes to the remote,
+        # so that we don't push the stages changes without actually creating a submission for the user
+        # (which would be very misleading)
+        try:
+            push(ORIGIN_REMOTE_NAME, MAIN_BRANCH_NAME, path=current_assignment_path)
+            self.finish()
+        except Exception as e:
+            # Need to rollback the commit if push failed too.
+            reset(rollback_id, path=student_repo.repo_root)
+            self.set_status(500)
+            self.finish(str(e))
+            return
 
 
 class SettingsHandler(BaseHandler):
