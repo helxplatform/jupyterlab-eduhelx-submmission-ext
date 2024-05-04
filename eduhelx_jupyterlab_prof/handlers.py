@@ -301,13 +301,11 @@ class SettingsHandler(BaseHandler):
     @tornado.web.authenticated
     async def get(self):
         server_version = str(__version__)
-        # await asyncio.sleep(5)
-        course_name = (await self.api.get_course())["name"]
-        repo_root = FIXED_REPO_ROOT.format(course_name) # note: the relative path for the server is the root path for the UI
+        repo_root = await self.context.get_repo_root()
 
         self.finish(json.dumps({
             "serverVersion": server_version,
-            "repoRoot": repo_root
+            "repoRoot": str(repo_root)
         }))
 
 
