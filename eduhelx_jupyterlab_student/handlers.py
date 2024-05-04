@@ -343,9 +343,11 @@ class SettingsHandler(BaseHandler):
     @tornado.web.authenticated
     async def get(self):
         server_version = str(__version__)
+        repo_root = await self.context.get_repo_root()
 
         self.finish(json.dumps({
-            "serverVersion": server_version
+            "serverVersion": server_version,
+            "repoRoot": str(repo_root)
         }))
 
 

@@ -74,4 +74,7 @@ export interface CourseResponse {
     instructors: InstructorResponse[]
 }
 
-export interface ServerSettingsResponse {}
+export interface ServerSettingsResponse {
+    serverVersion: string
+    repoRoot: string
+}
