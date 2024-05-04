@@ -19,9 +19,9 @@ export const AssignmentPanel = ({}: IAssignmentPanelProps) => {
     const snackbar = useSnackbar()!
     const { repoRoot } = useSettings()!
     const { course, students, assignment } = useAssignment()!
+    
+    const [syncLoading, setSyncLoading] = useState<boolean>(false)
 
-    const [syncLoading, setSyncLoading] = useState<boolean>(false);
-    (window as any).x = setSyncLoading
     const headerName = useMemo<ReactNode>(() => {
         const headerFragments = []
         // if (assignment) headerFragments.push(assignment.name)
@@ -56,6 +56,7 @@ export const AssignmentPanel = ({}: IAssignmentPanelProps) => {
             dontShowBrowser: true
         })
     }, [repoRoot])
+    
     return (
         <div className={ panelWrapperClass }>
             <header className={ panelHeaderClass }>
