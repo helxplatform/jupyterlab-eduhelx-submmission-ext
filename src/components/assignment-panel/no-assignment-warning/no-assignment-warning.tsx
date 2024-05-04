@@ -17,6 +17,7 @@ interface NoAssignmentWarningProps {
     noRepository: boolean
 }
 
+// This is named POORLY!
 export const NoAssignmentWarning = ({ noRepository }: NoAssignmentWarningProps) => {
     const commands = useCommands()!
     const { course } = useAssignment()!
