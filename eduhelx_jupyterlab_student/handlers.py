@@ -309,9 +309,12 @@ class SubmissionHandler(BaseHandler):
                 submission_description if submission_description else None,
                 path=current_assignment_path
             )
-        except:
+        except Exception as e:
             # If the commit fails then unstage the assignment files.
             reset(".", path=current_assignment_path)
+            self.set_status(500)
+            self.finish(str(e))
+            return
 
         try:
             await self.api.create_submission(
@@ -336,7 +339,6 @@ class SubmissionHandler(BaseHandler):
             reset(rollback_id, path=student_repo.repo_root)
             self.set_status(500)
             self.finish(str(e))
-            return
 
 
 class SettingsHandler(BaseHandler):
