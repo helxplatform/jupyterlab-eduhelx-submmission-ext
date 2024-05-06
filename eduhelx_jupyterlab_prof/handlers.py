@@ -18,7 +18,8 @@ from eduhelx_utils.git import (
     clone_repository, init_repository, fetch_repository,
     get_tail_commit_id, get_repo_name, add_remote,
     stage_files, commit, push, get_commit_info,
-    get_modified_paths, checkout, get_repo_root as get_git_repo_root
+    get_modified_paths, checkout, get_repo_root as get_git_repo_root,
+    get_head_commit_id, reset
 )
 from eduhelx_utils.api import Api
 from eduhelx_utils.process import execute
@@ -282,14 +283,32 @@ class SubmissionHandler(BaseHandler):
             return
 
         current_assignment_path = instructor_repo.get_assignment_path(instructor_repo.current_assignment)
-        stage_files(".", path=instructor_repo.repo_root)
-        commit_id = commit(
-            submission_summary,
-            None,
-            path=instructor_repo.repo_root
-        )
-        push(ORIGIN_REMOTE_NAME, MAIN_BRANCH_NAME, path=instructor_repo.repo_root)
-        self.finish()
+
+        rollback_id = get_head_commit_id(path=instructor_repo.repo_root)
+        stage_files(".", path=current_assignment_path)
+        
+        try:
+            commit_id = commit(
+                submission_summary,
+                None,
+                path=current_assignment_path
+            )
+        except Exception as e:
+            # If the commit fails, reset and abort.
+            reset(".", path=current_assignment_path)
+            self.set_status(500)
+            self.finish(str(e))
+            return
+        
+        try:
+            push(ORIGIN_REMOTE_NAME, MAIN_BRANCH_NAME, path=current_assignment_path)
+            self.finish()
+        except Exception as e:
+            # If the push fails, but we've already committed,
+            # rollback the commit and abort.
+            reset(rollback_id, path=instructor_repo.repo_root)
+            self.set_status(500)
+            self.finish(str(e))
 
 class SyncToLMSHandler(BaseHandler):
     @tornado.web.authenticated
