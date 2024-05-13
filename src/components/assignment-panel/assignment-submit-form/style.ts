@@ -20,7 +20,7 @@ export const summaryClass = style({
     alignItems: 'flex-start',
 
     marginBottom: '1em',
-    padding: 'var(--jp-code-padding)',
+    padding: 'var(--jp-code-padding) !important',
 
     outline: 'none',
     overflowX: 'auto',

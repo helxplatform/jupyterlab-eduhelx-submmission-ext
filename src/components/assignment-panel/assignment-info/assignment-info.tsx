@@ -1,4 +1,5 @@
 import React, { ChangeEvent, Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Tooltip } from 'antd'
 import moment from 'moment'
 import TextField from '@material-ui/core/TextField'
 import { ArrowBackSharp } from '@material-ui/icons'
@@ -61,19 +62,20 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
             filled = true
         }
         return (
-            <span
-                className={ tagClass }
-                style={{
-                    marginTop: 8,
-                    color,
-                    backgroundColor: filled ? backgroundColor: "transparent",
-                    border: `1px solid ${ borderColor ?? backgroundColor }`,
-                    textTransform: "capitalize"
-                }}
-                title={ tooltip }
-            >
-                { text }
-            </span>
+            <Tooltip title={ tooltip }>
+                <span
+                    className={ tagClass }
+                    style={{
+                        marginTop: 8,
+                        color,
+                        backgroundColor: filled ? backgroundColor: "transparent",
+                        border: `1px solid ${ borderColor ?? backgroundColor }`,
+                        textTransform: "capitalize"
+                    }}
+                >
+                    { text }
+                </span>
+            </Tooltip>
         )
     }, [assignment.isCreated])
 
@@ -105,20 +107,21 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
             filled = false
         }
         return (
-            <span
-                className={ tagClass }
-                style={{
-                    marginTop: 8,
-                    marginLeft: 8,
-                    color,
-                    backgroundColor: filled ? backgroundColor: "transparent",
-                    border: `1px solid ${ borderColor ?? backgroundColor }`,
-                    textTransform: "capitalize"
-                }}
-                title={ tooltip }
-            >
-                { text }
-            </span>
+            <Tooltip title={ tooltip }>
+                <span
+                    className={ tagClass }
+                    style={{
+                        marginTop: 8,
+                        marginLeft: 8,
+                        color,
+                        backgroundColor: filled ? backgroundColor: "transparent",
+                        border: `1px solid ${ borderColor ?? backgroundColor }`,
+                        textTransform: "capitalize"
+                    }}
+                >
+                    { text }
+                </span>
+            </Tooltip>
         )
     }, [course, assignment, hoursUntilDue])
 
