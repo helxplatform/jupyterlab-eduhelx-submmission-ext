@@ -256,8 +256,6 @@ async def clone_repo_if_not_exists(context: AppContext, course, student) -> None
 
         # We absolutely don't want to allow overriding any existing files.
         # To be extra careful, we will move the existing directory if it isn't empty.
-        # This may occur if something fatal goes wrong during cloning and we abort
-        # without proper cleanup.
         if repo_root.exists() and list(repo_root.iterdir()) != [repo_root / ".git"]:
             uniq_rname = str(repo_root) + "~{}"
             while os.path.exists(uniq_rname.format(c)):
