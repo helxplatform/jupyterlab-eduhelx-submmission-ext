@@ -257,37 +257,45 @@ async def clone_repo_if_not_exists(context: AppContext) -> None:
         student_repository_url = student["fork_remote_url"]
         
         # We absolutely don't want to allow overriding any existing files.
-        # To be extra careful, we will move the existing directory if it exists
+        # To be extra careful, we will move the existing directory if it isn't empty.
         # This may occur if something fatal goes wrong during cloning and we abort
         # without proper cleanup.
-        if repo_root.exists():
+        if repo_root.exists() and any(repo_root.iterdir()):
             c = 1
             uniq_rname = str(repo_root) + "~{}"
             while os.path.exists(uniq_rname.format(c)):
                 c += 1
             repo_root.rename(uniq_rname.format(c))
+            # Recreate the directory
+            repo_root.mkdir()
 
-        # This block should never fail. If it does, just abort.
-        init_repository(repo_root)
-        await set_git_authentication(context)
-        add_remote(UPSTREAM_REMOTE_NAME, master_repository_url, path=repo_root)
-        add_remote(ORIGIN_REMOTE_NAME, student_repository_url, path=repo_root)
+        """ Now we're working with a new, empty directory. """
+        try:
+            # This block should never fail. If it does, just abort.
+            init_repository(repo_root)
+            await set_git_authentication(context)
+            add_remote(UPSTREAM_REMOTE_NAME, master_repository_url, path=repo_root)
+            add_remote(ORIGIN_REMOTE_NAME, student_repository_url, path=repo_root)
 
-        @backoff.on_exception(backoff.constant, interval=2.5, max_time=15)
-        def try_fetch(remote):
-            fetch_repository(remote, path=repo_root)
+            @backoff.on_exception(backoff.constant, interval=2.5, max_time=15)
+            def try_fetch(remote):
+                fetch_repository(remote, path=repo_root)
 
-        # If either of these reach backoff and fail, just abort.
-        try_fetch(ORIGIN_REMOTE_NAME)
-        checkout(f"{ MAIN_BRANCH_NAME }", path=repo_root)
-        try_fetch(UPSTREAM_REMOTE_NAME)
+            # If either of these reach backoff and fail, just abort
+            try_fetch(ORIGIN_REMOTE_NAME)
+            checkout(f"{ MAIN_BRANCH_NAME }", path=repo_root)
+            try_fetch(UPSTREAM_REMOTE_NAME)
 
-        @backoff.on_exception(backoff.constant, interval=2.5, max_time=15)
-        async def mark_as_cloned():
-            await context.api.mark_my_fork_as_cloned()
+            @backoff.on_exception(backoff.constant, interval=2.5, max_time=15)
+            async def mark_as_cloned():
+                await context.api.mark_my_fork_as_cloned()
 
-        # Mark the fork as cloned. If this fails, just abort.
-        await mark_as_cloned()
+            # Mark the fork as cloned. If this fails, just abort.
+            await mark_as_cloned()
+        except Exception as e:
+            # At this point, we're removing a folder we just made, so no chance of deleting user data.
+            shutil.rmtree(repo_root)
+            raise e
 
 async def set_git_authentication(context: AppContext) -> None:
     repo_root = await context.get_repo_root()
