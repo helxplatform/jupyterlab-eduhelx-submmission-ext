@@ -1,4 +1,5 @@
 import React, { Fragment, useMemo } from 'react'
+import { Tooltip } from 'antd'
 import moment from 'moment'
 import { ArrowBackSharp } from '@material-ui/icons'
 import { assignmentInfoClass, assignmentInfoSectionClass, assignmentInfoSectionHeaderClass, assignmentInfoSectionWarningClass, assignmentNameClass, tagClass } from './style'
@@ -70,19 +71,20 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
             filled = !assignment.activeSubmission
         }
         return (
-            <span
-                className={ tagClass }
-                style={{
-                    marginTop: 8,
-                    color,
-                    backgroundColor: filled ? backgroundColor: "transparent",
-                    border: `1px solid ${ borderColor ?? backgroundColor }`,
-                    textTransform: "capitalize"
-                }}
-                title={ tooltip }
-            >
-                { text }
-            </span>
+            <Tooltip title={ tooltip } placement="right">
+                <span
+                    className={ tagClass }
+                    style={{
+                        marginTop: 8,
+                        color,
+                        backgroundColor: filled ? backgroundColor: "transparent",
+                        border: `1px solid ${ borderColor ?? backgroundColor }`,
+                        textTransform: "capitalize"
+                    }}
+                >
+                    { text }
+                </span>
+            </Tooltip>
         )
     }, [course, assignment, hoursUntilDue])
 

@@ -1,4 +1,5 @@
 import React, { Fragment, useMemo, useState } from 'react'
+import { Tooltip } from 'antd'
 import {
     Avatar, List, ListItem, ListItemAvatar as _ListItemAvatar, ListItemText,
     ExpansionPanel, ExpansionPanelSummary, ExpansionPanelDetails
@@ -89,18 +90,20 @@ const AssignmentListItem = ({ assignment }: AssignmentListItemProps) => {
                 </div>
             </ListItemText>
             <ListItemAvatar style={{ minWidth: 0, marginLeft: 16 }}>
-                <Avatar variant="square">
-                    <button
-                        className={ classes(downloadAssignmentButtonClass, !assignment.isCreated && disabledButtonClass) }
-                        disabled={ !assignment.isCreated }
-                        onClick={ () => commands.execute('filebrowser:go-to-path', {
-                            path: assignment.absoluteDirectoryPath,
-                            dontShowBrowser: true
-                        }) }
-                    >
-                        <OpenInNewSharp />
-                    </button>
-                </Avatar>
+                <Tooltip title={ !assignment.isCreated ? "Not available to work on yet" : undefined }>
+                    <Avatar variant="square">
+                        <button
+                            className={ classes(downloadAssignmentButtonClass, !assignment.isCreated && disabledButtonClass) }
+                            disabled={ !assignment.isCreated }
+                            onClick={ () => commands.execute('filebrowser:go-to-path', {
+                                path: assignment.absoluteDirectoryPath,
+                                dontShowBrowser: true
+                            }) }
+                        >
+                            <OpenInNewSharp />
+                        </button>
+                    </Avatar>
+                </Tooltip>
             </ListItemAvatar>
         </ListItem>
     )

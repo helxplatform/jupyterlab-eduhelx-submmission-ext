@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Backdrop, CircularProgress, Input, Snackbar } from '@material-ui/core'
 import { Alert } from '@material-ui/lab'
+import { Tooltip } from 'antd'
 import { AssignmentSubmitButton } from './assignment-submit-button'
 import {
     submitFormContainerClass, submitRootClass,
@@ -109,11 +110,16 @@ export const AssignmentSubmitForm = ({ }: AssignmentSubmitFormProps) => {
                 disableUnderline
                 fullWidth
             />
-            <AssignmentSubmitButton
-                onClick={ submitAssignment }
-                title={ disabledReason }
-                disabled={ disabled }
-            />
+            <Tooltip title={ disabledReason }>
+                {/* Wrap in div to avoid antd appending button styles. */}
+                <div>
+                    <AssignmentSubmitButton
+                        onClick={ submitAssignment }
+                        disabled={ disabled }
+                        style={{ width: "100%" }}
+                    />
+                </div>
+            </Tooltip>
         </div>
     )
 }
