@@ -234,14 +234,12 @@ class SettingsHandler(BaseHandler):
         }))
 
 
-async def create_repo_root_if_not_exists(context: AppContext) -> None:
-    repo_root = await context.get_repo_root()
+async def create_repo_root_if_not_exists(context: AppContext, course) -> None:
+    repo_root = context._compute_repo_root(course["name"])
     if not repo_root.exists():
         repo_root.mkdir(parents=True)
 
-async def clone_repo_if_not_exists(context: AppContext) -> None:
-    course = await context.api.get_course()
-    student = await context.api.get_my_user()
+async def clone_repo_if_not_exists(context: AppContext, course, student) -> None:
     repo_root = context._compute_repo_root(course["name"])
     try:
         # We're just confirming that the repo root is a git repository.
@@ -255,29 +253,29 @@ async def clone_repo_if_not_exists(context: AppContext) -> None:
         
         master_repository_url = course["master_remote_url"]
         student_repository_url = student["fork_remote_url"]
-        
+
         # We absolutely don't want to allow overriding any existing files.
         # To be extra careful, we will move the existing directory if it isn't empty.
         # This may occur if something fatal goes wrong during cloning and we abort
         # without proper cleanup.
-        if repo_root.exists() and any(repo_root.iterdir()):
-            c = 1
+        if repo_root.exists() and list(repo_root.iterdir()) != [repo_root / ".git"]:
             uniq_rname = str(repo_root) + "~{}"
             while os.path.exists(uniq_rname.format(c)):
                 c += 1
             repo_root.rename(uniq_rname.format(c))
             # Recreate the directory
             repo_root.mkdir()
+            await set_git_authentication(context, course, student)
 
         """ Now we're working with a new, empty directory. """
         try:
             # This block should never fail. If it does, just abort.
             init_repository(repo_root)
-            await set_git_authentication(context)
+            await set_git_authentication(context, course, student)
             add_remote(UPSTREAM_REMOTE_NAME, master_repository_url, path=repo_root)
             add_remote(ORIGIN_REMOTE_NAME, student_repository_url, path=repo_root)
 
-            @backoff.on_exception(backoff.constant, interval=2.5, max_time=15)
+            @backoff.on_exception(backoff.constant, Exception, interval=2.5, max_time=15)
             def try_fetch(remote):
                 fetch_repository(remote, path=repo_root)
 
@@ -286,7 +284,7 @@ async def clone_repo_if_not_exists(context: AppContext) -> None:
             checkout(f"{ MAIN_BRANCH_NAME }", path=repo_root)
             try_fetch(UPSTREAM_REMOTE_NAME)
 
-            @backoff.on_exception(backoff.constant, interval=2.5, max_time=15)
+            @backoff.on_exception(backoff.constant, Exception, interval=2.5, max_time=15)
             async def mark_as_cloned():
                 await context.api.mark_my_fork_as_cloned()
 
@@ -297,9 +295,8 @@ async def clone_repo_if_not_exists(context: AppContext) -> None:
             shutil.rmtree(repo_root)
             raise e
 
-async def set_git_authentication(context: AppContext) -> None:
-    repo_root = await context.get_repo_root()
-    student = await context.api.get_my_user()
+async def set_git_authentication(context: AppContext, course, student) -> None:
+    repo_root = context._compute_repo_root(course["name"])
     student_repository_url = student["fork_remote_url"]
 
     try:
@@ -344,9 +341,11 @@ async def set_root_folder_permissions(context: AppContext) -> None:
 
 async def setup_backend(context: AppContext):
     try:
-        await create_repo_root_if_not_exists(context)
-        await set_git_authentication(context)
-        await clone_repo_if_not_exists(context)
+        course = await context.api.get_course()
+        student = await context.api.get_my_user()
+        await create_repo_root_if_not_exists(context, course)
+        await set_git_authentication(context, course, student)
+        await clone_repo_if_not_exists(context, course, student)
         await set_root_folder_permissions(context)
     except:
         print(traceback.format_exc())
