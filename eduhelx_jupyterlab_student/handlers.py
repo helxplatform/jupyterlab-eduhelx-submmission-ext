@@ -1,5 +1,6 @@
 import json
 import os
+import backoff
 import requests
 import subprocess
 import tempfile
@@ -64,106 +65,6 @@ class BaseHandler(APIHandler):
     def api(self) -> Api:
         return self.context.api
 
-
-class CloneStudentRepositoryHandler(BaseHandler):
-    @tornado.web.authenticated
-    async def post(self):
-        data = json.loads(self.request.body)
-        repository_url: str = data["repository_url"]
-        current_path: str = data["current_path"]
-        current_path_abs = os.path.realpath(current_path)
-        
-        course = await self.api.get_course()
-        master_repository_url = course["master_remote_url"]
-
-        # Get the name of the master repo and the first commit id 
-        with tempfile.TemporaryDirectory() as tmp_master_repo:
-            clone_repository(master_repository_url, tmp_master_repo)
-            master_repo_name = get_repo_name(path=tmp_master_repo)
-            master_tail_id = get_tail_commit_id(path=tmp_master_repo)
-
-        # This needs to get cleaned up!
-        tmp_repo = tempfile.TemporaryDirectory()
-        # Check that the student repo is actually a repo, and get it's first commit id
-        try:
-            clone_repository(repository_url, tmp_repo.name)
-            cloned_repo_name = get_repo_name(path=tmp_repo.name)
-            cloned_tail_id = get_tail_commit_id(path=tmp_repo.name)
-        except Exception as e:
-            self.set_status(400)
-            self.finish(json.dumps({
-                "message": "URL is not a valid git repository. Please make sure you have the correct URL."
-            }))
-            tmp_repo.cleanup()
-            return
-        
-        # Confirm that the repository that the student has provided
-        # is actually a fork of the master repository.
-        # There's no actual, functional feature of "forks" in git, so we'll
-        # just check that:
-        #   1. The initial commit (tail) of the repositories are the same
-        #   2. The student repo isn't named the same as the master repo.
-
-        if master_tail_id != cloned_tail_id:
-            self.set_status(400)
-            self.finish(json.dumps({
-                "message": "The repository is not a fork of the master class repository. You may have the wrong URL."
-            }))
-            tmp_repo.cleanup()
-            return
-            
-        if master_repo_name == cloned_repo_name:
-            self.set_status(400)
-            self.finish(json.dumps({
-                "message": "The repository appears to be the master class repository. You should only try to clone the student version created for you."
-            }))
-            tmp_repo.cleanup()
-            return
-
-        cloned_repo_path = os.path.join(current_path_abs, cloned_repo_name)
-        # Check to make sure that cloned_repo_name either doesn't exist or exists but is an empty directory.
-        if os.path.exists(cloned_repo_path) and any(os.scandir(cloned_repo_path)):
-            self.set_status(409)
-            self.finish(json.dumps({
-                "message": f'The repository folder "{cloned_repo_name}" exists and is not empty. Please move or rename it and try again.'
-            }))
-            tmp_repo.cleanup()
-            return
-        
-        shutil.move(tmp_repo.name, cloned_repo_path)
-        tmp_repo.cleanup()
-
-        # Now we're working with cloned_repo_path
-        add_remote("upstream", master_repository_url, path=cloned_repo_path)
-
-        # Return the path to the cloned repo.
-        cwd = os.getcwd()
-        frontend_cloned_path = os.path.relpath(
-            cloned_repo_path,
-            cwd
-        )
-        
-        self.finish(json.dumps(os.path.join("/", frontend_cloned_path)))
-
-class PollCourseStudentHandler(BaseHandler):
-    @tornado.web.authenticated
-    async def get(self):
-        # If this is the first poll the client has made, the `current_value` argument will not be present.
-        # Note: we are not deserializing `current_value`; it is a JSON-serialized string.
-        current_value: str | None = None
-        if "current_value" in self.request.arguments:
-            current_value = self.get_argument("current_value")
-
-        start = time.time()
-        while (elapsed := time.time() - start) < self.config.LONG_POLLING_TIMEOUT_SECONDS:
-            new_value = await CourseAndStudentHandler.get_value(self)
-            if new_value != current_value:
-                self.finish(new_value)
-                return
-            asyncio.sleep(self.config.LONG_POLLING_SLEEP_INTERVAL_SECONDS)
-            
-        self.finish(new_value)
-
 class CourseAndStudentHandler(BaseHandler):
     async def get_value(self):
         student = await self.api.get_my_user()
@@ -176,26 +77,6 @@ class CourseAndStudentHandler(BaseHandler):
     @tornado.web.authenticated
     async def get(self):
         self.finish(await self.get_value())
-
-class PollAssignmentsHandler(BaseHandler):
-    @tornado.web.authenticated
-    async def get(self):
-        current_path: str = self.get_argument("path")
-        # If this is the first poll the client has made, the `current_value` argument will not be present.
-        # Note: we are not deserializing `current_value`; it is a JSON-serialized string.
-        current_value: str | None = None
-        if "current_value" in self.request.arguments:
-            current_value = self.get_argument("current_value")
-
-        start = time.time()
-        while (elapsed := time.time() - start) < self.config.LONG_POLLING_TIMEOUT_SECONDS:
-            new_value = await AssignmentsHandler.get_value(self, current_path)
-            if new_value != current_value:
-                self.finish(new_value)
-                return
-            asyncio.sleep(self.config.LONG_POLLING_SLEEP_INTERVAL_SECONDS)
-            
-        self.finish(new_value)
 
 class AssignmentsHandler(BaseHandler):
     async def get_value(self, current_path: str):
@@ -363,18 +244,50 @@ async def clone_repo_if_not_exists(context: AppContext) -> None:
     student = await context.api.get_my_user()
     repo_root = context._compute_repo_root(course["name"])
     try:
+        # We're just confirming that the repo root is a git repository.
+        # If it is, don't need to clone
         get_git_repo_root(path=repo_root)
     except InvalidGitRepositoryException:
+        # We're not going to bother checking if fork_cloned is False actually.
+        # If the repo isn't properly setup for any reason, we'll just rename
+        # whatever is using that directory name, then try to set it up again.
+        # If we fail at any point, just abort so the extension crashes.
+        
         master_repository_url = course["master_remote_url"]
         student_repository_url = student["fork_remote_url"]
+        
+        # We absolutely don't want to allow overriding any existing files.
+        # To be extra careful, we will move the existing directory if it exists
+        # This may occur if something fatal goes wrong during cloning and we abort
+        # without proper cleanup.
+        if repo_root.exists():
+            c = 1
+            uniq_rname = str(repo_root) + "~{}"
+            while os.path.exists(uniq_rname.format(c)):
+                c += 1
+            repo_root.rename(uniq_rname.format(c))
+
+        # This block should never fail. If it does, just abort.
         init_repository(repo_root)
         await set_git_authentication(context)
         add_remote(UPSTREAM_REMOTE_NAME, master_repository_url, path=repo_root)
         add_remote(ORIGIN_REMOTE_NAME, student_repository_url, path=repo_root)
-        fetch_repository(ORIGIN_REMOTE_NAME, path=repo_root)
+
+        @backoff.on_exception(backoff.constant, interval=2.5, max_time=15)
+        def try_fetch(remote):
+            fetch_repository(remote, path=repo_root)
+
+        # If either of these reach backoff and fail, just abort.
+        try_fetch(ORIGIN_REMOTE_NAME)
         checkout(f"{ MAIN_BRANCH_NAME }", path=repo_root)
-        fetch_repository(UPSTREAM_REMOTE_NAME, path=repo_root)
-        
+        try_fetch(UPSTREAM_REMOTE_NAME)
+
+        @backoff.on_exception(backoff.constant, interval=2.5, max_time=15)
+        async def mark_as_cloned():
+            await context.api.mark_my_fork_as_cloned()
+
+        # Mark the fork as cloned. If this fails, just abort.
+        await mark_as_cloned()
 
 async def set_git_authentication(context: AppContext) -> None:
     repo_root = await context.get_repo_root()
@@ -442,11 +355,8 @@ def setup_handlers(server_app):
     base_url = web_app.settings["base_url"]
     handlers = [
         ("assignments", AssignmentsHandler),
-        (("assignments", "poll"), PollAssignmentsHandler),
         ("course_student", CourseAndStudentHandler),
-        (("course_student", "poll"), PollCourseStudentHandler),
         ("submit_assignment", SubmissionHandler),
-        ("clone_student_repository", CloneStudentRepositoryHandler),
         ("settings", SettingsHandler)
     ]
 

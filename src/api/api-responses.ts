@@ -29,6 +29,8 @@ export interface StudentResponse extends UserResponse {
     user_type: UserType.STUDENT
     join_date: string
     exit_date: string | null
+    fork_remote_url: string
+    fork_cloned: boolean
 }
 
 export interface StagedChangeResponse {
