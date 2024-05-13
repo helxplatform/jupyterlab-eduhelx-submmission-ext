@@ -19,13 +19,22 @@ interface NoAssignmentWarningProps {
 
 export const NoAssignmentWarning = ({ noRepository }: NoAssignmentWarningProps) => {
     const commands = useCommands()!
-    const { course } = useAssignment()!
+    const { course, student } = useAssignment()!
     const { repoRoot } = useSettings()!
 
     if (noRepository) return (
         <div className={ containerClass }>
             <div className={ textContainerClass }>
-                You are not currently in your class repository.
+                You are not currently in your class repository. Make sure not to move or rename
+                your repository.
+                {/* { false && (
+                    <Fragment>
+                        <br />
+                        It looks like you may have moved or renamed your class repository.
+                        Please move it back to "{ repoRoot }" or create a symlink to it using
+                        `ln -s { `<` }new_location{ `>` } COMP_555-student`.
+                    </Fragment>
+                ) } */}
             </div>
             <button
                 className={ openFileBrowserButtonClass }
