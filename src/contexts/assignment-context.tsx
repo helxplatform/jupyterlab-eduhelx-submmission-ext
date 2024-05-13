@@ -1,6 +1,7 @@
 import React, { createContext, useContext, ReactNode, useState, useMemo, useEffect } from 'react'
 import { IChangedArgs } from '@jupyterlab/coreutils'
 import { FileBrowserModel, IDefaultFileBrowser } from '@jupyterlab/filebrowser'
+import { useSnackbar } from './snackbar-context'
 import { IEduhelxSubmissionModel } from '../tokens'
 import { IAssignment, IStudent, ICurrentAssignment, ICourse, getAssignmentsPolled, GetAssignmentsResponse, getStudentAndCoursePolled, getStudentAndCourse, getAssignments } from '../api'
 
@@ -21,6 +22,8 @@ interface IAssignmentProviderProps {
 export const AssignmentContext = createContext<IAssignmentContext|undefined>(undefined)
 
 export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProviderProps) => {
+    const snackbar = useSnackbar()!
+
     const [currentPath, setCurrentPath] = useState<string|null>(null)
     const [currentAssignment, setCurrentAssignment] = useState<ICurrentAssignment|null|undefined>(undefined)
     const [assignments, setAssignments] = useState<IAssignment[]|null|undefined>(undefined)
@@ -58,6 +61,10 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
                     value = await getAssignments(currentPath)
                 } catch (e: any) {
                     console.error(e)
+                    snackbar.open({
+                        type: 'warning',
+                        message: 'Failed to pull assignments...'
+                    })
                 }
             }
             if (cancelled) return
@@ -87,6 +94,10 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
                 value = await getStudentAndCourse()
             } catch (e: any) {
                 console.error(e)
+                snackbar.open({
+                    type: 'warning',
+                    message: 'Failed to pull course data...'
+                })
             }
             if (cancelled) return
             if (value !== undefined) {
