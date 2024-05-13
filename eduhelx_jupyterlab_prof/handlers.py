@@ -335,7 +335,6 @@ async def create_repo_root_if_not_exists(context: AppContext) -> None:
 
 async def clone_repo_if_not_exists(context: AppContext) -> None:
     course = await context.api.get_course()
-    student = await context.api.get_my_user()
     repo_root = context._compute_repo_root(course["name"])
     try:
         get_git_repo_root(path=repo_root)
@@ -352,9 +351,10 @@ async def clone_repo_if_not_exists(context: AppContext) -> None:
         
 
 async def set_git_authentication(context: AppContext) -> None:
-    repo_root = await context.get_repo_root()
-    student = await context.api.get_my_user()
-    student_repository_url = student["fork_remote_url"]
+    course = await context.api.get_course()
+    instructor = await context.api.get_my_user()
+    repo_root = context._compute_repo_root(course["name"])
+    master_repository_url = course["master_remote_url"]
 
     try:
         get_git_repo_root(path=repo_root)
@@ -368,19 +368,19 @@ async def set_git_authentication(context: AppContext) -> None:
             credential_config = \
                 "[user]\n" \
                 f"    name = { context.config.USER_ONYEN }\n" \
-                f"    email = { student['email'] }\n" \
+                f"    email = { instructor['email'] }\n" \
                 "[author]\n" \
                 f"    name = { context.config.USER_ONYEN }\n" \
-                f"    email = { student['email'] }\n" \
+                f"    email = { instructor['email'] }\n" \
                 "[committer]\n" \
                 f"    name = { context.config.USER_ONYEN }\n" \
-                f"    email = { student['email'] }\n" \
+                f"    email = { instructor['email'] }\n" \
                 f"[credential]" \
                 f"    helper = ''" \
                 f"    helper = { context.config.CREDENTIAL_HELPER }"
             f.write(credential_config)
 
-    parsed = urlparse(student_repository_url)
+    parsed = urlparse(master_repository_url)
     protocol, host = parsed.scheme, parsed.netloc
     credentials = \
         f"protocol={ protocol }\n" \
