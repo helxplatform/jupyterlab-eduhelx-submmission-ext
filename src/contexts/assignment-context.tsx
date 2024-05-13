@@ -1,6 +1,7 @@
 import React, { createContext, useContext, ReactNode, useState, useMemo, useEffect } from 'react'
 import { IChangedArgs } from '@jupyterlab/coreutils'
 import { FileBrowserModel, IDefaultFileBrowser } from '@jupyterlab/filebrowser'
+import { useSnackbar } from './snackbar-context'
 import { IEduhelxSubmissionModel } from '../tokens'
 import { IAssignment, IInstructor, ICurrentAssignment, ICourse, getAssignments, GetAssignmentsResponse, GetInstructorAndStudentsAndCourseResponse, IStudent, getInstructorAndStudentsAndCourse } from '../api'
 
@@ -22,6 +23,7 @@ interface IAssignmentProviderProps {
 export const AssignmentContext = createContext<IAssignmentContext|undefined>(undefined)
 
 export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProviderProps) => {
+    const snackbar = useSnackbar()!
     const [currentPath, setCurrentPath] = useState<string|null>(null)
     const [currentAssignment, setCurrentAssignment] = useState<ICurrentAssignment|null|undefined>(undefined)
     const [assignments, setAssignments] = useState<IAssignment[]|null|undefined>(undefined)
@@ -69,6 +71,10 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
                 } catch (e: any) {
                     // If the request fails, just maintain whatever state we already have
                     console.error(e)
+                    snackbar.open({
+                        type: 'warning',
+                        message: 'Failed to pull assignments...'
+                    })
                     if (!cancelled) timeoutId = window.setTimeout(timeout, retryDelay)
                 }
             }
@@ -102,6 +108,10 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
             } catch (e: any) {
                 // If the request fails, just maintain whatever state we already have
                 console.error(e)
+                snackbar.open({
+                    type: 'warning',
+                    message: 'Failed to pull course data...'
+                })
                 if (!cancelled) timeoutId = window.setTimeout(timeout, retryDelay)
             }
         }

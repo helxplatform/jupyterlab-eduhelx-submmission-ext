@@ -31,14 +31,13 @@ export const SnackbarContext = createContext<ISnackbarContext|undefined>(undefin
 
 export const SnackbarProvider = ({ children }: ISnackbarProviderProps) => {
     const [snackbars, setSnackbars] = useState<{
-        [key: string]: CreateSnackbarProps
+        [key: string]: [CreateSnackbarProps, number]
     }>({})
 
     const createSnackbar: CreateSnackbar = (props: CreateSnackbarProps) => {
         props.duration = props.duration ?? 2500
         props.key = props.key ?? uuidv4()
         props.alignment = props.alignment ?? { vertical: 'bottom', horizontal: 'right' }
-        console.log(props, props.type)
         if (!props.content) props.content = (
             <Alert
                 variant="filled"
@@ -63,7 +62,7 @@ export const SnackbarProvider = ({ children }: ISnackbarProviderProps) => {
         )
         setSnackbars((prevSnackbars) => ({
                 ...prevSnackbars,
-                [props.key!]: props
+                [props.key!]: [props, Date.now()]
         }))
         return props.key
     }
@@ -84,21 +83,28 @@ export const SnackbarProvider = ({ children }: ISnackbarProviderProps) => {
             <Fragment>
                 { children }
                 <Portal>
-                    { Object.keys(snackbars).map((key) => {
-                        const { className, duration, alignment, content } = snackbars[key]
-                        return (
-                            <Snackbar
-                                key={ key }
-                                className={ className }
-                                open={ true }
-                                autoHideDuration={ duration }
-                                anchorOrigin={ alignment }
-                                onClose={ () => destroySnackbar(key) }
-                            >
-                                { content }
-                            </Snackbar>
-                        )
-                    }) }
+                    <div style={{ display: "flex", flexDirection: "column-reverse", position: "fixed", bottom: 24, right: 24 }}>
+                        { Object.entries(snackbars).sort((a, b) => {
+                            const [keyA, [propsA, timeA]] = a
+                            const [keyB, [propsB, timeB]] = b
+                            return timeB - timeA
+                        }).map(([key, [props, time]]) => {
+                            const { className, duration, alignment, content } = props
+                            return (
+                                <Snackbar
+                                    key={ key }
+                                    className={ className }
+                                    open={ true }
+                                    autoHideDuration={ duration }
+                                    anchorOrigin={ alignment }
+                                    onClose={ (_, reason) => reason !== "clickaway" && destroySnackbar(key) }
+                                    style={{ marginTop: 8, position: "initial" }}
+                                >
+                                    { content }
+                                </Snackbar>
+                            )
+                        }) }
+                    </div>
                 </Portal>
             </Fragment>
         </SnackbarContext.Provider>
