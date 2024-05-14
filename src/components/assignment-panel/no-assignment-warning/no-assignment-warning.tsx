@@ -8,7 +8,6 @@ import {
 } from './style'
 import { AssignmentsList } from '../assignments-list'
 import { TextDivider } from '../../text-divider'
-import { cloneStudentRepository } from '../../../api'
 import { useAssignment, useCommands, useSettings } from '../../../contexts'
 import { DateFormat } from '../../../utils'
 import { activeStyle, disabledStyle, submitRootClass, summaryClass } from '../assignment-submit-form/style'

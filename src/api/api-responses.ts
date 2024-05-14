@@ -45,13 +45,7 @@ export interface SubmissionResponse {
     active: boolean
     submission_time: string
     commit: CommitResponse
-}
-
-export interface SubmissionResponse {
-    id: number
-    active: boolean
-    submission_time: string
-    commit: CommitResponse
+    graded: boolean
 }
 
 export interface AssignmentResponse {
