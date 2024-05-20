@@ -39,8 +39,10 @@ class AppContext:
         self.config = ExtensionConfig(self.serverapp)
         self.api = Api(
             api_url=self.config.GRADER_API_URL,
-            user_onyen=self.config.USER_ONYEN,
-            user_autogen_password=self.config.USER_AUTOGEN_PASSWORD,
+            user_onyen=self.config.USERNAME,
+            appstore_auth="student",
+            appstore_sessionid="",
+            # user_autogen_password=self.config.USER_AUTOGEN_PASSWORD,
             jwt_refresh_leeway_seconds=self.config.JWT_REFRESH_LEEWAY_SECONDS
         )
 
@@ -56,6 +58,10 @@ class AppContext:
 
 class BaseHandler(APIHandler):
     context: AppContext = None
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.api.appstore_sessionid = self.get_cookie("sessionid")
 
     @property
     def config(self) -> ExtensionConfig:
