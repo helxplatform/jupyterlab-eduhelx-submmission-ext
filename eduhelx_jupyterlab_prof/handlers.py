@@ -7,6 +7,9 @@ import time
 import asyncio
 import httpx
 import traceback
+import csv
+from numpy import median, mean, std
+from io import StringIO
 from urllib.parse import urlparse
 from jupyter_server.base.handlers import APIHandler
 from jupyter_server.utils import url_path_join
@@ -48,8 +51,10 @@ class AppContext:
         self.config = ExtensionConfig(self.serverapp)
         self.api = Api(
             api_url=self.config.GRADER_API_URL,
-            user_onyen=self.config.USER_ONYEN,
-            user_autogen_password=self.config.USER_AUTOGEN_PASSWORD,
+            user_onyen=self.config.USERNAME,
+            appstore_auth="instructor",
+            appstore_sessionid="",
+            # user_autogen_password=self.config.USER_AUTOGEN_PASSWORD,
             jwt_refresh_leeway_seconds=self.config.JWT_REFRESH_LEEWAY_SECONDS
         )
         self.api.client.timeout = httpx.Timeout(15.0, read=15.0)
@@ -66,6 +71,10 @@ class AppContext:
 class BaseHandler(APIHandler):
     context: AppContext = None
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.api.appstore_sessionid = self.get_cookie("sessionid")
+
     @property
     def config(self) -> ExtensionConfig:
         return self.context.config
@@ -73,87 +82,6 @@ class BaseHandler(APIHandler):
     @property
     def api(self) -> Api:
         return self.context.api
-
-
-class CloneStudentRepositoryHandler(BaseHandler):
-    @tornado.web.authenticated
-    async def post(self):
-        data = json.loads(self.request.body)
-        repository_url: str = data["repository_url"]
-        current_path: str = data["current_path"]
-        current_path_abs = os.path.realpath(current_path)
-        
-        course = await self.api.get_course()
-        master_repository_url = course["master_remote_url"]
-
-        # Get the name of the master repo and the first commit id 
-        with tempfile.TemporaryDirectory() as tmp_master_repo:
-            clone_repository(master_repository_url, tmp_master_repo)
-            master_repo_name = get_repo_name(path=tmp_master_repo)
-            master_tail_id = get_tail_commit_id(path=tmp_master_repo)
-
-        # This needs to get cleaned up!
-        tmp_repo = tempfile.TemporaryDirectory()
-        # Check that the student repo is actually a repo, and get it's first commit id
-        try:
-            clone_repository(repository_url, tmp_repo.name)
-            cloned_repo_name = get_repo_name(path=tmp_repo.name)
-            cloned_tail_id = get_tail_commit_id(path=tmp_repo.name)
-        except Exception as e:
-            self.set_status(400)
-            self.finish(json.dumps({
-                "message": "URL is not a valid git repository. Please make sure you have the correct URL."
-            }))
-            tmp_repo.cleanup()
-            return
-        
-        # Confirm that the repository that the student has provided
-        # is actually a fork of the master repository.
-        # There's no actual, functional feature of "forks" in git, so we'll
-        # just check that:
-        #   1. The initial commit (tail) of the repositories are the same
-        #   2. The student repo isn't named the same as the master repo.
-
-        if master_tail_id != cloned_tail_id:
-            self.set_status(400)
-            self.finish(json.dumps({
-                "message": "The repository is not a fork of the master class repository. You may have the wrong URL."
-            }))
-            tmp_repo.cleanup()
-            return
-            
-        if master_repo_name == cloned_repo_name:
-            self.set_status(400)
-            self.finish(json.dumps({
-                "message": "The repository appears to be the master class repository. You should only try to clone the student version created for you."
-            }))
-            tmp_repo.cleanup()
-            return
-
-        cloned_repo_path = os.path.join(current_path_abs, cloned_repo_name)
-        # Check to make sure that cloned_repo_name either doesn't exist or exists but is an empty directory.
-        if os.path.exists(cloned_repo_path) and any(os.scandir(cloned_repo_path)):
-            self.set_status(409)
-            self.finish(json.dumps({
-                "message": f'The repository folder "{cloned_repo_name}" exists and is not empty. Please move or rename it and try again.'
-            }))
-            tmp_repo.cleanup()
-            return
-        
-        shutil.move(tmp_repo.name, cloned_repo_path)
-        tmp_repo.cleanup()
-
-        # Now we're working with cloned_repo_path
-        add_remote("upstream", master_repository_url, path=cloned_repo_path)
-
-        # Return the path to the cloned repo.
-        cwd = os.getcwd()
-        frontend_cloned_path = os.path.relpath(
-            cloned_repo_path,
-            cwd
-        )
-        
-        self.finish(json.dumps(os.path.join("/", frontend_cloned_path)))
 
 class CourseAndInstructorAndStudentsHandler(BaseHandler):
     async def get_value(self):
@@ -316,6 +244,39 @@ class SyncToLMSHandler(BaseHandler):
         await self.api.sync_to_lms()
         self.finish()
 
+class GradeAssignmentHandler(BaseHandler):
+    # assignment_id -> job id
+    GRADING_JOBS = {}
+
+    @tornado.web.authenticated
+    async def put(self):
+        data = self.get_json_body()
+        assignment_id: int = data["assignment_id"]
+
+        grades = [row for row in csv.DictReader(
+            StringIO("file,sqrt,percent_correct\ntestsubmissions/testnotebook_2024_04_30T11_21_22_054188.zip,1.0,1.0"),
+            delimiter=","
+        )]
+        grade_mean = mean([g["percent_correct"] for g in grades])
+        grade_med = median([g["percent_correct"] for g in grades])
+        grade_stdev = std([g["percent_correct"] for g in grades])
+        grade_min = min([g["percent_correct"] for g in grades])
+        grade_max = max([g["percent_correct"] for g in grades])
+        self.finish({
+            "grade_report": {
+                "mean": grade_mean,
+                "median": grade_med,
+                "stdev": grade_stdev,
+                "min": grade_min,
+                "max": grade_max
+            }
+        })
+
+    async def delete(self):
+        assignment_id: int = self.get_argument("assigment_id")
+        self.finish()
+
+
 class SettingsHandler(BaseHandler):
     @tornado.web.authenticated
     async def get(self):
@@ -418,9 +379,9 @@ def setup_handlers(server_app):
     handlers = [
         ("assignments", AssignmentsHandler),
         ("course_instructor_students", CourseAndInstructorAndStudentsHandler),
-        ("clone_student_repository", CloneStudentRepositoryHandler),
         ("submit_assignment", SubmissionHandler),
         ("sync_to_lms", SyncToLMSHandler),
+        ("grade_assignment", GradeAssignmentHandler),
         ("settings", SettingsHandler)
     ]
 

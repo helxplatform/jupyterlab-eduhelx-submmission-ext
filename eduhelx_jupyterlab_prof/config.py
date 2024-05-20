@@ -13,8 +13,8 @@ def _parse_bool(value: Union[str, bool]) -> bool:
 """
 class Config:
     GRADER_API_URL: str
-    USER_ONYEN: str
-    USER_AUTOGEN_PASSWORD: str
+    USERNAME: str
+    # USER_AUTOGEN_PASSWORD: str
     # Which credential helper to use in Git
     CREDENTIAL_HELPER: str = "store"
     # How far ahead of time the API should refresh the access token
