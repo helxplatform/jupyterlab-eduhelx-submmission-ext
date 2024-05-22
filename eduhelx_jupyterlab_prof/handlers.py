@@ -8,7 +8,7 @@ import asyncio
 import httpx
 import traceback
 import csv
-from numpy import median, mean, std
+# from numpy import median, mean, std
 from io import StringIO
 from urllib.parse import urlparse
 from jupyter_server.base.handlers import APIHandler
@@ -253,24 +253,25 @@ class GradeAssignmentHandler(BaseHandler):
         data = self.get_json_body()
         assignment_id: int = data["assignment_id"]
 
-        grades = [row for row in csv.DictReader(
-            StringIO("file,sqrt,percent_correct\ntestsubmissions/testnotebook_2024_04_30T11_21_22_054188.zip,1.0,1.0"),
-            delimiter=","
-        )]
-        grade_mean = mean([g["percent_correct"] for g in grades])
-        grade_med = median([g["percent_correct"] for g in grades])
-        grade_stdev = std([g["percent_correct"] for g in grades])
-        grade_min = min([g["percent_correct"] for g in grades])
-        grade_max = max([g["percent_correct"] for g in grades])
-        self.finish({
-            "grade_report": {
-                "mean": grade_mean,
-                "median": grade_med,
-                "stdev": grade_stdev,
-                "min": grade_min,
-                "max": grade_max
-            }
-        })
+        # grades = [row for row in csv.DictReader(
+        #     StringIO("file,sqrt,percent_correct\ntestsubmissions/testnotebook_2024_04_30T11_21_22_054188.zip,1.0,1.0"),
+        #     delimiter=","
+        # )]
+        # grade_mean = mean([g["percent_correct"] for g in grades])
+        # grade_med = median([g["percent_correct"] for g in grades])
+        # grade_stdev = std([g["percent_correct"] for g in grades])
+        # grade_min = min([g["percent_correct"] for g in grades])
+        # grade_max = max([g["percent_correct"] for g in grades])
+        # self.finish({
+        #     "grade_report": {
+        #         "mean": grade_mean,
+        #         "median": grade_med,
+        #         "stdev": grade_stdev,
+        #         "min": grade_min,
+        #         "max": grade_max
+        #     }
+        # })
+        self.finish()
 
     async def delete(self):
         assignment_id: int = self.get_argument("assigment_id")
