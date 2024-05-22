@@ -21,7 +21,7 @@ from eduhelx_utils.git import (
     get_tail_commit_id, get_repo_name, add_remote,
     stage_files, commit, push, get_commit_info,
     get_modified_paths, get_repo_root as get_git_repo_root,
-    checkout, reset, get_head_commit_id
+    checkout, reset as git_reset, get_head_commit_id
 )
 from eduhelx_utils.api import Api
 from eduhelx_utils.process import execute
@@ -198,7 +198,7 @@ class SubmissionHandler(BaseHandler):
             )
         except Exception as e:
             # If the commit fails then unstage the assignment files.
-            reset(".", path=current_assignment_path)
+            git_reset(".", path=current_assignment_path)
             self.set_status(500)
             self.finish(str(e))
             return
@@ -210,7 +210,7 @@ class SubmissionHandler(BaseHandler):
             )
         except Exception as e:
             # If the submission fails create in the API, rollback the local commit to the previous head.
-            reset(rollback_id, path=student_repo.repo_root)
+            git_reset(rollback_id, path=student_repo.repo_root)
             self.set_status(e.response.status_code)
             self.finish(e.response.text)
             return
@@ -223,7 +223,7 @@ class SubmissionHandler(BaseHandler):
             self.finish()
         except Exception as e:
             # Need to rollback the commit if push failed too.
-            reset(rollback_id, path=student_repo.repo_root)
+            git_reset(rollback_id, path=student_repo.repo_root)
             self.set_status(500)
             self.finish(str(e))
 
