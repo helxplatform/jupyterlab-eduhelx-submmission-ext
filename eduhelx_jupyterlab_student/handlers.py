@@ -39,7 +39,7 @@ class AppContext:
         self.config = ExtensionConfig(self.serverapp)
         self.api = Api(
             api_url=self.config.GRADER_API_URL,
-            user_onyen=self.config.USERNAME,
+            user_onyen=self.config.USER_NAME,
             appstore_auth="student",
             appstore_sessionid="",
             # user_autogen_password=self.config.USER_AUTOGEN_PASSWORD,
@@ -314,13 +314,13 @@ async def set_git_authentication(context: AppContext, course, student) -> None:
         with open(config_path, "w+") as f:
             credential_config = \
                 "[user]\n" \
-                f"    name = { context.config.USER_ONYEN }\n" \
+                f"    name = { context.config.USER_NAME }\n" \
                 f"    email = { student['email'] }\n" \
                 "[author]\n" \
-                f"    name = { context.config.USER_ONYEN }\n" \
+                f"    name = { context.config.USER_NAME }\n" \
                 f"    email = { student['email'] }\n" \
                 "[committer]\n" \
-                f"    name = { context.config.USER_ONYEN }\n" \
+                f"    name = { context.config.USER_NAME }\n" \
                 f"    email = { student['email'] }\n" \
                 f"[credential]" \
                 f"    helper = ''" \
@@ -332,7 +332,7 @@ async def set_git_authentication(context: AppContext, course, student) -> None:
     credentials = \
         f"protocol={ protocol }\n" \
         f"host={ host }\n" \
-        f"username={ context.config.USER_ONYEN }\n" \
+        f"username={ context.config.USER_NAME }\n" \
         f"password={ context.config.USER_AUTOGEN_PASSWORD }"
     execute(["git", "credential", "approve"], stdin_input=credentials, cwd=repo_root)
 
