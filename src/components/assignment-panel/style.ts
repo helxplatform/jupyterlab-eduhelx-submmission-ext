@@ -7,6 +7,7 @@ export const panelWrapperClass = (style as any)({
     color: 'var(--jp-ui-font-color1)',
     fontSize: 'var(--jp-ui-font-size1)',
     background: 'var(--jp-layout-color1) !important',
+    minWidth: 315,
     '&, & *': { boxSizing: 'border-box' } 
 })
 
@@ -23,4 +24,12 @@ export const panelHeaderClass = style({
     marginTop: 2,
     padding: '8px 12px',
     textTransform: 'uppercase'
+})
+
+export const studentManagementPopoverOverlayClass = style({
+    $nest: {
+        '& .ant-popover-title': {
+            marginBottom: 4
+        }
+    }
 })

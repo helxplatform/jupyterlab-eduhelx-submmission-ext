@@ -8,6 +8,7 @@ export interface ISubmission {
     readonly active: boolean
     readonly submissionTime: Date
     readonly commit: ICommit
+    readonly graded: boolean
 }
 
 export class Submission implements ISubmission {
@@ -15,19 +16,22 @@ export class Submission implements ISubmission {
         private _id: number,
         private _active: boolean,
         private _submissionTime: Date,
-        private _commit: ICommit
+        private _commit: ICommit,
+        private _graded: boolean
     ) {}
     get id() { return this._id }
     get active() { return this._active }
     get submissionTime() { return this._submissionTime }
     get commit() { return this._commit }
+    get graded() { return this._graded }
 
     static fromResponse(data: SubmissionResponse): ISubmission {
         return new Submission(
             data.id,
             data.active,
             new Date(data.submission_time),
-            Commit.fromResponse(data.commit)
+            Commit.fromResponse(data.commit),
+            data.graded
         )
     }
 }

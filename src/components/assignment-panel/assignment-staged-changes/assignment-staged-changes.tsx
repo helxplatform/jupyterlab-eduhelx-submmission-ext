@@ -69,7 +69,7 @@ export const AssignmentStagedChanges = ({ ...props }: AssignmentStagedChangesPro
         if (!assignment) return []
         return assignment.stagedChanges
     }, [assignment?.stagedChanges, showMore])
-
+    
     const hideShowMoreButton = useMemo(() => !showMore && stagedChangesSource.length <= SHOW_MORE_CUTOFF, [showMore, stagedChangesSource])
 
     useEffect(() => {
@@ -98,7 +98,7 @@ export const AssignmentStagedChanges = ({ ...props }: AssignmentStagedChangesPro
     )
     return (
         <div className={ assignmentStagedChangesClass } { ...props }>
-            {/* <TextDivider innerStyle={{ fontSize: 'var(--jp-ui-font-size2)' }} style={{ marginBottom: 4 }}>Unsubmitted changes</TextDivider> */}
+            <TextDivider innerStyle={{ fontSize: 15 }} style={{ marginBottom: 8 }}>Staged changes</TextDivider>
             <div className={ stagedChangesListClass }>
             {
                 stagedChangesSource.slice(0, showMore ? undefined : SHOW_MORE_CUTOFF).map((change) => (

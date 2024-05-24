@@ -2,14 +2,14 @@ import { IChangedArgs } from '@jupyterlab/coreutils'
 import { ISignal, Signal } from '@lumino/signaling'
 import { Poll } from '@lumino/polling'
 import { IEduhelxSubmissionModel } from './tokens'
-import { getAssignments, IAssignment, IStudent, ICurrentAssignment, GetAssignmentsResponse, GetStudentAndCourseResponse, getStudentAndCourse, ICourse } from './api'
+import { getAssignments, IAssignment, IInstructor, ICurrentAssignment, GetAssignmentsResponse, GetInstructorAndStudentsAndCourseResponse, getInstructorAndStudentsAndCourse, ICourse } from './api'
 
 export class EduhelxSubmissionModel implements IEduhelxSubmissionModel {
     private _isDisposed: boolean = false
     private _currentPath: string | null = null
     private _currentAssignment: ICurrentAssignment | null | undefined = undefined
     private _assignments: IAssignment[] | null | undefined = undefined
-    private _student: IStudent | undefined = undefined
+    private _instructor: IInstructor | undefined = undefined
     private _course: ICourse | undefined = undefined
 
     private _assignmentPoll: Poll
@@ -26,9 +26,9 @@ export class EduhelxSubmissionModel implements IEduhelxSubmissionModel {
         IEduhelxSubmissionModel,
         IChangedArgs<IAssignment[] | null | undefined>
     >(this)
-    private _studentChanged = new Signal<
+    private _instructorChanged = new Signal<
         IEduhelxSubmissionModel,
-        IChangedArgs<IStudent | undefined>
+        IChangedArgs<IInstructor | undefined>
     >(this)
     private _courseChanged = new Signal<
         IEduhelxSubmissionModel,
@@ -67,20 +67,20 @@ export class EduhelxSubmissionModel implements IEduhelxSubmissionModel {
         return this._assignmentsChanged
     }
 
-    get student(): IStudent | undefined {
-        return this._student
+    get instructor(): IInstructor | undefined {
+        return this._instructor
     }
-    private set student(v: IStudent | undefined) {
-        const change: IChangedArgs<IStudent | undefined> = {
-            name: 'student',
+    private set instructor(v: IInstructor | undefined) {
+        const change: IChangedArgs<IInstructor | undefined> = {
+            name: 'instructor',
             newValue: v,
-            oldValue: this.student
+            oldValue: this.instructor
         }
-        this._student = v
-        this._studentChanged.emit(change)
+        this._instructor = v
+        this._instructorChanged.emit(change)
     }
-    get studentChanged(): ISignal<IEduhelxSubmissionModel, IChangedArgs<IStudent | undefined>> {
-        return this._studentChanged
+    get instructorChanged(): ISignal<IEduhelxSubmissionModel, IChangedArgs<IInstructor | undefined>> {
+        return this._instructorChanged
     }
 
     get course(): ICourse | undefined {
@@ -148,9 +148,9 @@ export class EduhelxSubmissionModel implements IEduhelxSubmissionModel {
         }
     }
 
-    private async _loadStudentAndCourse(): Promise<GetStudentAndCourseResponse | undefined> {
+    private async _loadInstructorAndCourse(): Promise<GetInstructorAndStudentsAndCourseResponse | undefined> {
         try {
-            return await getStudentAndCourse()
+            return await getInstructorAndStudentsAndCourse()
         } catch (e: any) {
             console.error(e)
             // If the request encouners an error, default to loading.
@@ -162,7 +162,7 @@ export class EduhelxSubmissionModel implements IEduhelxSubmissionModel {
         // Set assignment to loading.
         this.currentAssignment = undefined
         this.assignments = undefined
-        this.student = undefined
+        this.instructor = undefined
         // await this._assignmentPoll.refresh()
         this._refreshModel()
         await this._assignmentPoll.tick
@@ -171,10 +171,10 @@ export class EduhelxSubmissionModel implements IEduhelxSubmissionModel {
     private async _refreshModel(): Promise<void> {
         const [
             assignmentsResponse,
-            studentAndCourseResponse
+            instructorAndCourseResponse
         ] = await Promise.all([
             this._loadAssignments(),
-            this._loadStudentAndCourse()
+            this._loadInstructorAndCourse()
         ])
         if (assignmentsResponse === undefined) {
             this.assignments = undefined
@@ -183,12 +183,12 @@ export class EduhelxSubmissionModel implements IEduhelxSubmissionModel {
             this.assignments = assignmentsResponse.assignments
             this.currentAssignment = assignmentsResponse.currentAssignment
         }
-        if (studentAndCourseResponse === undefined) {
-            this.student = undefined
+        if (instructorAndCourseResponse === undefined) {
+            this.instructor = undefined
             this.course = undefined
         } else {
-            this.student = studentAndCourseResponse.student
-            this.course = studentAndCourseResponse.course
+            this.instructor = instructorAndCourseResponse.instructor
+            this.course = instructorAndCourseResponse.course
         }
     }
 

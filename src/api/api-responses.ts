@@ -27,6 +27,8 @@ export interface InstructorResponse extends UserResponse {
 
 export interface StudentResponse extends UserResponse {
     user_type: UserType.STUDENT
+    fork_remote_url: string
+    fork_cloned: boolean
     join_date: string
     exit_date: string | null
 }
@@ -43,6 +45,7 @@ export interface SubmissionResponse {
     active: boolean
     submission_time: string
     commit: CommitResponse
+    graded: boolean
 }
 
 export interface AssignmentResponse {
@@ -52,10 +55,9 @@ export interface AssignmentResponse {
     absolute_directory_path: string
     created_date: string
     available_date: string | null
-    adjusted_available_date: string | null
     due_date: string | null
-    adjusted_due_date: string | null
     last_modified_date: string
+    staged_changes: StagedChangeResponse[]
 
     is_deferred: boolean
     is_extended: boolean
@@ -63,8 +65,7 @@ export interface AssignmentResponse {
     is_available: boolean
     is_closed: boolean
 
-    submissions?: SubmissionResponse[]
-    staged_changes?: StagedChangeResponse[]
+    student_submissions?: { [onyen: string]: SubmissionResponse[] }
 }
 
 export interface CourseResponse {
@@ -72,6 +73,10 @@ export interface CourseResponse {
     name: string
     master_remote_url: string
     instructors: InstructorResponse[]
+    students: StudentResponse[]
 }
 
-export interface ServerSettingsResponse {}
+export interface ServerSettingsResponse {
+    serverVersion: string
+    repoRoot: string
+}

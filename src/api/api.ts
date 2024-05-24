@@ -12,41 +12,39 @@ import {
     StudentResponse,
     SubmissionResponse,
     ServerSettingsResponse,
+    InstructorResponse,
 } from './api-responses'
+import { IInstructor, Instructor } from './instructor'
+
+export interface UpdateAssignmentData {
+    new_name?: string | null,
+    directory_path?: string | null,
+    available_date?: string | null,
+    due_date?: string | null
+}
 
 export interface GetAssignmentsResponse {
     assignments: IAssignment[] | null
     currentAssignment: ICurrentAssignment | null
 }
 
-export interface GetStudentAndCourseResponse {
-    student: IStudent
+export interface GetInstructorAndStudentsAndCourseResponse {
+    instructor: IInstructor
+    students: IStudent[]
     course: ICourse
 }
 
-export async function getStudentAndCourse(): Promise<GetStudentAndCourseResponse> {
-    const { student, course } = await requestAPI<{
-        student: StudentResponse
+export async function getInstructorAndStudentsAndCourse(): Promise<GetInstructorAndStudentsAndCourseResponse> {
+    const { instructor, students, course } = await requestAPI<{
+        instructor: InstructorResponse
+        students: StudentResponse[]
         course: CourseResponse
-    }>(`/course_student`, {
+    }>(`/course_instructor_students`, {
         method: 'GET'
     })
     return {
-        student: Student.fromResponse(student),
-        course: Course.fromResponse(course)
-    }
-}
-
-export async function getStudentAndCoursePolled(currentValue?: object): Promise<GetStudentAndCourseResponse> {
-    const queryString = qs.stringify({ current_value: JSON.stringify(currentValue) })
-    const { student, course } = await requestAPI<{
-        student: StudentResponse
-        course: CourseResponse
-    }>(`/course_student/poll?${ queryString }`, {
-        method: 'GET'
-    })
-    return {
-        student: Student.fromResponse(student),
+        instructor: Instructor.fromResponse(instructor),
+        students: students.map((student) => Student.fromResponse(student)),
         course: Course.fromResponse(course)
     }
 }
@@ -66,18 +64,12 @@ export async function getAssignments(path: string): Promise<GetAssignmentsRespon
     }
 }
 
-export async function getAssignmentsPolled(path: string, currentValue?: object): Promise<GetAssignmentsResponse> {
-    const queryString = qs.stringify({ path, current_value: JSON.stringify(currentValue) })
-    const { assignments, current_assignment } = await requestAPI<{
-        assignments: AssignmentResponse[] | null
-        current_assignment: AssignmentResponse | null
-    }>(`/assignments/poll?${ queryString }`, {
-        method: 'GET'
+export async function updateAssignment(assignmentName: string, data: UpdateAssignmentData): Promise<void> {
+    const queryString = qs.stringify({ name: assignmentName })
+    await requestAPI<void>(`/assignments?${ queryString }`, {
+        method: 'PATCH',
+        body: JSON.stringify(data)
     })
-    return {
-        assignments: assignments ? assignments.map((data) => Assignment.fromResponse(data)) : null,
-        currentAssignment: current_assignment ? Assignment.fromResponse(current_assignment) as ICurrentAssignment : null
-    }
 }
 
 export async function getServerSettings(): Promise<IServerSettings> {
@@ -106,28 +98,21 @@ export async function getServerSettings(): Promise<IServerSettings> {
     }
 }
 
-export async function submitAssignment(
+export async function uploadAssignment(
     currentPath: string,
-    summary: string,
-    description?: string
+    summary: string
 ): Promise<void> {
     const res = await requestAPI<void>(`/submit_assignment`, {
         method: 'POST',
         body: JSON.stringify({
             summary,
-            description,
             current_path: currentPath
         })
     })
 }
 
-export async function cloneStudentRepository(repositoryUrl: string, currentPath: string): Promise<string> {
-    const repositoryRootPath = await requestAPI<string>(`/clone_student_repository`, {
-        method: 'POST',
-        body: JSON.stringify({
-            repository_url: repositoryUrl,
-            current_path: currentPath
-        })
+export async function syncToLMS(): Promise<void> {
+    await requestAPI<void>(`/sync_to_lms`, {
+        method: 'POST'
     })
-    return repositoryRootPath
 }

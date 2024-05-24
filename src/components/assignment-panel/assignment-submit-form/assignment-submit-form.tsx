@@ -1,14 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { Tooltip } from 'antd'
 import { Backdrop, CircularProgress, Input, Snackbar } from '@material-ui/core'
 import { Alert } from '@material-ui/lab'
 import { AssignmentSubmitButton } from './assignment-submit-button'
 import {
     submitFormContainerClass, submitRootClass,
-    summaryClass, descriptionClass,
+    summaryClass,
     activeStyle, disabledStyle
 } from './style'
 import { useAssignment, useBackdrop, useSnackbar } from '../../../contexts'
-import { submitAssignment as apiSubmitAssignment } from '../../../api'
+import { uploadAssignment as apiUploadAssignment } from '../../../api'
 
 interface AssignmentSubmitFormProps {
 
@@ -20,17 +21,13 @@ export const AssignmentSubmitForm = ({ }: AssignmentSubmitFormProps) => {
     const snackbar = useSnackbar()!
 
     const [summaryText, setSummaryText] = useState<string>("")
-    const [descriptionText, setDescriptionText] = useState<string>("")
     const [submitting, setSubmitting] = useState<boolean>(false)
 
-    const disabled = submitting || summaryText === "" || !assignment?.isAvailable || assignment?.isClosed
+    const disabled = submitting || summaryText === ""
     const disabledReason = disabled ? (
-        !assignment ? undefined :
-        submitting ? `Currently uploading submission` :
-        !assignment.isAvailable ? `Assignment is not available for you to work on yet` :
-        assignment.isClosed ?
-            `Past due. Please contact your instructor${course!.instructors.length > 1 ? "s" : ""} if you need an extension` :
-        summaryText === "" ? `Please enter a summary for the submission` : undefined
+        !assignment ? undefined :   
+        submitting ? `Currently uploading assignment` :
+        summaryText === "" ? `Please enter a summary describing your changes` : undefined
     ) : undefined
     
     const submitAssignment = async () => {
@@ -41,20 +38,18 @@ export const AssignmentSubmitForm = ({ }: AssignmentSubmitFormProps) => {
         }
         setSubmitting(true)
         try {
-            // Use undefined for descriptionText if it is an empty string.
-            const submission = await apiSubmitAssignment(path, summaryText, descriptionText ?? undefined)
-            // Only clear summary/description if the submission goes through.
+            const submission = await apiUploadAssignment(path, summaryText)
+            // Only clear summary if the upload goes through.
             setSummaryText("")
-            setDescriptionText("")
 
             snackbar.open({
                 type: 'success',
-                message: 'Successfully submitted assignment!'
+                message: 'Successfully uploaded assignment!'
             })
         } catch (e: any) {
             snackbar.open({
                 type: 'error',
-                message: 'Failed to submit assignment!'
+                message: 'Failed to upload assignment!'
             })
         }
         setSubmitting(false)
@@ -73,47 +68,30 @@ export const AssignmentSubmitForm = ({ }: AssignmentSubmitFormProps) => {
                     focused: activeStyle,
                     disabled: disabledStyle
                 }}
-                type="text"
-                placeholder="Summary"
-                title="Enter a summary for the submission (preferably less than 50 characters)"
+                placeholder="*Summary"
+                title="Enter a summary for the assignment changes"
+                multiline
+                minRows={ 1 }
                 value={ summaryText }
                 onChange={ (e) => setSummaryText(e.target.value) }
                 onKeyDown={ (e) => {
                     if (disabled) return
-                    if (e.key === 'Enter') submitAssignment()
+                    // if (e.key === 'Enter') submitAssignment()
                 } }
                 disabled={ submitting }
                 required
                 disableUnderline
                 fullWidth
             />
-            <Input
-                className={ descriptionClass }
-                classes={{
-                    root: submitRootClass,
-                    focused: activeStyle,
-                    disabled: disabledStyle
-                }}
-                multiline
-                rows={ 5 }
-                rowsMax={ 10 }
-                placeholder="Description (optional)"
-                title="Enter a description for the submission"
-                value={ descriptionText }
-                onChange={ (e) => setDescriptionText(e.target.value) }
-                onKeyDown={ (e) => {
-                    // if (disabled) return
-                    // if (e.key === 'Enter') submitAssignment()
-                } }
-                disabled={ submitting }
-                disableUnderline
-                fullWidth
-            />
-            <AssignmentSubmitButton
-                onClick={ submitAssignment }
-                title={ disabledReason }
-                disabled={ disabled }
-            />
+            <Tooltip title={ disabledReason }>
+                <div>
+                    <AssignmentSubmitButton
+                        onClick={ submitAssignment }
+                        disabled={ disabled }
+                        style={{ width: "100%" }}
+                    />
+                </div>
+            </Tooltip>
         </div>
     )
 }

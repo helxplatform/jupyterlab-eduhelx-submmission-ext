@@ -44,7 +44,7 @@ async function activate (
   )
   submissionWidget.id = 'jp-submission-widget'
   submissionWidget.title.icon = submissionIcon
-  submissionWidget.title.caption = 'Submit assignments'
+  submissionWidget.title.caption = 'Eduhelx'
 
   restorer.add(submissionWidget, 'submission-widget')
   shell.add(submissionWidget, 'left', { rank: 200 })
