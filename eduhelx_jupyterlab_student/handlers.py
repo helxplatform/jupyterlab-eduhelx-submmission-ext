@@ -320,7 +320,7 @@ async def clone_repo_if_not_exists(context: AppContext, course, student) -> None
             raise e
 
 async def set_git_authentication(context: AppContext, course, student) -> None:
-    repo_root = context._compute_repo_root(course["name"])
+    repo_root = context._compute_repo_root(course["name"]).resolve()
     student_repository_url = student["fork_remote_url"]
     ssh_config_file = repo_root / ".ssh" / "config"
     ssh_identity_file = repo_root / ".ssh" / "id_rsa"
