@@ -23,7 +23,7 @@ from eduhelx_utils.git import (
     get_modified_paths, get_repo_root as get_git_repo_root,
     checkout, reset as git_reset, get_head_commit_id
 )
-from eduhelx_utils.api import Api
+from eduhelx_utils.api import Api, AuthType
 from eduhelx_utils.process import execute
 from .student_repo import StudentClassRepo, NotStudentClassRepositoryException
 from ._version import __version__
@@ -40,8 +40,8 @@ class AppContext:
         self.api = Api(
             api_url=self.config.GRADER_API_URL,
             user_onyen=self.config.USER_NAME,
-            appstore_auth="student",
-            appstore_sessionid="",
+            auth_type=AuthType.APPSTORE_STUDENT,
+            appstore_access_token=self.config.ACCESS_TOKEN,
             # user_autogen_password=self.config.USER_AUTOGEN_PASSWORD,
             jwt_refresh_leeway_seconds=self.config.JWT_REFRESH_LEEWAY_SECONDS
         )
@@ -58,10 +58,6 @@ class AppContext:
 
 class BaseHandler(APIHandler):
     context: AppContext = None
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.api.appstore_sessionid = self.get_cookie("sessionid")
 
     @property
     def config(self) -> ExtensionConfig:
@@ -245,6 +241,30 @@ async def create_repo_root_if_not_exists(context: AppContext, course) -> None:
     if not repo_root.exists():
         repo_root.mkdir(parents=True)
 
+async def create_ssh_config_if_not_exists(context: AppContext, course, student) -> None:
+    repo_root = context._compute_repo_root(course["name"]).resolve()
+    ssh_config_dir = repo_root / ".ssh"
+    ssh_config_file = ssh_config_dir / "config"
+    ssh_identity_file = ssh_config_dir / "id_rsa"
+    ssh_public_key_file = ssh_config_dir / "id_rsa.pub"
+    ssh_host = urlparse("ssh://" + student["fork_remote_url"]).hostname
+    ssh_port = 22 if not context.config.LOCAL else 2222
+    ssh_user = "git"
+    if not ssh_identity_file.exists():
+        ssh_config_dir.mkdir(parents=True, exist_ok=True)
+        execute(["ssh-keygen", "-t", "rsa", "-f", ssh_identity_file, "-N", ""])
+        with open(ssh_config_file, "w+") as f:
+            f.write(
+                f"Host { ssh_host }\n" \
+                f"   User { ssh_user }\n" \
+                f"   Port { ssh_port }\n" \
+                f"   IdentityFile { ssh_identity_file }\n" \
+                f"   HostName localhost\n" if context.config.LOCAL else ""
+            )
+        with open(ssh_public_key_file, "r") as f:
+            public_key = f.read()
+            await context.api.set_ssh_key("jls-client", public_key)
+
 async def clone_repo_if_not_exists(context: AppContext, course, student) -> None:
     repo_root = context._compute_repo_root(course["name"])
     try:
@@ -302,17 +322,20 @@ async def clone_repo_if_not_exists(context: AppContext, course, student) -> None
 async def set_git_authentication(context: AppContext, course, student) -> None:
     repo_root = context._compute_repo_root(course["name"])
     student_repository_url = student["fork_remote_url"]
+    ssh_config_file = repo_root / ".ssh" / "config"
+    ssh_identity_file = repo_root / ".ssh" / "id_rsa"
 
     try:
         get_git_repo_root(path=repo_root)
-        execute(["git", "config", "--local", "--unset-all", "credential.helper"], cwd=repo_root)
-        execute(["git", "config", "--local", "credential.helper", ""], cwd=repo_root)
-        execute(["git", "config", "--local", "--add", "credential.helper", context.config.CREDENTIAL_HELPER], cwd=repo_root)
+        
+        execute(["git", "config", "--local", "core.sshCommand", f'ssh -F { ssh_config_file } -i { ssh_identity_file }'], cwd=repo_root)
     except InvalidGitRepositoryException:
         config_path = repo_root / ".git" / "config"
         config_path.parent.mkdir(parents=True, exist_ok=True)
         with open(config_path, "w+") as f:
             credential_config = \
+                "[core]\n" \
+                f'    sshCommand = ssh -F { ssh_config_file } -i { ssh_identity_file }\n' \
                 "[user]\n" \
                 f"    name = { context.config.USER_NAME }\n" \
                 f"    email = { student['email'] }\n" \
@@ -321,20 +344,8 @@ async def set_git_authentication(context: AppContext, course, student) -> None:
                 f"    email = { student['email'] }\n" \
                 "[committer]\n" \
                 f"    name = { context.config.USER_NAME }\n" \
-                f"    email = { student['email'] }\n" \
-                f"[credential]" \
-                f"    helper = ''" \
-                f"    helper = { context.config.CREDENTIAL_HELPER }"
+                f"    email = { student['email'] }\n"
             f.write(credential_config)
-
-    parsed = urlparse(student_repository_url)
-    protocol, host = parsed.scheme, parsed.netloc
-    credentials = \
-        f"protocol={ protocol }\n" \
-        f"host={ host }\n" \
-        f"username={ context.config.USER_NAME }\n" \
-        f"password={ context.config.USER_AUTOGEN_PASSWORD }"
-    execute(["git", "credential", "approve"], stdin_input=credentials, cwd=repo_root)
 
 async def set_root_folder_permissions(context: AppContext) -> None:
     # repo_root = await context.get_repo_root()
@@ -348,6 +359,7 @@ async def setup_backend(context: AppContext):
         course = await context.api.get_course()
         student = await context.api.get_my_user()
         await create_repo_root_if_not_exists(context, course)
+        await create_ssh_config_if_not_exists(context, course, student)
         await set_git_authentication(context, course, student)
         await clone_repo_if_not_exists(context, course, student)
         await set_root_folder_permissions(context)
