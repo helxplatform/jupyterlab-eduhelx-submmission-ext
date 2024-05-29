@@ -13,8 +13,10 @@ def _parse_bool(value: Union[str, bool]) -> bool:
 """
 class Config:
     GRADER_API_URL: str
-    USER_ONYEN: str
-    USER_AUTOGEN_PASSWORD: str
+    USER_NAME: str
+    # USER_AUTOGEN_PASSWORD: str
+    # Which credential helper to use in Git
+    CREDENTIAL_HELPER: str = "store"
     # How far ahead of time the API should refresh the access token
     # (proactively refreshing using a buffer deals with issues such as latency and clock sync)
     JWT_REFRESH_LEEWAY_SECONDS: int = 60
@@ -22,7 +24,7 @@ class Config:
     LONG_POLLING_TIMEOUT_SECONDS: int = 60
     # For polling that depends on unobservable data, how long to sleep in between data fetches.
     LONG_POLLING_SLEEP_INTERVAL_SECONDS: int = 5
-
+    
     """
     Map environment variables to class fields according to these rules:
       - Field won't be parsed unless it has a type annotation

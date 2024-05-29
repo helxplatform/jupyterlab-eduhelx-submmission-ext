@@ -1,8 +1,9 @@
 import React, { createContext, useContext, ReactNode, useState, useMemo, useEffect } from 'react'
 import { IChangedArgs } from '@jupyterlab/coreutils'
 import { FileBrowserModel, IDefaultFileBrowser } from '@jupyterlab/filebrowser'
+import { useSnackbar } from './snackbar-context'
 import { IEduhelxSubmissionModel } from '../tokens'
-import { IAssignment, IStudent, ICurrentAssignment, ICourse, getAssignmentsPolled, GetAssignmentsResponse, getStudentAndCoursePolled } from '../api'
+import { IAssignment, IStudent, ICurrentAssignment, ICourse, getAssignmentsPolled, GetAssignmentsResponse, getStudentAndCoursePolled, getStudentAndCourse, getAssignments } from '../api'
 
 interface IAssignmentContext {
     assignments: IAssignment[] | null | undefined
@@ -21,6 +22,8 @@ interface IAssignmentProviderProps {
 export const AssignmentContext = createContext<IAssignmentContext|undefined>(undefined)
 
 export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProviderProps) => {
+    const snackbar = useSnackbar()!
+
     const [currentPath, setCurrentPath] = useState<string|null>(null)
     const [currentAssignment, setCurrentAssignment] = useState<ICurrentAssignment|null|undefined>(undefined)
     const [assignments, setAssignments] = useState<IAssignment[]|null|undefined>(undefined)
@@ -51,30 +54,30 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
         setCurrentAssignment(undefined)
         
         let cancelled = false
-        void async function poll(currentValue?: object) {
-            let newValue = undefined
-            let error = false
+        const poll = async () => {
+            let value
             if (currentPath !== null) {
                 try {
-                    newValue = await getAssignmentsPolled(currentPath, currentValue)
+                    value = await getAssignments(currentPath)
                 } catch (e: any) {
                     console.error(e)
-                    error = true
+                    snackbar.open({
+                        type: 'warning',
+                        message: 'Failed to pull assignments...'
+                    })
                 }
             }
             if (cancelled) return
-            if (newValue !== undefined) {
-                setAssignments(newValue.assignments)
-                setCurrentAssignment(newValue.currentAssignment)
+            if (value !== undefined) {
+                setAssignments(value.assignments)
+                setCurrentAssignment(value.currentAssignment)
             } else {
                 setAssignments(undefined)
                 setCurrentAssignment(undefined)
             }
-            // This endpoint should never return an error, which means it will likely return it immediately.
-            // If we don't delay our next request upon erroring, it may immediately fail and rerequest, which is bad.
-            if (!error) poll(newValue)
-            else setTimeout(() => poll(newValue), 1000)
-        }()
+            setTimeout(poll, 2500)
+        }
+        setTimeout(poll, 2500)
         return () => {
             cancelled = true
         }
@@ -85,28 +88,28 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
         setStudent(undefined)
 
         let cancelled = false
-        void async function poll(currentValue?: object) {
-            let newValue = undefined
-            let error = false
+        const poll = async () => {
+            let value
             try {
-                newValue = await getStudentAndCoursePolled(currentValue)
+                value = await getStudentAndCourse()
             } catch (e: any) {
                 console.error(e)
-                error = true
+                snackbar.open({
+                    type: 'warning',
+                    message: 'Failed to pull course data...'
+                })
             }
             if (cancelled) return
-            if (newValue !== undefined) {
-                setCourse(newValue.course)
-                setStudent(newValue.student)
+            if (value !== undefined) {
+                setCourse(value.course)
+                setStudent(value.student)
             } else {
                 setCourse(undefined)
                 setStudent(undefined)
             }
-            // This endpoint should never return an error, which means it will likely return it immediately.
-            // If we don't delay our next request upon erroring, it may immediately fail and rerequest, which is bad.
-            if (!error) poll(newValue)
-            else setTimeout(() => poll(newValue), 1000)
-        }()
+            setTimeout(poll, 2500)
+        }
+        setTimeout(poll, 2500)
         return () => {
             cancelled = true
         }
