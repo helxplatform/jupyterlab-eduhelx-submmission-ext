@@ -53,11 +53,13 @@ class AppContext:
         # If autogen password happens to be set (e.g. if running locally), then use it for convenience.
         if self.config.USER_AUTOGEN_PASSWORD != "":
             self.api = Api(
+                **api_config,
                 user_autogen_password=self.config.USER_AUTOGEN_PASSWORD,
                 auth_type=AuthType.PASSWORD
             )
         else:
             self.api = Api(
+                **api_config,
                 appstore_access_token=self.config.ACCESS_TOKEN,
                 auth_type=AuthType.APPSTORE_STUDENT
             )
