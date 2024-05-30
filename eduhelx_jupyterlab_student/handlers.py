@@ -37,7 +37,7 @@ UPSTREAM_REMOTE_NAME = "upstream"
 MAIN_BRANCH_NAME = "main"
 # We have to do a merge to sync changes. We stage the merge on a separate branch
 # to proactively guard against a merge conflict.
-MERGE_STAGING_BRANCH_NAME = "__temp__/merge_{}-from-{}" # Formatted with the origin head and upstream head commit hashes
+MERGE_STAGING_BRANCH_NAME = "__temp__/merge_{}-from-{}" # Formatted with the local head and upstream head commit hashes
 UPSTREAM_TRACKING_BRANCH = f"{ UPSTREAM_REMOTE_NAME }/{ MAIN_BRANCH_NAME }"
 ORIGIN_TRACKING_BRANCH = f"{ ORIGIN_REMOTE_NAME }/{ MAIN_BRANCH_NAME }"
 
