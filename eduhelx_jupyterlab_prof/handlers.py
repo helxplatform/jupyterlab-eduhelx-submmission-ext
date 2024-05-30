@@ -329,13 +329,8 @@ async def clone_repo_if_not_exists(context: AppContext) -> None:
         init_repository(repo_root)
         await set_git_authentication(context)
         add_remote(ORIGIN_REMOTE_NAME, master_repository_url, path=repo_root)
-        with open(".ssh/config", "r") as f: print(13491234190823409, f.read())
-        try:
-            fetch_repository(ORIGIN_REMOTE_NAME, path=repo_root)
-            checkout(f"{ MAIN_BRANCH_NAME }", path=repo_root)
-        except:
-            ...
-        with open(".ssh/config", "r") as f: print(69879056876590, f.read())
+        fetch_repository(ORIGIN_REMOTE_NAME, path=repo_root)
+        checkout(f"{ MAIN_BRANCH_NAME }", path=repo_root)
         
         
 
