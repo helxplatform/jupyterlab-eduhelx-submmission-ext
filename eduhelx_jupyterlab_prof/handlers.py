@@ -257,7 +257,7 @@ class SubmissionHandler(BaseHandler):
 class SyncToLMSHandler(BaseHandler):
     @tornado.web.authenticated
     async def post(self):
-        await self.api.sync_to_lms()
+        await self.api.lms_downsync()
         self.finish()
 
 class GradeAssignmentHandler(BaseHandler):
