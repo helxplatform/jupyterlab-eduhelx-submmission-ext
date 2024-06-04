@@ -83,7 +83,7 @@ export const AssignmentPanel = ({}: IAssignmentPanelProps) => {
                         <ul style={{ margin: 0, paddingLeft: 16 }}>
                            { students.map((student) => (
                             <li key={ student.onyen }>
-                                { student.fullName } ({ student.onyen })
+                                { student.name } ({ student.onyen })
                             </li>
                            )) } 
                         </ul>
