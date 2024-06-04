@@ -2,6 +2,8 @@ import os
 from typing import get_type_hints, Union
 from jupyter_server.serverapp import ServerApp
 
+validators = []
+
 def _parse_bool(value: Union[str, bool]) -> bool:
     if type(value) == bool: return value
     return True if value.lower() in ["true", "yes", "1"] else False
@@ -14,7 +16,9 @@ def _parse_bool(value: Union[str, bool]) -> bool:
 class Config:
     GRADER_API_URL: str
     USER_NAME: str
-    # USER_AUTOGEN_PASSWORD: str
+    ACCESS_TOKEN: str = ""
+    USER_AUTOGEN_PASSWORD: str = ""
+    UPSTREAM_SYNC_INTERVAL: int = 60
     # Which credential helper to use in Git
     CREDENTIAL_HELPER: str = "store"
     # How far ahead of time the API should refresh the access token
@@ -62,6 +66,24 @@ class Config:
                     field
                 )
             )
+
+        for validator in validators:
+            if not validator(self):
+                raise ValueError(f"Config misconfiguration: { validator.__validation_description__ }")
+
+    def validator(validation_description: str):
+        def decorator(method):
+            method.__validation_description__ = validation_description
+            if method not in validators: validators.append(method)
+            return method
+        return decorator
+    
+    
+    @validator("password or auth token must be provided")
+    def validate_auth_set(self) -> bool:
+        if self.USER_AUTOGEN_PASSWORD and self.ACCESS_TOKEN:
+            print("Warning: both password and identity token provided, defaulting to password auth...")
+        return self.USER_AUTOGEN_PASSWORD != "" or self.ACCESS_TOKEN != ""
 
     """ Add a trailing slash to the URL if not present """
     def process_GRADER_API_URL(self, value: str):
