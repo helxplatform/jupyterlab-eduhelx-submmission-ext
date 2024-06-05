@@ -39,6 +39,10 @@ export const AssignmentPanel = ({}: IAssignmentPanelProps) => {
         try {
             await new Promise((resolve) => setTimeout(resolve, 2000))
             await syncToLMS()
+            snackbar.open({
+                type: 'success',
+                message: 'Successfully synced with LMS'
+            })
         } catch (e: any) {
             snackbar.open({
                 type: 'error',

@@ -265,6 +265,33 @@ class GradeAssignmentHandler(BaseHandler):
     GRADING_JOBS = {}
 
     @tornado.web.authenticated
+    async def post(self):
+        data = self.get_json_body()
+        current_path: str = data["current_path"]
+        current_path_abs = os.path.realpath(current_path)
+
+        try:
+            course = await self.api.get_course()
+            assignments = await self.api.get_my_assignments()
+            repo = InstructorClassRepo(course, assignments, current_path_abs)
+            if repo.current_assignment is None: raise Exception()
+        except Exception:
+            self.set_status(400)
+            self.finish({
+                "message": "current_path is not in an eduhelx assignment"
+            })
+            return
+        
+        try:
+            with open(os.path.join(repo.get_assignment_path(repo.current_assignment), "grades.csv"), "r") as f:
+                self.api.grade_assignment(repo.current_assignment["id"], f.read())
+        except FileNotFoundError:
+            self.set_status(404)
+            self.finish({
+                'message': '"grades.csv" does not exist in assignment directory'
+            })
+
+    @tornado.web.authenticated
     async def put(self):
         data = self.get_json_body()
         assignment_id: int = data["assignment_id"]

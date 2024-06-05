@@ -72,6 +72,15 @@ export async function updateAssignment(assignmentName: string, data: UpdateAssig
     })
 }
 
+export async function gradeAssignment(currentPath: string): Promise<void> {
+    await requestAPI<void>(`/grade_assignment`, {
+        method: 'POST',
+        body: JSON.stringify({
+            current_path: currentPath
+        })
+    })
+}
+
 export async function getServerSettings(): Promise<IServerSettings> {
     try {
         const data = await requestAPI<ServerSettingsResponse>('/settings', {
