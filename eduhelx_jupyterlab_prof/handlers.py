@@ -41,10 +41,8 @@ ORIGIN_TRACKING_BRANCH = f"{ ORIGIN_REMOTE_NAME }/{ MAIN_BRANCH_NAME }"
 
 def set_datetime_tz(datetime: str):
     if datetime is None: return None
-    # NOTE: Postgres is DST aware and will automatically adjust the timezone offset for daylight savings
-    # NOTE: Since time.timezone is *not* DST aware, we will let Postgres handle everything.
-    # e.g. 2024-03-02T19:03 -> 2024-03-02T23:03-05:00
-    utc_offset = -time.timezone / 60
+    tz = time.timezone if not time.localtime().tm_isdst else time.altzone
+    utc_offset = -tz / 60
     if utc_offset == 0: return datetime + "Z"
     utc_offset_sign = "-" if utc_offset < 0 else "+"
     utc_offset_hr = str(int(abs(utc_offset) // 60)).zfill(2)
@@ -263,6 +261,33 @@ class SyncToLMSHandler(BaseHandler):
 class GradeAssignmentHandler(BaseHandler):
     # assignment_id -> job id
     GRADING_JOBS = {}
+
+    @tornado.web.authenticated
+    async def post(self):
+        data = self.get_json_body()
+        current_path: str = data["current_path"]
+        current_path_abs = os.path.realpath(current_path)
+
+        try:
+            course = await self.api.get_course()
+            assignments = await self.api.get_my_assignments()
+            repo = InstructorClassRepo(course, assignments, current_path_abs)
+            if repo.current_assignment is None: raise Exception()
+        except Exception:
+            self.set_status(400)
+            self.finish({
+                "message": "current_path is not in an eduhelx assignment"
+            })
+            return
+        
+        try:
+            with open(os.path.join(repo.get_assignment_path(repo.current_assignment), "grades.csv"), "r") as f:
+                self.api.grade_assignment(repo.current_assignment["id"], f.read())
+        except FileNotFoundError:
+            self.set_status(404)
+            self.finish({
+                'message': '"grades.csv" does not exist in assignment directory'
+            })
 
     @tornado.web.authenticated
     async def put(self):
