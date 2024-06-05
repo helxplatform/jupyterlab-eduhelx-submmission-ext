@@ -41,10 +41,8 @@ ORIGIN_TRACKING_BRANCH = f"{ ORIGIN_REMOTE_NAME }/{ MAIN_BRANCH_NAME }"
 
 def set_datetime_tz(datetime: str):
     if datetime is None: return None
-    # NOTE: Postgres is DST aware and will automatically adjust the timezone offset for daylight savings
-    # NOTE: Since time.timezone is *not* DST aware, we will let Postgres handle everything.
-    # e.g. 2024-03-02T19:03 -> 2024-03-02T23:03-05:00
-    utc_offset = -time.timezone / 60
+    tz = time.timezone if not time.localtime().tm_isdst else time.altzone
+    utc_offset = -tz / 60
     if utc_offset == 0: return datetime + "Z"
     utc_offset_sign = "-" if utc_offset < 0 else "+"
     utc_offset_hr = str(int(abs(utc_offset) // 60)).zfill(2)
