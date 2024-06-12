@@ -249,8 +249,15 @@ class SubmissionHandler(BaseHandler):
             # If the push fails, but we've already committed,
             # rollback the commit and abort.
             git_reset(rollback_id, path=instructor_repo.repo_root)
-            self.set_status(500)
-            self.finish(str(e))
+
+            remote_echos = [line.partition("remote:")[2].strip() for line in str(e).splitlines() if line.strip().startswith("remote:")]
+            if len(remote_echos) > 0:
+                # Rejected by a Git hook
+                self.set_status(409)
+                self.finish(json.dumps(remote_echos))
+            else:
+                self.set_status(500)
+                self.finish(str(e))
 
 class SyncToLMSHandler(BaseHandler):
     @tornado.web.authenticated

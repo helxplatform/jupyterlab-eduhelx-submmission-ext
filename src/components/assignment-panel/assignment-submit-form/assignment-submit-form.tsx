@@ -2,7 +2,9 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Tooltip } from 'antd'
 import { Backdrop, CircularProgress, Input, Snackbar } from '@material-ui/core'
 import { Alert } from '@material-ui/lab'
+import { Dialog, showErrorMessage } from '@jupyterlab/apputils'
 import { AssignmentSubmitButton } from './assignment-submit-button'
+import { MergeControlMessage } from './merge-control-message'
 import {
     submitFormContainerClass, submitRootClass,
     summaryClass,
@@ -23,7 +25,7 @@ export const AssignmentSubmitForm = ({ }: AssignmentSubmitFormProps) => {
     const [summaryText, setSummaryText] = useState<string>("")
     const [submitting, setSubmitting] = useState<boolean>(false)
 
-    const disabled = submitting || summaryText === ""
+    const disabled = !assignment || submitting || summaryText === ""
     const disabledReason = disabled ? (
         !assignment ? undefined :   
         submitting ? `Currently uploading assignment` :
@@ -31,6 +33,10 @@ export const AssignmentSubmitForm = ({ }: AssignmentSubmitFormProps) => {
     ) : undefined
     
     const submitAssignment = async () => {
+        if (!assignment) {
+            console.log("Unknown assignment, can't submit")
+            return
+        }
         if (!path) {
             // If this component is being rendered, this should never be possible.
             console.log("Unknown cwd, can't submit")
@@ -47,9 +53,23 @@ export const AssignmentSubmitForm = ({ }: AssignmentSubmitFormProps) => {
                 message: 'Successfully uploaded assignment!'
             })
         } catch (e: any) {
-            snackbar.open({
+            if (e.response?.status === 409) {
+                (window as any).e = e
+                showErrorMessage(
+                    'Merge control policy violation',
+                    {
+                        message: (
+                            <MergeControlMessage
+                                remoteMessages={ await e.response.json() }
+                                assignmentPath={ assignment!.directoryPath }
+                            />
+                        )
+                    },
+                    [Dialog.warnButton({ label: 'Dismiss' })]
+                )
+            } else snackbar.open({
                 type: 'error',
-                message: 'Failed to upload assignment!'
+                message: 'Failed to upload changes!'
             })
         }
         setSubmitting(false)
