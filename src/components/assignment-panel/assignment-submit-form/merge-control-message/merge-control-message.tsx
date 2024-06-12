@@ -22,7 +22,7 @@ export const MergeControlMessage = ({ remoteMessages, assignmentPath }: MergeCon
                 const fullPath = message.trim().slice(VIOLATION_PREFIX.length)
                 // Remove the assignmentPath prefix, since we are in the assignment view already.
                 const fileName = fullPath.split(assignmentPath).slice(1).join(assignmentPath)
-                files.push(fileName)
+                files.push(fileName.startsWith("/") ? fileName.slice(1) : fileName)
             }
         })
 
