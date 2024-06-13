@@ -85,10 +85,6 @@ class AppContext:
 class BaseHandler(APIHandler):
     context: AppContext = None
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # self.api.appstore_sessionid = self.get_cookie("sessionid")
-
     @property
     def config(self) -> ExtensionConfig:
         return self.context.config
@@ -336,6 +332,48 @@ async def create_repo_root_if_not_exists(context: AppContext) -> None:
     if not repo_root.exists():
         repo_root.mkdir(parents=True)
 
+async def create_ssh_config_if_not_exists(context: AppContext) -> None:
+    course = await context.api.get_course()
+    settings = await context.api.get_settings()
+    repo_root = context._compute_repo_root(course["name"]).resolve()
+    ssh_config_dir = repo_root / ".ssh"
+    ssh_config_file = ssh_config_dir / "config"
+    ssh_identity_file = ssh_config_dir / "id_gitea"
+    ssh_public_key_file = ssh_config_dir / "id_gitea.pub"
+
+    ssh_public_url = course["master_remote_url"]
+    if not urlparse(ssh_public_url).scheme:
+        ssh_public_url = "ssh://" + ssh_public_url
+
+    ssh_private_url = settings["gitea_ssh_url"] if not context.config.LOCAL else "ssh://git@localhost:2222"
+    if not urlparse(ssh_private_url).scheme:
+        ssh_private_url = "ssh://" + ssh_private_url 
+
+    ssh_public_url_parsed = urlparse(ssh_public_url)
+    ssh_private_url_parsed = urlparse(ssh_private_url)
+
+    ssh_public_hostname = ssh_public_url_parsed.hostname
+    ssh_private_hostname = ssh_private_url_parsed.hostname
+    ssh_port = ssh_private_url_parsed.port or 2222
+    ssh_user = ssh_private_url_parsed.username or "git"
+    
+    if not ssh_identity_file.exists():
+        ssh_config_dir.mkdir(parents=True, exist_ok=True)
+        execute(["ssh-keygen", "-t", "rsa", "-f", ssh_identity_file, "-N", ""])
+        with open(ssh_config_file, "w+") as f:
+            # Host (public Gitea URL) is rewritten as an alias to HostName (private ssh URL)
+            f.write( 
+                # Note that Host is really a hostname in SSH config. and is an alias to HostName here.
+                f"Host { ssh_public_hostname }\n" \
+                f"   User { ssh_user }\n" \
+                f"   Port { ssh_port }\n" \
+                f"   IdentityFile { ssh_identity_file }\n" \
+                f"   HostName { ssh_private_hostname }\n"
+            )
+        with open(ssh_public_key_file, "r") as f:
+            public_key = f.read()
+            await context.api.set_ssh_key("jlp-client", public_key)
+
 async def clone_repo_if_not_exists(context: AppContext) -> None:
     course = await context.api.get_course()
     repo_root = context._compute_repo_root(course["name"])
@@ -352,23 +390,27 @@ async def clone_repo_if_not_exists(context: AppContext) -> None:
         fetch_repository(ORIGIN_REMOTE_NAME, path=repo_root)
         checkout(f"{ MAIN_BRANCH_NAME }", path=repo_root)
         
+        
 
 async def set_git_authentication(context: AppContext) -> None:
     course = await context.api.get_course()
     instructor = await context.api.get_my_user()
-    repo_root = context._compute_repo_root(course["name"])
+    repo_root = context._compute_repo_root(course["name"]).resolve()
     master_repository_url = course["master_remote_url"]
+    ssh_config_file = repo_root / ".ssh" / "config"
+    ssh_identity_file = repo_root / ".ssh" / "id_gitea"
 
     try:
         get_git_repo_root(path=repo_root)
-        execute(["git", "config", "--local", "--unset-all", "credential.helper"], cwd=repo_root)
-        execute(["git", "config", "--local", "credential.helper", ""], cwd=repo_root)
-        execute(["git", "config", "--local", "--add", "credential.helper", context.config.CREDENTIAL_HELPER], cwd=repo_root)
+        
+        execute(["git", "config", "--local", "core.sshCommand", f'ssh -F { ssh_config_file } -i { ssh_identity_file }'], cwd=repo_root)
     except InvalidGitRepositoryException:
         config_path = repo_root / ".git" / "config"
         config_path.parent.mkdir(parents=True, exist_ok=True)
         with open(config_path, "w+") as f:
             credential_config = \
+                "[core]\n" \
+                f'    sshCommand = ssh -F { ssh_config_file } -i { ssh_identity_file }\n' \
                 "[user]\n" \
                 f"    name = { context.config.USER_NAME }\n" \
                 f"    email = { instructor['email'] }\n" \
@@ -377,21 +419,9 @@ async def set_git_authentication(context: AppContext) -> None:
                 f"    email = { instructor['email'] }\n" \
                 "[committer]\n" \
                 f"    name = { context.config.USER_NAME }\n" \
-                f"    email = { instructor['email'] }\n" \
-                f"[credential]" \
-                f"    helper = ''" \
-                f"    helper = { context.config.CREDENTIAL_HELPER }"
+                f"    email = { instructor['email'] }\n"
             f.write(credential_config)
-
-    parsed = urlparse(master_repository_url)
-    protocol, host = parsed.scheme, parsed.netloc
-    credentials = \
-        f"protocol={ protocol }\n" \
-        f"host={ host }\n" \
-        f"username={ context.config.USER_NAME }\n" \
-        f"password={ context.config.USER_AUTOGEN_PASSWORD }"
-    execute(["git", "credential", "approve"], stdin_input=credentials, cwd=repo_root)
-
+            
 async def set_root_folder_permissions(context: AppContext) -> None:
     # repo_root = await context.get_repo_root()
     # execute(["chown", "root", repo_root.parent])
@@ -461,6 +491,7 @@ async def sync_upstream_repository(context: AppContext) -> None:
 async def setup_backend(context: AppContext):
     try:
         await create_repo_root_if_not_exists(context)
+        await create_ssh_config_if_not_exists(context)
         await set_git_authentication(context)
         await clone_repo_if_not_exists(context)
         await set_root_folder_permissions(context)
