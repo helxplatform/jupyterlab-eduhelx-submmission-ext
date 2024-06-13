@@ -54,7 +54,6 @@ export const AssignmentSubmitForm = ({ }: AssignmentSubmitFormProps) => {
             })
         } catch (e: any) {
             if (e.response?.status === 409) {
-                (window as any).e = e
                 showErrorMessage(
                     'Merge control policy violation',
                     {
