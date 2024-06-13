@@ -1,14 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Progress, Tooltip } from 'antd'
 import { classes } from 'typestyle'
-import { assignmentSubmissionInfoClass } from './style'
-import { TextDivider } from '../../text-divider'
-import { tagClass } from '../assignment-info/style'
-import { assignmentSubmitButton } from '../assignment-submit-form/assignment-submit-button/style'
-import { useAssignment } from '../../../contexts'
-import { IStudent, ISubmission } from '../../../api'
 import { CircularProgress } from '@material-ui/core'
 import { ClearOutlined, PlayArrowOutlined } from '@material-ui/icons'
+import { assignmentSubmissionInfoClass } from './style'
+import { tagClass } from '../assignment-info/style'
+import { assignmentSubmitButton } from '../assignment-submit-form/assignment-submit-button/style'
+import { TextDivider } from '../../text-divider'
+import { useAssignment, useSnackbar } from '../../../contexts'
+import { gradeAssignment, IStudent, ISubmission } from '../../../api'
 
 interface SubmissionLegendProps {
     graded: IStudent[]
@@ -76,7 +76,8 @@ const SubmissionLegend = ({ graded, submitted, unsubmitted, resubmitted }: Submi
 }
 
 export const AssignmentSubmissionInfo = ({ }: AssignmentSubmissionInfoProps) => {
-    const { assignment, students } = useAssignment()!
+    const { assignment, students, path } = useAssignment()!
+    const snackbar = useSnackbar()!
 
     const [gradingActive, setGradingActive] = useState<boolean>(false)
 
@@ -117,10 +118,19 @@ export const AssignmentSubmissionInfo = ({ }: AssignmentSubmissionInfoProps) => 
     }, [graded, submitted, gradingActive])
 
     const grade = useCallback(async () => {
+        if (path === null) return
         setGradingActive(true)
-        await new Promise((resolve) => setTimeout(resolve, 2500))
-        setGradingActive(false)
-    }, [])
+        try {
+            await gradeAssignment(path)
+        } catch (e: any) {
+            snackbar.open({
+                type: "error",
+                message: "Failed to grade assignments!"
+            })
+        } finally {
+            setGradingActive(false)
+        }
+    }, [path, snackbar])
 
     const abort = useCallback(async () => {
         setGradingActive(false)
@@ -155,6 +165,7 @@ export const AssignmentSubmissionInfo = ({ }: AssignmentSubmissionInfoProps) => 
                         height: 28,
                         backgroundColor: gradingDisabled ? 'var(--jp-layout-color3)' : undefined
                     }}
+                    disabled={ gradingDisabled }
                     onClick={ !gradingActive ? grade : abort }
                 >
                     { gradingActive ? (

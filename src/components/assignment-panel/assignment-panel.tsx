@@ -39,6 +39,10 @@ export const AssignmentPanel = ({}: IAssignmentPanelProps) => {
         try {
             await new Promise((resolve) => setTimeout(resolve, 2000))
             await syncToLMS()
+            snackbar.open({
+                type: 'success',
+                message: 'Successfully synced with LMS'
+            })
         } catch (e: any) {
             snackbar.open({
                 type: 'error',
@@ -83,7 +87,7 @@ export const AssignmentPanel = ({}: IAssignmentPanelProps) => {
                         <ul style={{ margin: 0, paddingLeft: 16 }}>
                            { students.map((student) => (
                             <li key={ student.onyen }>
-                                { student.fullName } ({ student.onyen })
+                                { student.name } ({ student.onyen })
                             </li>
                            )) } 
                         </ul>
