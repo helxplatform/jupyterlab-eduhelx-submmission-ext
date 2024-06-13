@@ -3,7 +3,6 @@ import os
 import tempfile
 import shutil
 import tornado
-import time
 import asyncio
 import httpx
 import traceback
@@ -38,16 +37,6 @@ MAIN_BRANCH_NAME = "main"
 # to proactively guard against a merge conflict.
 MERGE_STAGING_BRANCH_NAME = "__temp__/merge_{}-from-{}" # Formatted with the local head and tracking head commit hashes
 ORIGIN_TRACKING_BRANCH = f"{ ORIGIN_REMOTE_NAME }/{ MAIN_BRANCH_NAME }"
-
-def set_datetime_tz(datetime: str):
-    if datetime is None: return None
-    tz = time.timezone if not time.localtime().tm_isdst else time.altzone
-    utc_offset = -tz / 60
-    if utc_offset == 0: return datetime + "Z"
-    utc_offset_sign = "-" if utc_offset < 0 else "+"
-    utc_offset_hr = str(int(abs(utc_offset) // 60)).zfill(2)
-    utc_offset_min = str(int(abs(utc_offset) % 60)).zfill(2)
-    return datetime + f"{ utc_offset_sign }{utc_offset_hr}:{utc_offset_min}"
 
 class AppContext:
     def __init__(self, serverapp):
@@ -186,8 +175,7 @@ class AssignmentsHandler(BaseHandler):
     async def patch(self):
         name = self.get_argument("name")
         data = self.get_json_body()
-        if "available_date" in data: data["available_date"] = set_datetime_tz(data["available_date"])
-        if "due_date" in data: data["due_date"] = set_datetime_tz(data["due_date"])
+        
         await self.api.update_assignment(name, **data)
 
 class SubmissionHandler(BaseHandler):

@@ -6,7 +6,7 @@ import { ArrowBackSharp } from '@material-ui/icons'
 import { useDebouncedCallback } from 'use-debounce'
 import { assignmentInfoClass, assignmentInfoSectionClass, assignmentInfoSectionHeaderClass, assignmentInfoSectionWarningClass, assignmentNameClass, tagClass } from './style'
 import { useAssignment } from '../../../contexts'
-import { getLocalTimezoneAbbr } from '../../../utils'
+import { addLocalTimezone, getLocalTimezoneAbbr } from '../../../utils'
 import { updateAssignment } from '../../../api'
 import { ExpectedValue } from '../../expected-value'
 import { InputAdornment } from '@material-ui/core'
@@ -127,7 +127,7 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
 
     const onAvailableDateChanged = useDebouncedCallback((e: ChangeEvent<HTMLInputElement>) => {
         void async function() {
-            const newDate = e.target.value !== "" ? e.target.value : null
+            const newDate = e.target.value !== "" ? addLocalTimezone(e.target.value) : null
             await updateAssignment(assignment.name, {
                 available_date: newDate
             })
@@ -136,7 +136,7 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
 
     const onDueDateChanged = useDebouncedCallback((e: ChangeEvent<HTMLInputElement>) => {
         void async function() {
-            const newDate = e.target.value !== "" ? e.target.value : null
+            const newDate = e.target.value !== "" ? addLocalTimezone(e.target.value) : null
             await updateAssignment(assignment.name, {
                 due_date: newDate
             })
