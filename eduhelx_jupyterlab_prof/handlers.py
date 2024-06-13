@@ -399,27 +399,43 @@ async def set_git_authentication(context: AppContext) -> None:
     master_repository_url = course["master_remote_url"]
     ssh_config_file = repo_root / ".ssh" / "config"
     ssh_identity_file = repo_root / ".ssh" / "id_gitea"
+    use_password_auth = context.api.auth_type == AuthType.PASSWORD
 
     try:
         get_git_repo_root(path=repo_root)
-        
-        execute(["git", "config", "--local", "core.sshCommand", f'ssh -F { ssh_config_file } -i { ssh_identity_file }'], cwd=repo_root)
+        execute(["git", "config", "--local", "--unset-all", "credential.helper"], cwd=repo_root)
+        execute(["git", "config", "--local", "--unset-all", "core.sshCommand"], cwd=repo_root)
+        if use_password_auth:
+            execute(["git", "config", "--local", "credential.helper", ""], cwd=repo_root)
+            execute(["git", "config", "--local", "--add", "credential.helper", context.config.CREDENTIAL_HELPER], cwd=repo_root)
+        else:
+            execute(["git", "config", "--local", "core.sshCommand", f'ssh -F { ssh_config_file } -i { ssh_identity_file }'], cwd=repo_root)
     except InvalidGitRepositoryException:
         config_path = repo_root / ".git" / "config"
         config_path.parent.mkdir(parents=True, exist_ok=True)
         with open(config_path, "w+") as f:
-            credential_config = \
-                "[core]\n" \
-                f'    sshCommand = ssh -F { ssh_config_file } -i { ssh_identity_file }\n' \
-                "[user]\n" \
-                f"    name = { context.config.USER_NAME }\n" \
-                f"    email = { instructor['email'] }\n" \
-                "[author]\n" \
-                f"    name = { context.config.USER_NAME }\n" \
-                f"    email = { instructor['email'] }\n" \
-                "[committer]\n" \
-                f"    name = { context.config.USER_NAME }\n" \
+            ssh_credential_config = (
+                "[core]\n"
+                f'    sshCommand = ssh -F { ssh_config_file } -i { ssh_identity_file }\n'
+            )
+            password_credential_config = (
+                f"[credential]\n"
+                f"    helper = ''\n"
+                f"    helper = { context.config.CREDENTIAL_HELPER }\n"
+            )
+            credential_config = (
+                f"{ ssh_credential_config }"
+                "[user]\n"
+                f"    name = { context.config.USER_NAME }\n"
                 f"    email = { instructor['email'] }\n"
+                "[author]\n"
+                f"    name = { context.config.USER_NAME }\n"
+                f"    email = { instructor['email'] }\n"
+                "[committer]\n"
+                f"    name = { context.config.USER_NAME }\n"
+                f"    email = { instructor['email'] }\n"
+                f"{ password_credential_config }" if use_password_auth else ""
+            )
             f.write(credential_config)
             
 async def set_root_folder_permissions(context: AppContext) -> None:
