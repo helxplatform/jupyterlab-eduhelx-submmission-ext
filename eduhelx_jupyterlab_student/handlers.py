@@ -21,7 +21,9 @@ from eduhelx_utils.git import (
     get_tail_commit_id, get_repo_name, add_remote,
     stage_files, commit, push, get_commit_info,
     get_modified_paths, get_repo_root as get_git_repo_root,
-    checkout, reset as git_reset, get_head_commit_id
+    checkout, reset as git_reset, get_head_commit_id,
+    merge as git_merge, abort_merge, delete_local_branch,
+    is_ancestor_commit
 )
 from eduhelx_utils.api import Api, AuthType
 from eduhelx_utils.process import execute
@@ -31,20 +33,36 @@ from ._version import __version__
 FIXED_REPO_ROOT = "eduhelx/{}-student" # <class_name>
 ORIGIN_REMOTE_NAME = "origin"
 UPSTREAM_REMOTE_NAME = "upstream"
+# Local branch
 MAIN_BRANCH_NAME = "main"
+# We have to do a merge to sync changes. We stage the merge on a separate branch
+# to proactively guard against a merge conflict.
+MERGE_STAGING_BRANCH_NAME = "__temp__/merge_{}-from-{}" # Formatted with the local head and upstream head commit hashes
+UPSTREAM_TRACKING_BRANCH = f"{ UPSTREAM_REMOTE_NAME }/{ MAIN_BRANCH_NAME }"
+ORIGIN_TRACKING_BRANCH = f"{ ORIGIN_REMOTE_NAME }/{ MAIN_BRANCH_NAME }"
 
 class AppContext:
     def __init__(self, serverapp):
         self.serverapp = serverapp
         self.config = ExtensionConfig(self.serverapp)
-        self.api = Api(
+        api_config = dict(
             api_url=self.config.GRADER_API_URL,
             user_onyen=self.config.USER_NAME,
-            auth_type=AuthType.APPSTORE_STUDENT,
-            appstore_access_token=self.config.ACCESS_TOKEN,
-            # user_autogen_password=self.config.USER_AUTOGEN_PASSWORD,
             jwt_refresh_leeway_seconds=self.config.JWT_REFRESH_LEEWAY_SECONDS
         )
+        # If autogen password happens to be set (e.g. if running locally), then use it for convenience.
+        if self.config.USER_AUTOGEN_PASSWORD != "":
+            self.api = Api(
+                **api_config,
+                user_autogen_password=self.config.USER_AUTOGEN_PASSWORD,
+                auth_type=AuthType.PASSWORD
+            )
+        else:
+            self.api = Api(
+                **api_config,
+                appstore_access_token=self.config.ACCESS_TOKEN,
+                auth_type=AuthType.APPSTORE_STUDENT
+            )
 
     async def get_repo_root(self):
         course = await self.api.get_course()
@@ -382,6 +400,66 @@ async def set_root_folder_permissions(context: AppContext) -> None:
     # execute(["chmod", "a-w", repo_root.parent])
     ...
 
+async def sync_upstream_repository(context: AppContext, course) -> None:
+    repo_root = context._compute_repo_root(course["name"])
+
+    try:
+        fetch_repository(UPSTREAM_REMOTE_NAME, path=repo_root)
+        # In case we've pushed directly to the student's repository on the remote for some reason (through Gitea-Assist)
+        fetch_repository(ORIGIN_REMOTE_NAME, path=repo_root)
+    except:
+        print("Fatal: Couldn't fetch remote tracking branches, aborting sync...")
+
+    checkout(MAIN_BRANCH_NAME, path=repo_root)
+    local_head = get_head_commit_id(path=repo_root)
+    upstream_head = get_head_commit_id(UPSTREAM_TRACKING_BRANCH, path=repo_root)
+    merge_branch_name = MERGE_STAGING_BRANCH_NAME.format(local_head[:8], upstream_head[:8])
+    if is_ancestor_commit(descendant=local_head, ancestor=upstream_head, path=repo_root):
+        # If the local head is a descendant of the local head,
+        # then any upstream changes have already been merged in.
+        print(f"Upstream and local heads are the merged, nothing to sync...")
+        return
+    
+    # Make certain the merge branch is empty before we start.
+    delete_local_branch(merge_branch_name, force=True, path=repo_root)
+    # Branch onto the merge branch off the user's head
+    checkout(merge_branch_name, new_branch=True, path=repo_root)
+
+    # Merge the upstream tracking branch into the temp merge branch
+    try:
+        print(f"Merging { UPSTREAM_TRACKING_BRANCH } ({ upstream_head[:8] }) --> { MAIN_BRANCH_NAME } ({ local_head[:8] }) on branch { merge_branch_name }")
+        # Merge the upstream tracking branch into the merge branch
+        conflicts = git_merge(UPSTREAM_TRACKING_BRANCH, commit=True, path=repo_root)
+        if len(conflicts) > 0:
+            raise Exception("Encountered merge conflicts during merge: ", ", ".join(conflicts))
+
+    except Exception as e:
+        print("Fatal: Can't merge upstream changes into student repository", e)
+        # Cleanup the merge branch and return to main
+        abort_merge(path=repo_root)
+        checkout(MAIN_BRANCH_NAME, path=repo_root)
+        delete_local_branch(merge_branch_name, force=True, path=repo_root)
+        return
+
+    checkout(MAIN_BRANCH_NAME, path=repo_root)
+
+    # If we successfully merged it, we can go ahead and merge the temp branch into our actual branch
+    try:
+        print(f"Merging { merge_branch_name } --> { MAIN_BRANCH_NAME }")
+        # Merge the merge staging branch into the actual branch, don't need to commit since fast forward
+        # We don't need to check for conflicts here since the actual branch can now be fast forwarded.
+        git_merge(merge_branch_name, ff_only=True, commit=False, path=repo_root)
+
+    except Exception as e:
+        # Merging from temp to actual branch failed.
+        print(f"Fatal: Failed to merge the merge staging branch into actual branch", e)
+        abort_merge(path=repo_root)
+    
+    finally:
+        delete_local_branch(merge_branch_name, force=True, path=repo_root)
+        
+    # TODO: when websockets added, ping the client if anything was changed.
+
 async def setup_backend(context: AppContext):
     try:
         course = await context.api.get_course()
@@ -391,6 +469,11 @@ async def setup_backend(context: AppContext):
         await set_git_authentication(context, course, student)
         await clone_repo_if_not_exists(context, course, student)
         await set_root_folder_permissions(context)
+        while True:
+            print("Pulling in upstream changes...")
+            await sync_upstream_repository(context, course)
+            print(f"Sleeping for { context.config.UPSTREAM_SYNC_INTERVAL }...")
+            await asyncio.sleep(context.config.UPSTREAM_SYNC_INTERVAL)
     except:
         print(traceback.format_exc())
 
