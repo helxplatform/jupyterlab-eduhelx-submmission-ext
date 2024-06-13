@@ -432,6 +432,16 @@ async def set_git_authentication(context: AppContext) -> None:
                 f"{ password_credential_config }" if use_password_auth else ""
             )
             f.write(credential_config)
+    
+    if use_password_auth:
+        parsed = urlparse(master_repository_url)
+        protocol, host = parsed.scheme, parsed.netloc
+        credentials = \
+            f"protocol={ protocol }\n" \
+            f"host={ host }\n" \
+            f"username={ context.config.USER_NAME }\n" \
+            f"password={ context.config.USER_AUTOGEN_PASSWORD }"
+        execute(["git", "credential", "approve"], stdin_input=credentials, cwd=repo_root)
             
 async def set_root_folder_permissions(context: AppContext) -> None:
     # repo_root = await context.get_repo_root()
