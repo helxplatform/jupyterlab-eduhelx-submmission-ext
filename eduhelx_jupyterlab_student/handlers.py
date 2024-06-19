@@ -448,7 +448,8 @@ async def sync_upstream_repository(context: AppContext, course) -> None:
         return
     
     # Make certain the merge branch is empty before we start.
-    delete_local_branch(merge_branch_name, force=True, path=repo_root)
+    try: delete_local_branch(merge_branch_name, force=True, path=repo_root)
+    except: pass
     # Branch onto the merge branch off the user's head
     checkout(merge_branch_name, new_branch=True, path=repo_root)
 
