@@ -160,7 +160,8 @@ class AssignmentsHandler(BaseHandler):
         if current_assignment:
             current_assignment["student_submissions"] = await self.api.get_submissions(current_assignment["id"])
             for student in current_assignment["student_submissions"]:
-                for submission in current_assignment["student_submissions"][student]:
+                for i, submission in enumerate(current_assignment["student_submissions"][student]):
+                    if i == 0: submission["active"] = True
                     submission["commit"] = {
                         "id": submission["commit_id"],
                         "message": "",
