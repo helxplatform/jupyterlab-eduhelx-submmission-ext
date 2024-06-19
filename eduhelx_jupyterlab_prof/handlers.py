@@ -368,7 +368,8 @@ async def create_ssh_config_if_not_exists(context: AppContext) -> None:
                 f"   User { ssh_user }\n" \
                 f"   Port { ssh_port }\n" \
                 f"   IdentityFile { ssh_identity_file }\n" \
-                f"   HostName { ssh_private_hostname }\n"
+                f"   HostName { ssh_private_hostname }\n" \
+                f"   StrictHostKeyChecking no\n"
             )
         with open(ssh_public_key_file, "r") as f:
             public_key = f.read()
@@ -465,7 +466,8 @@ async def sync_upstream_repository(context: AppContext) -> None:
         return
     
     # Make certain the merge branch is empty before we start.
-    delete_local_branch(merge_branch_name, force=True, path=repo_root)
+    try: delete_local_branch(merge_branch_name, force=True, path=repo_root)
+    except: pass
     # Branch onto the merge branch off the user's head
     checkout(merge_branch_name, new_branch=True, path=repo_root)
 
