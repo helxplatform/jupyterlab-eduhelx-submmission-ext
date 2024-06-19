@@ -16,8 +16,7 @@ export interface UserResponse {
     id: number
     user_type: UserType
     onyen: string
-    first_name: string
-    last_name: string
+    name: string
     email: string
 }
 
