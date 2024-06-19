@@ -294,7 +294,8 @@ async def create_ssh_config_if_not_exists(context: AppContext, course, student) 
                 f"   User { ssh_user }\n" \
                 f"   Port { ssh_port }\n" \
                 f"   IdentityFile { ssh_identity_file }\n" \
-                f"   HostName { ssh_private_hostname }\n"
+                f"   HostName { ssh_private_hostname }\n" \
+                f"   StrictHostKeyChecking no\n"
             )
         with open(ssh_public_key_file, "r") as f:
             public_key = f.read()
