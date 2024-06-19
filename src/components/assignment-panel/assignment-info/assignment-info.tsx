@@ -112,13 +112,13 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
             </div>
             <div className={ assignmentInfoSectionClass } style={{ marginTop: 16 }}>
                 <h5 className={ assignmentInfoSectionHeaderClass }>Student</h5>
-                <span>{ student.firstName } { student.lastName }</span>
+                <span>{ student.name }</span>
             </div>
             <div className={ assignmentInfoSectionClass }>
                 <h5 className={ assignmentInfoSectionHeaderClass }>
                     Instructor{ course.instructors.length > 1 ? "s" : "" }
                 </h5>
-                <span>{ course.instructors.map((ins) => ins.fullName).join(", ") }</span>
+                <span>{ course.instructors.map((ins) => ins.name).join(", ") }</span>
             </div>
             <div className={ assignmentInfoSectionClass }>
                 <h5 className={ assignmentInfoSectionHeaderClass }>Due date</h5>

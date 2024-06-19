@@ -12,15 +12,14 @@ export class Student extends User implements IStudent {
     constructor(
         id: number,
         onyen: string,
-        firstName: string,
-        lastName: string,
+        name: string,
         email: string,
         private _joinDate: Date,
         private _exitDate: Date | null,
         private _forkRemoteUrl: string,
         private _forkCloned: boolean
     ) {
-        super(id, onyen, firstName, lastName, email)
+        super(id, onyen, name, email)
     }
     get joinDate() { return this._joinDate }
     get exitDate() { return this._exitDate }
@@ -31,8 +30,7 @@ export class Student extends User implements IStudent {
         return new Student(
             data.id,
             data.onyen,
-            data.first_name,
-            data.last_name,
+            data.name,
             data.email,
             new Date(data.join_date),
             data.exit_date ? new Date(data.exit_date) : null,

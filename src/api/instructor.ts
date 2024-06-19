@@ -8,19 +8,17 @@ export class Instructor extends User implements IInstructor {
     constructor(
         id: number,
         onyen: string,
-        firstName: string,
-        lastName: string,
+        name: string,
         email: string
     ) {
-        super(id, onyen, firstName, lastName, email)
+        super(id, onyen, name, email)
     }
 
     static fromResponse(data: InstructorResponse): IInstructor {
         return new Instructor(
             data.id,
             data.onyen,
-            data.first_name,
-            data.last_name,
+            data.name,
             data.email
         )
     }
