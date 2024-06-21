@@ -4,7 +4,7 @@ import { Backdrop, CircularProgress, Input, Snackbar } from '@material-ui/core'
 import { Alert } from '@material-ui/lab'
 import { Dialog, showErrorMessage } from '@jupyterlab/apputils'
 import { AssignmentSubmitButton } from './assignment-submit-button'
-import { MergeControlMessage } from './merge-control-message'
+import { PushPolicyViolationMessage } from './push-policy-violation-message'
 import {
     submitFormContainerClass, submitRootClass,
     summaryClass,
@@ -18,17 +18,18 @@ interface AssignmentSubmitFormProps {
 }
 
 export const AssignmentSubmitForm = ({ }: AssignmentSubmitFormProps) => {
-    const { assignment, course, path } = useAssignment()!
+    const { assignment, course, path, gradedNotebookExists } = useAssignment()!
     const backdrop = useBackdrop()!
     const snackbar = useSnackbar()!
 
     const [summaryText, setSummaryText] = useState<string>("")
     const [submitting, setSubmitting] = useState<boolean>(false)
 
-    const disabled = !assignment || submitting || summaryText === ""
+    const disabled = !assignment || submitting || summaryText === "" || !gradedNotebookExists(assignment)
     const disabledReason = disabled ? (
         !assignment ? undefined :   
         submitting ? `Currently uploading assignment` :
+        !gradedNotebookExists(assignment) ? "Please select a notebook to use for grading" :
         summaryText === "" ? `Please enter a summary describing your changes` : undefined
     ) : undefined
     
@@ -55,10 +56,10 @@ export const AssignmentSubmitForm = ({ }: AssignmentSubmitFormProps) => {
         } catch (e: any) {
             if (e.response?.status === 409) {
                 showErrorMessage(
-                    'Merge control policy violation',
+                    'Push policy violation',
                     {
                         message: (
-                            <MergeControlMessage
+                            <PushPolicyViolationMessage
                                 remoteMessages={ await e.response.json() }
                                 assignmentPath={ assignment!.directoryPath }
                             />
