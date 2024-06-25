@@ -47,10 +47,10 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
         notebookFiles === undefined
     ), [currentAssignment, assignments, instructor, students, course, notebookFiles])
 
-    const gradedNotebookExists = useCallback((assignment: IAssignment, directoryPath?: string | undefined) => {
+    const gradedNotebookExists = useCallback((assignment: IAssignment, gradedNotebookPath?: string | undefined) => {
         if (!notebookFiles) return false
-        if (directoryPath === undefined) directoryPath = assignment.directoryPath
-        return notebookFiles[assignment.id].some((file) => file === directoryPath)
+        if (gradedNotebookPath === undefined) gradedNotebookPath = assignment.masterNotebookPath
+        return notebookFiles[assignment.id].some((file) => file === gradedNotebookPath)
     }, [notebookFiles])
     
     useEffect(() => {

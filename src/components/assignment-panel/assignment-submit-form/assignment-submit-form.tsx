@@ -27,7 +27,7 @@ export const AssignmentSubmitForm = ({ }: AssignmentSubmitFormProps) => {
 
     const disabled = !assignment || submitting || summaryText === "" || !gradedNotebookExists(assignment)
     const disabledReason = disabled ? (
-        !assignment ? undefined :   
+        !assignment ? undefined :
         submitting ? `Currently uploading assignment` :
         !gradedNotebookExists(assignment) ? "Please select a notebook to use for grading" :
         summaryText === "" ? `Please enter a summary describing your changes` : undefined

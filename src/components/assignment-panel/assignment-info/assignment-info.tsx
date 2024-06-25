@@ -158,9 +158,9 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
 
     const openGradedNotebook = useCallback(() => {
         if (!commands || !assignment) return
-        const gradedNotebookPath = assignment.absoluteDirectoryPath + "/" + assignment.masterNotebookPath
+        const gradedNotebookPath = assignment.absoluteDirectoryPath + "/" + gradedNotebookControlled
         commands.execute('docmanager:open', { path: gradedNotebookPath })
-    }, [commands, assignment])
+    }, [commands, assignment, gradedNotebookControlled])
 
     useEffect(() => {
         setAvailableDateControlled(formatDateToMui(assignment.availableDate))
@@ -257,13 +257,34 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                             ))
                         }
                     </Select>
-                    <FormHelperText style={{ color: "#1976d2" }}>
-                        <a onClick={ openGradedNotebook } style={{ cursor: "pointer" }}>
-                            Open notebook
-                        </a>
-                    </FormHelperText>
+                    { !gradedNotebookInvalid && (
+                        <FormHelperText style={{ color: "#1976d2" }}>
+                            <a onClick={ openGradedNotebook } style={{ cursor: "pointer" }}>
+                                Open notebook
+                            </a>
+                        </FormHelperText>
+                    )}
                 </div>
             </div>
+            {/* <div className={ assignmentInfoSectionClass } style={{ marginTop: 0 }}>
+                <h5 className={ assignmentInfoSectionHeaderClass }>
+                    Student notebook
+                    <InfoTooltip
+                        title="This is the student copy of the notebook with hidden test cases"
+                        trigger="hover"
+                        iconProps={{ style: { fontSize: 13, marginLeft: 4 } }}
+                    />
+                </h5>
+                <div style={{ width: "100%" }}>
+                    <Select
+                        readOnly
+                        value={ assignment.studentNotebookPath }
+                        style={{ width: "100%" }}
+                    >
+                        <MenuItem value={ assignment.studentNotebookPath }>{ assignment.studentNotebookPath }</MenuItem>
+                    </Select>
+                </div>
+            </div> */}
         </div>
     )
 }
