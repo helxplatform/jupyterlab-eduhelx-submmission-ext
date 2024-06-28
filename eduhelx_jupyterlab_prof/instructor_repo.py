@@ -58,7 +58,7 @@ class InstructorClassRepo:
         repo_root = Path(cls.FIXED_REPO_ROOT.format(course_name.replace(" ", "_")))
         if current_path is not None:
             try:
-                Path(current_path).relative_to(os.path.realpath(repo_root))
+                Path(os.path.realpath(current_path)).relative_to(os.path.realpath(repo_root))
             except ValueError:
                 raise NotInstructorClassRepositoryException()
         return repo_root
