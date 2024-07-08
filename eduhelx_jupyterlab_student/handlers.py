@@ -10,7 +10,10 @@ import time
 import asyncio
 import traceback
 from urllib.parse import urlparse
-from jupyter_server.base.handlers import APIHandler
+from jupyter_server.base.handlers import APIHandler, JupyterHandler
+from jupyter_server.base.websocket import WebSocketMixin as WSMixin
+from jupyter_server.auth.decorator import ws_authenticated
+from tornado.websocket import WebSocketHandler as WSHandler
 from jupyter_server.utils import url_path_join
 from pathlib import Path
 from collections.abc import Iterable
@@ -23,7 +26,7 @@ from eduhelx_utils.git import (
     get_modified_paths, get_repo_root as get_git_repo_root,
     checkout, reset as git_reset, get_head_commit_id,
     merge as git_merge, abort_merge, delete_local_branch,
-    is_ancestor_commit
+    is_ancestor_commit, diff_status as git_diff_status
 )
 from eduhelx_utils.api import Api, AuthType
 from eduhelx_utils.process import execute
@@ -84,6 +87,45 @@ class BaseHandler(APIHandler):
     @property
     def api(self) -> Api:
         return self.context.api
+    
+class WebsocketHandler(WSMixin, WSHandler, BaseHandler):
+    clients = []
+    queued_messages = []
+
+    def check_origin(self, origin):
+        return True
+
+    def set_default_headers(self):
+        pass
+
+    def get_compression_options(self):
+        return self.settings.get("websocket_compression_options", None)
+    
+    def prepare(self, *args, **kwargs):
+        try:
+            del kwargs["_redirect_to_login"]
+        except: pass
+        return JupyterHandler.prepare(self, *args, **kwargs)
+
+    @ws_authenticated
+    async def open(self):
+        if self not in self.clients: self.clients.append(self)
+        while len(self.queued_messages) > 0:
+            message = self.queued_messages.pop()
+            self.emit(*message[0], **message[1])
+
+    def on_message(self, message):
+        print("message", message)
+
+    def on_close(self):
+        if self in self.clients: self.clients.remove(self)
+
+    @classmethod
+    def emit(cls, *args, **kwargs):
+        if len(cls.clients) == 0:
+            cls.queued_messages.append((args, kwargs))
+        for client in cls.clients:
+            client.write_message(*args, **kwargs)
 
 class CourseAndStudentHandler(BaseHandler):
     async def get_value(self):
@@ -371,7 +413,7 @@ async def set_git_authentication(context: AppContext, course, student) -> None:
     student_repository_url = student["fork_remote_url"]
     ssh_config_file = repo_root / ".ssh" / "config"
     ssh_identity_file = repo_root / ".ssh" / "id_gitea"
-    use_password_auth = context.api.auth_type == AuthType.PASSWORD
+    use_password_auth = urlparse(student_repository_url).scheme in ["http", "https"]
     
     try:
         get_git_repo_root(path=repo_root)
@@ -452,7 +494,7 @@ async def sync_upstream_repository(context: AppContext, course) -> None:
     if is_ancestor_commit(descendant=local_head, ancestor=upstream_head, path=repo_root):
         # If the local head is a descendant of the local head,
         # then any upstream changes have already been merged in.
-        print(f"Upstream and local heads are the merged, nothing to sync...")
+        print(f"Upstream and local heads are merged, nothing to sync...")
         return
     
     # Make certain the merge branch is empty before we start.
@@ -495,6 +537,11 @@ async def sync_upstream_repository(context: AppContext, course) -> None:
         delete_local_branch(merge_branch_name, force=True, path=repo_root)
         
     # TODO: when websockets added, ping the client if anything was changed.
+    added_files = git_diff_status(f"{local_head}..{upstream_head}", diff_filter="A", path=repo_root)
+    WebsocketHandler.emit({
+        "type": "downsync",
+        "files": added_files
+    })
 
 async def setup_backend(context: AppContext):
     try:
@@ -524,6 +571,7 @@ def setup_handlers(server_app):
 
     base_url = web_app.settings["base_url"]
     handlers = [
+        ("ws", WebsocketHandler),
         ("assignments", AssignmentsHandler),
         ("course_student", CourseAndStudentHandler),
         ("submit_assignment", SubmissionHandler),

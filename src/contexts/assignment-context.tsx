@@ -1,6 +1,9 @@
 import React, { createContext, useContext, ReactNode, useState, useMemo, useEffect } from 'react'
-import { IChangedArgs } from '@jupyterlab/coreutils'
+import { IChangedArgs, URLExt } from '@jupyterlab/coreutils'
+import { ServerConnection } from '@jupyterlab/services'
 import { FileBrowserModel, IDefaultFileBrowser } from '@jupyterlab/filebrowser'
+import { showDialog, Dialog } from '@jupyterlab/apputils'
+import { Button } from '@jupyterlab/ui-components'
 import { useSnackbar } from './snackbar-context'
 import { IEduhelxSubmissionModel } from '../tokens'
 import { IAssignment, IStudent, ICurrentAssignment, ICourse, getAssignmentsPolled, GetAssignmentsResponse, getStudentAndCoursePolled, getStudentAndCourse, getAssignments } from '../api'
@@ -19,6 +22,14 @@ interface IAssignmentProviderProps {
     children?: ReactNode
 }
 
+const _SC = ServerConnection.makeSettings()
+const WEBSOCKET_URL = URLExt.join(
+    _SC.baseUrl,
+    "eduhelx-jupyterlab-student",
+    "ws"
+)
+const WEBSOCKET_REOPEN_DELAY = 1000
+
 export const AssignmentContext = createContext<IAssignmentContext|undefined>(undefined)
 
 export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProviderProps) => {
@@ -29,6 +40,7 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
     const [assignments, setAssignments] = useState<IAssignment[]|null|undefined>(undefined)
     const [student, setStudent] = useState<IStudent|undefined>(undefined)
     const [course, setCourse] = useState<ICourse|undefined>(undefined)
+    const [ws, setWs] = useState<WebSocket>(() => new WebSocket(WEBSOCKET_URL))
 
     const loading = useMemo(() => (
         currentAssignment === undefined ||
@@ -36,6 +48,32 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
         student === undefined ||
         course === undefined
     ), [currentAssignment, assignments, student, course])
+
+    useEffect(() => {
+        const triggerReconnect = () => {
+            ws.close()
+            setWs(new WebSocket(WEBSOCKET_URL))
+        }
+
+        ws.addEventListener("message", (e) => {
+            const { type, ...data } = JSON.parse(e.data)
+            if (type === "downsync") showDialog({
+                title: "Some files have been added",
+                body: (
+                    <ul>
+                        { data.files.map((f: string) => (
+                            <li>{ f }</li>
+                        )) }
+                    </ul>
+                ),
+                buttons: [Dialog.okButton({ label: "Ok" })]
+            })
+        })
+        ws.addEventListener("close", triggerReconnect)
+        return () => {
+            ws.close()
+        }
+    }, [ws])
 
     useEffect(() => {
         setCurrentPath(fileBrowser.model.path)
