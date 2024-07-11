@@ -251,6 +251,7 @@ class NotebookFilesHandler(BaseHandler):
             assignment_path = repo_root / assignment["directory_path"]
 
             notebooks = [path.relative_to(assignment_path) for path in assignment_path.rglob("*.ipynb")]
+            notebooks = [path for path in notebooks if not path.parts[0] == ".ipynb_checkpoints"]
             # Sort by nestedness, then alphabetically
             notebooks.sort(key=lambda path: (len(path.parents), str(path)))
 
