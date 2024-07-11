@@ -6,7 +6,7 @@ import { ArrowBackSharp } from '@material-ui/icons'
 import { useDebouncedCallback } from 'use-debounce'
 import { assignmentInfoClass, assignmentInfoSectionClass, assignmentInfoSectionHeaderClass, assignmentInfoSectionWarningClass, assignmentNameClass, tagClass } from './style'
 import { InfoTooltip } from '../../info-tooltip'
-import { useAssignment, useCommands } from '../../../contexts'
+import { useAssignment, useCommands, useSnackbar } from '../../../contexts'
 import { addLocalTimezone, getLocalTimezoneAbbr } from '../../../utils'
 import { updateAssignment } from '../../../api'
 
@@ -28,9 +28,10 @@ const formatMuiToDate = (date: string): Date | null => {
 export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
     const { assignment, instructor, course, notebookFiles, gradedNotebookExists } = useAssignment()!
     const commands = useCommands()
+    const snackbar = useSnackbar()!
     // We need the raw undebounced value so that other parts of the UI can respond immediately to the expected value
-    const [availableDateControlled, setAvailableDateControlled] = useState<string|undefined>(undefined)
-    const [dueDateControlled, setDueDateControlled] = useState<string|undefined>(undefined)
+    const [availableDateControlled, setAvailableDateControlled] = useState<string|undefined>(formatDateToMui(assignment?.availableDate))
+    const [dueDateControlled, setDueDateControlled] = useState<string|undefined>(formatDateToMui(assignment?.dueDate))
     const [gradedNotebookControlled, setGradedNotebookControlled] = useState<string|undefined>(assignment?.masterNotebookPath)
 
     if (!instructor || !assignment || !course || !notebookFiles) return null
@@ -133,18 +134,34 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
     const onAvailableDateChanged = useDebouncedCallback((e: ChangeEvent<HTMLInputElement>) => {
         void async function() {
             const newDate = e.target.value !== "" ? addLocalTimezone(e.target.value) : null
-            await updateAssignment(assignment.name, {
-                available_date: newDate
-            })
+            try {
+                await updateAssignment(assignment.name, {
+                    available_date: newDate
+                })
+            } catch (e: any) {
+                const error = await e.response.json()
+                snackbar.open({
+                    type: 'error',
+                    message: `Failed to update: ${ error.message }`
+                })
+            }
         }()
     }, 1000, { leading: true })
 
     const onDueDateChanged = useDebouncedCallback((e: ChangeEvent<HTMLInputElement>) => {
         void async function() {
             const newDate = e.target.value !== "" ? addLocalTimezone(e.target.value) : null
-            await updateAssignment(assignment.name, {
-                due_date: newDate
-            })
+            try {
+                await updateAssignment(assignment.name, {
+                    due_date: newDate
+                })
+            } catch (e: any) {
+                const error = await e.response.json()
+                snackbar.open({
+                    type: 'error',
+                    message: `Failed to update: ${ error.message }`
+                })
+            }
         }()
     }, 1000, { leading: true })
 
@@ -192,14 +209,19 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                 <div style={{ width: "100%" }}>
                     <TextField
                         type="datetime-local"
-                        defaultValue={ formatDateToMui(assignment.availableDate) }
+                        value={ availableDateControlled }
                         onChange={ (e: ChangeEvent<HTMLInputElement>) => {
+                            const newAvailableDate = new Date(e.target.value)
+                            if (assignment.dueDate && newAvailableDate >= assignment.dueDate) {
+                                e.preventDefault()
+                                return false
+                            }
                             setAvailableDateControlled(e.target.value)
                             onAvailableDateChanged(e)
                         } }
                         InputProps={{ inputProps: {
                             // Gets overriden in top-level inputProps
-                            max: "9999-12-31T11:59",
+                            max: dueDateControlled ?? "9999-12-31T11:59",
                             step: 900, // 15 min step
                             style: { boxSizing: "content-box", paddingTop: 4, paddingBottom: 5, fontSize: 15 }
                         } }}
@@ -216,12 +238,19 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                 <div style={{ width: "100%" }}>
                     <TextField
                         type="datetime-local"
-                        defaultValue={ formatDateToMui(assignment.dueDate) }
+                        value={ dueDateControlled }
                         onChange={ (e: ChangeEvent<HTMLInputElement>) => {
+                            const newDueDate = new Date(e.target.value)
+                            // Due date cannot be earlier than available date
+                            if (assignment.availableDate && newDueDate <= assignment.availableDate) {
+                                e.preventDefault()
+                                return
+                            }
                             setDueDateControlled(e.target.value)
                             onDueDateChanged(e)
                         } }
                         InputProps={{ inputProps: {
+                            min: availableDateControlled,
                             // Gets overriden in top-level inputProps
                             max: "9999-12-31T11:59",
                             step: 900, // 15 min step

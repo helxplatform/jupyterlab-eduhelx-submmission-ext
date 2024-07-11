@@ -156,8 +156,12 @@ class AssignmentsHandler(BaseHandler):
     async def patch(self):
         name = self.get_argument("name")
         data = self.get_json_body()
-        
-        await self.api.update_assignment(name, **data)
+
+        try:
+            await self.api.update_assignment(name, **data)
+        except Exception as e:
+            self.set_status(e.response.status_code)
+            self.finish(e.response.text)
 
 class SubmissionHandler(BaseHandler):
     @tornado.web.authenticated
