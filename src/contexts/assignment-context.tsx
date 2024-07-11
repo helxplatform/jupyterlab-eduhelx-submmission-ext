@@ -58,7 +58,7 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
         ws.addEventListener("message", (e) => {
             const { type, ...data } = JSON.parse(e.data)
             if (type === "downsync") showDialog({
-                title: "Some files have been added",
+                title: "New files have been added",
                 body: (
                     <ul>
                         { data.files.map((f: string) => (

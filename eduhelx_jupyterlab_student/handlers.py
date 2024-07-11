@@ -339,9 +339,9 @@ async def create_ssh_config_if_not_exists(context: AppContext, course, student) 
                 f"   HostName { ssh_private_hostname }\n" \
                 f"   StrictHostKeyChecking no\n"
             )
-        with open(ssh_public_key_file, "r") as f:
-            public_key = f.read()
-            await context.api.set_ssh_key("jls-client", public_key)
+    with open(ssh_public_key_file, "r") as f:
+        public_key = f.read()
+        await context.api.set_ssh_key("jls-client", public_key)
 
 async def clone_repo_if_not_exists(context: AppContext, course, student) -> None:
     repo_root = context._compute_repo_root(course["name"])
