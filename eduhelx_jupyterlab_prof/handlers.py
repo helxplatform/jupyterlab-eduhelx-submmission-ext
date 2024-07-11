@@ -382,9 +382,9 @@ async def create_ssh_config_if_not_exists(context: AppContext) -> None:
                 f"   IdentityFile { ssh_identity_file }\n" \
                 f"   HostName { ssh_private_hostname }\n"
             )
-        with open(ssh_public_key_file, "r") as f:
-            public_key = f.read()
-            await context.api.set_ssh_key("jlp-client", public_key)
+    with open(ssh_public_key_file, "r") as f:
+        public_key = f.read()
+        await context.api.set_ssh_key("jlp-client", public_key)
 
 async def clone_repo_if_not_exists(context: AppContext) -> None:
     course = await context.api.get_course()
