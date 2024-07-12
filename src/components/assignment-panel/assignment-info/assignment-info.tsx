@@ -28,8 +28,8 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
         let text = undefined
         let tooltip = undefined
         let filled = false
-        if (!assignment.isCreated) {
-            // Upcoming assignment (doesn't have either an open or close date yet)
+        if (!assignment.isCreated || !assignment.isAvailable) {
+            // Upcoming assignment (doesn't one either an open/close date OR open date not reached yet)
             color = "white"
             backgroundColor = "#1890ff"
             text = "Upcoming"
