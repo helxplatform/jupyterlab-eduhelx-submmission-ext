@@ -1,5 +1,6 @@
 import os
 import shutil
+import json
 from otter.assign import main as otter_assign
 from pathlib import Path
 
@@ -49,7 +50,17 @@ class InstructorClassRepo:
         student_notebook_dist_path = dist_path / "student" / master_notebook_path.name
 
         otter_assign(master_notebook_path, dist_path, no_pdfs=True)
+
+        # Process student notebook
         shutil.move(student_notebook_dist_path, student_notebook_path)
+        with open(student_notebook_path, "r") as f:
+            student_notebook = json.load(f)
+            for cell in student_notebook["cells"]:
+                # Since we rename the notebook, need to replace the references to the old name.
+                cell["source"] = [line.replace(master_notebook_path.name, student_notebook_path.name) for line in cell["source"]]
+        with open(student_notebook_path, "w") as f:
+            json.dump(student_notebook, f)
+
         shutil.rmtree(dist_path)
     
     @classmethod

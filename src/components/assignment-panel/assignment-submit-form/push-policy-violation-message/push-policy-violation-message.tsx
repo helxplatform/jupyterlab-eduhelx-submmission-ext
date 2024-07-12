@@ -48,7 +48,7 @@ export const PushPolicyViolationMessage = ({ remoteMessages, assignmentPath }: M
         <div>
             { type === ViolationType.MERGE_CONTROL
                 ? "This assignment has become available for students, so files can no longer be modified."
-                : `Your staged changes contain ${ files.length === 1 ? "a file" : "some files" } which include sensitive information.`
+                : `Your staged changes contain ${ files.length === 1 ? "a file" : "some files" } which include${ files.length === 1 ? "s" : "" } sensitive information.`
             }
             <br />
             { type == ViolationType.MERGE_CONTROL
