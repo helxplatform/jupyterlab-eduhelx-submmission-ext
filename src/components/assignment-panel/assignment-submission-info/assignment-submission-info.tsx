@@ -91,8 +91,6 @@ export const AssignmentSubmissionInfo = ({ }: AssignmentSubmissionInfoProps) => 
 
         Object.keys(assignment.studentSubmissions).forEach((onyen) => {
             const submissions = assignment.studentSubmissions[onyen]
-            if (submissions[0]) (submissions[0] as any)._active = true
-            if (submissions[0]) (submissions[1] as any)._graded = true
 
             const student = students.find((s) => s.onyen === onyen)!
             // If they student has no submissions, they are unsubmitted.

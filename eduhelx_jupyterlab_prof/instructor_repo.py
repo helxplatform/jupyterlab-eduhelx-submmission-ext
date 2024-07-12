@@ -49,8 +49,15 @@ class InstructorClassRepo:
         dist_path = self.current_assignment_path / f"{ assignment['name'] }-dist"
         student_notebook_dist_path = dist_path / "student" / master_notebook_path.name
 
+        otter_config_path = self.current_assignment_path / "otter_grading_config.json"
+        otter_config_dist_path = dist_path / "autograder" / "otter_config.json"
+
         otter_assign(master_notebook_path, dist_path, no_pdfs=True)
 
+        # Move default otter config for the assignment if it doesn't exist
+        if not otter_config_path.exists():
+            otter_config_dist_path.rename(otter_config_path)
+        shutil.move(student_notebook_dist_path, student_notebook_path)
         # Process student notebook
         shutil.move(student_notebook_dist_path, student_notebook_path)
         with open(student_notebook_path, "r") as f:
