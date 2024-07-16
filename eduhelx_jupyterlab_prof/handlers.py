@@ -255,7 +255,7 @@ class NotebookFilesHandler(BaseHandler):
             assignment_path = repo_root / assignment["directory_path"]
 
             notebooks = [path.relative_to(assignment_path) for path in assignment_path.rglob("*.ipynb")]
-            notebooks = [path for path in notebooks if not path.parts[0] == ".ipynb_checkpoints"]
+            notebooks = [path for path in notebooks if ".ipynb_checkpoints" not in path.parts and path != Path(assignment["student_notebook_path"])]
             # Sort by nestedness, then alphabetically
             notebooks.sort(key=lambda path: (len(path.parents), str(path)))
 
@@ -293,43 +293,25 @@ class GradeAssignmentHandler(BaseHandler):
             })
             return
         
+        master_notebook_path = repo.current_assignment["master_notebook_path"]
         try:
-            with open(repo.get_assignment_path(repo.current_assignment) / "grades.csv", "r") as f:
-                self.api.grade_assignment(repo.current_assignment["id"], f.read())
+            with open(repo.current_assignment_path / master_notebook_path, "r") as f:
+                master_notebook_content = f.read()
         except FileNotFoundError:
             self.set_status(404)
             self.finish({
-                'message': '"grades.csv" does not exist in assignment directory'
+                'message': f'Master notebook "{ master_notebook_path }" does not exist in assignment directory'
+            })
+        try: 
+            with open(repo.current_assignment_path / "otter_grading_config.json", "r") as f:
+                otter_config_content = f.read()
+        except FileNotFoundError:
+            self.set_status(404)
+            self.finish({
+                'message': 'Grading config "otter_grading_config.json" does not exist in assignment directory'
             })
 
-    @tornado.web.authenticated
-    async def put(self):
-        data = self.get_json_body()
-        assignment_id: int = data["assignment_id"]
-
-        # grades = [row for row in csv.DictReader(
-        #     StringIO("file,sqrt,percent_correct\ntestsubmissions/testnotebook_2024_04_30T11_21_22_054188.zip,1.0,1.0"),
-        #     delimiter=","
-        # )]
-        # grade_mean = mean([g["percent_correct"] for g in grades])
-        # grade_med = median([g["percent_correct"] for g in grades])
-        # grade_stdev = std([g["percent_correct"] for g in grades])
-        # grade_min = min([g["percent_correct"] for g in grades])
-        # grade_max = max([g["percent_correct"] for g in grades])
-        # self.finish({
-        #     "grade_report": {
-        #         "mean": grade_mean,
-        #         "median": grade_med,
-        #         "stdev": grade_stdev,
-        #         "min": grade_min,
-        #         "max": grade_max
-        #     }
-        # })
-        self.finish()
-
-    async def delete(self):
-        assignment_id: int = self.get_argument("assigment_id")
-        self.finish()
+        await self.api.grade_assignment(repo.current_assignment["name"], master_notebook_content, otter_config_content)
 
 
 class SettingsHandler(BaseHandler):

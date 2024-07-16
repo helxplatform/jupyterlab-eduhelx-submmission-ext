@@ -57,7 +57,6 @@ class InstructorClassRepo:
         # Move default otter config for the assignment if it doesn't exist
         if not otter_config_path.exists():
             otter_config_dist_path.rename(otter_config_path)
-        shutil.move(student_notebook_dist_path, student_notebook_path)
         # Process student notebook
         shutil.move(student_notebook_dist_path, student_notebook_path)
         with open(student_notebook_path, "r") as f:
