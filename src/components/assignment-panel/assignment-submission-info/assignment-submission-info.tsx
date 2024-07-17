@@ -113,7 +113,7 @@ export const AssignmentSubmissionInfo = ({ }: AssignmentSubmissionInfoProps) => 
     }, [assignment?.studentSubmissions, students])
 
     const gradingDisabledReason = useMemo<string|undefined>(() => (
-        gradingActive ? "Grading is already in progress" :
+        gradingActive ? undefined :
         !gradedNotebookExists(assignment!) ? "Please select a notebook to use for grading" :
         (graded.length === 0 && submitted.length === 0) ? "There's nothing to grade right now" :
         undefined
@@ -165,7 +165,7 @@ export const AssignmentSubmissionInfo = ({ }: AssignmentSubmissionInfoProps) => 
                     style={{
                         marginTop: 16,
                         height: 28,
-                        backgroundColor: gradingDisabledReason ? 'var(--jp-layout-color3)' : undefined
+                        backgroundColor: gradingActive || gradingDisabledReason ? 'var(--jp-layout-color3)' : undefined
                     }}
                     disabled={ gradingDisabledReason !== undefined }
                     onClick={ !gradingActive ? grade : abort }
