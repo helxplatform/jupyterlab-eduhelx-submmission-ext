@@ -12,6 +12,8 @@ export interface IAssignment {
     readonly absoluteDirectoryPath: string
     readonly masterNotebookPath: string
     readonly studentNotebookPath: string
+    readonly maxAttempts: number | null
+    readonly currentAttempts: number
     readonly createdDate: Date
     readonly adjustedAvailableDate: Date | null
     readonly adjustedDueDate: Date | null
@@ -49,6 +51,8 @@ export class Assignment implements IAssignment {
         private _absoluteDirectoryPath: string,
         private _masterNotebookPath: string,
         private _studentNotebookPath: string,
+        private _maxAttempts: number | null,
+        private _currentAttempts: number,
         private _createdDate: Date,
         private _adjustedAvailableDate: Date | null,
         private _adjustedDueDate: Date | null,
@@ -69,6 +73,8 @@ export class Assignment implements IAssignment {
     get absoluteDirectoryPath() { return this._absoluteDirectoryPath }
     get masterNotebookPath() { return this._masterNotebookPath }
     get studentNotebookPath() { return this._studentNotebookPath }
+    get maxAttempts() { return this._maxAttempts }
+    get currentAttempts() { return this._currentAttempts }
     get createdDate() { return this._createdDate }
     get adjustedAvailableDate() { return this._adjustedAvailableDate }
     get adjustedDueDate() { return this._adjustedDueDate }
@@ -99,6 +105,8 @@ export class Assignment implements IAssignment {
             data.absolute_directory_path,
             data.master_notebook_path,
             data.student_notebook_path,
+            data.max_attempts,
+            data.current_attempts,
             new Date(data.created_date),
             data.adjusted_available_date ? new Date(data.adjusted_available_date) : null,
             data.adjusted_due_date ? new Date(data.adjusted_due_date) : null,

@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { Dialog, showDialog } from '@jupyterlab/apputils'
 import { Backdrop, CircularProgress, Input, Snackbar } from '@material-ui/core'
 import { Alert } from '@material-ui/lab'
 import { Tooltip } from 'antd'
+import pluralize from 'pluralize'
 import { AssignmentSubmitButton } from './assignment-submit-button'
 import {
     submitFormContainerClass, submitRootClass,
@@ -24,13 +26,17 @@ export const AssignmentSubmitForm = ({ }: AssignmentSubmitFormProps) => {
     const [descriptionText, setDescriptionText] = useState<string>("")
     const [submitting, setSubmitting] = useState<boolean>(false)
 
-    const disabled = submitting || summaryText === "" || !assignment?.isAvailable || assignment?.isClosed
+    const maxAttemptsReached = !!assignment && assignment.maxAttempts !== null && assignment.currentAttempts >= assignment.maxAttempts
+    const contactText = `Please contact your ${ pluralize("instructor", course!.instructors.length) }`
+
+    const disabled = submitting || summaryText === "" || !assignment?.isAvailable || assignment?.isClosed || maxAttemptsReached
     const disabledReason = disabled ? (
         !assignment ? undefined :
         submitting ? `Currently uploading submission` :
         !assignment.isAvailable ? `Assignment is not available for you to work on yet` :
         assignment.isClosed ?
-            `Past due. Please contact your instructor${course!.instructors.length > 1 ? "s" : ""} if you need an extension` :
+            `Past due. ${ contactText } if you need an extension` :
+        maxAttemptsReached ? `You have reached the maximum number of submissions. ${ contactText } if you need to resubmit` :
         summaryText === "" ? `Please enter a summary for the submission` : undefined
     ) : undefined
     
@@ -40,6 +46,27 @@ export const AssignmentSubmitForm = ({ }: AssignmentSubmitFormProps) => {
             console.log("Unknown cwd, can't submit")
             return
         }
+        if (assignment && assignment.maxAttempts !== null) {
+            const singleAttempt = assignment.maxAttempts === 1
+            const remainingAttempts = assignment.maxAttempts - assignment.currentAttempts
+
+            if (remainingAttempts === 1) {
+                const result = await showDialog({
+                    title: "Confirm submission",
+                    body: singleAttempt ? (
+                        "You can only submit this assignment once. Are you sure you want to submit?"
+                    ) : (
+                        "This is your final remaining submission. Are you sure you want to submit?"
+                    ),
+                    buttons: [
+                        Dialog.cancelButton(),
+                        Dialog.okButton({ label: "Confirm" })
+                    ]
+                })
+                if (!result.button.accept) return
+            }
+        } 
+
         setSubmitting(true)
         try {
             // Use undefined for descriptionText if it is an empty string.

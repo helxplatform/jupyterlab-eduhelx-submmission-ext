@@ -53,6 +53,8 @@ export interface AssignmentResponse {
     absolute_directory_path: string
     master_notebook_path: string
     student_notebook_path: string
+    max_attempts: number | null
+    current_attempts: number
     created_date: string
     available_date: string | null
     adjusted_available_date: string | null

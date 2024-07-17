@@ -1,6 +1,7 @@
 import React, { Fragment, useMemo } from 'react'
 import { Tooltip } from 'antd'
 import moment from 'moment'
+import pluralize from 'pluralize'
 import { ArrowBackSharp } from '@material-ui/icons'
 import { assignmentInfoClass, assignmentInfoSectionClass, assignmentInfoSectionHeaderClass, assignmentInfoSectionWarningClass, assignmentNameClass, tagClass } from './style'
 import { useAssignment } from '../../../contexts'
@@ -33,7 +34,7 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
             color = "white"
             backgroundColor = "#1890ff"
             text = "Upcoming"
-            tooltip = `Your instructor${ course.instructors.length > 1 ? "s" : "" } has not released this assignment yet`
+            tooltip = `Your ${ pluralize("instructor", course.instructors.length) } has not released this assignment yet`
             filled = true
         }
         else if (assignment.isClosed) {
@@ -47,7 +48,7 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                         Submitted { new DateFormat(assignment.activeSubmission.submissionTime).toRelativeDatetimeNoArticle() } ago
                     </span>
                 )
-                tooltip = `You submitted this assignment before it closed. Please contact your instructor${ course.instructors.length > 1 ? "s" : "" } if you need to resubmit`
+                tooltip = `You submitted this assignment before it closed. Please contact your ${ pluralize("instructor", course.instructors.length) } if you need to resubmit`
                 filled = false
             } else {
                 // Closed and never submitted
@@ -58,7 +59,7 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                         { new DateFormat(assignment.adjustedDueDate!).toRelativeDatetimeNoArticle() } past due
                     </span>
                 )
-                tooltip = `You never submitted this assignment. Please contact your instructor${ course.instructors.length > 1 ? "s" : "" } to request an extension`
+                tooltip = `You never submitted this assignment. Please contact your ${ pluralize("instructor", course.instructors.length) } to request an extension`
                 filled = false
             }            
         } else if (assignment.isAvailable) {
@@ -87,6 +88,16 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
             </Tooltip>
         )
     }, [course, assignment, hoursUntilDue])
+    
+    const attemptsDescriptionText = useMemo(() => {
+        if (assignment.maxAttempts === null) return "This assignment has unlimited attempts"
+
+        const remainingAttempts = assignment.maxAttempts - assignment.currentAttempts
+        const maxAttemptsReached = assignment.currentAttempts === assignment.maxAttempts
+
+        if (maxAttemptsReached) return "You've reached the maximum number of submissions."
+        else return `You are allowed to submit ${ remainingAttempts }${ assignment.currentAttempts > 0 ? ' more' : ''} ${ pluralize("time", remainingAttempts) }`
+    }, [assignment])
 
     return (
         <div className={ assignmentInfoClass }>
@@ -116,7 +127,7 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
             </div>
             <div className={ assignmentInfoSectionClass }>
                 <h5 className={ assignmentInfoSectionHeaderClass }>
-                    Instructor{ course.instructors.length > 1 ? "s" : "" }
+                    { pluralize("Instructor", course.instructors.length) }
                 </h5>
                 <span>{ course.instructors.map((ins) => ins.name).join(", ") }</span>
             </div>
@@ -133,6 +144,16 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                     ) : null }
                 </div>
             </div>
+            { assignment.maxAttempts !== null && (
+                <div className={ assignmentInfoSectionClass }>
+                    <h5 className={ assignmentInfoSectionHeaderClass }>
+                        Attempts{ assignment.currentAttempts > 0 ? ` (${ assignment.currentAttempts }/${ assignment.maxAttempts })` : "" }
+                    </h5>
+                    <div>
+                        { attemptsDescriptionText }
+                    </div>
+                </div>
+            ) }
             { assignment.isCreated && assignment.isClosed && (
                 <div className={ assignmentInfoSectionClass }>
                     <h5
@@ -142,7 +163,7 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                     </h5>
                     <div className={ assignmentInfoSectionWarningClass }>
                         No further changes can be submitted.
-                        Please contact your instructor{ course.instructors.length > 1 ? "s" : "" } for an extension.
+                        Please contact your {pluralize("instructor", course.instructors.length)} for an extension.
                     </div>
                 </div>
             ) }
