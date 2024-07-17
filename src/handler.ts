@@ -27,15 +27,6 @@ export async function requestAPI<T>(
     throw new ServerConnection.NetworkError(error as any)
   }
 
-  // let data: any = await response.text()
-
-  // if (data.length > 0) {
-  //   try {
-  //     data = JSON.parse(data)
-  //   } catch (error) {
-  //     console.log('Not a JSON response body.', response)
-  //   }
-  // }
   let data
   try {
     // Clone so we don't read the response body in the event of an error (we return the response). 

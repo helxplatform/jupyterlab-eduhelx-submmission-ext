@@ -295,6 +295,7 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                     )}
                 </div>
             </div>
+            {/* Displays an equivalent select with student notebook value as only option */}
             {/* <div className={ assignmentInfoSectionClass } style={{ marginTop: 0 }}>
                 <h5 className={ assignmentInfoSectionHeaderClass }>
                     Student notebook
