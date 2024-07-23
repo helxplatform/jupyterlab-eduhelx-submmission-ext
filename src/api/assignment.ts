@@ -65,7 +65,11 @@ export class Assignment implements IAssignment {
         private _isClosed: boolean,
         private _submissions?: ISubmission[],
         private _stagedChanges?: IStagedChange[]
-    ) {}
+    ) {
+        // TEMP: REMOVE AFTER ATTEMPTS PR IN GRADER-API
+        if (this._maxAttempts === undefined) this._maxAttempts = null
+        if (this._currentAttempts === undefined) this._currentAttempts = 0
+    }
     
     get id() { return this._id }
     get name() { return this._name }
