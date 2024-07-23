@@ -134,7 +134,8 @@ class AssignmentsHandler(BaseHandler):
         if current_assignment:
             current_assignment["student_submissions"] = await self.api.get_submissions(current_assignment["id"])
             for student in current_assignment["student_submissions"]:
-                for submission in current_assignment["student_submissions"][student]:
+                for i, submission in enumerate(current_assignment["student_submissions"][student]):
+                    if i == 0: submission["active"] = True
                     submission["commit"] = {
                         "id": submission["commit_id"],
                         "message": "",
@@ -367,7 +368,8 @@ async def create_ssh_config_if_not_exists(context: AppContext) -> None:
                 f"   User { ssh_user }\n" \
                 f"   Port { ssh_port }\n" \
                 f"   IdentityFile { ssh_identity_file }\n" \
-                f"   HostName { ssh_private_hostname }\n"
+                f"   HostName { ssh_private_hostname }\n" \
+                f"   StrictHostKeyChecking no\n"
             )
     with open(ssh_public_key_file, "r") as f:
         public_key = f.read()
@@ -407,6 +409,14 @@ async def set_git_authentication(context: AppContext) -> None:
         get_git_repo_root(path=repo_root)
         execute(["git", "config", "--local", "--unset-all", "credential.helper"], cwd=repo_root)
         execute(["git", "config", "--local", "--unset-all", "core.sshCommand"], cwd=repo_root)
+
+        execute(["git", "config", "--local", "user.name", context.config.USER_NAME])
+        execute(["git", "config", "--local", "user.email", instructor["email"]])
+        execute(["git", "config", "--local", "author.name", context.config.USER_NAME])
+        execute(["git", "config", "--local", "author.email", instructor["email"]])
+        execute(["git", "config", "--local", "committer.name", context.config.USER_NAME])
+        execute(["git", "config", "--local", "committer.email", instructor["email"]])
+
         if use_password_auth:
             execute(["git", "config", "--local", "credential.helper", ""], cwd=repo_root)
             execute(["git", "config", "--local", "--add", "credential.helper", context.config.CREDENTIAL_HELPER], cwd=repo_root)
@@ -475,7 +485,8 @@ async def sync_upstream_repository(context: AppContext) -> None:
         return
     
     # Make certain the merge branch is empty before we start.
-    delete_local_branch(merge_branch_name, force=True, path=repo_root)
+    try: delete_local_branch(merge_branch_name, force=True, path=repo_root)
+    except: pass
     # Branch onto the merge branch off the user's head
     checkout(merge_branch_name, new_branch=True, path=repo_root)
 

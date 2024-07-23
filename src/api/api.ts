@@ -17,8 +17,8 @@ import {
 import { IInstructor, Instructor } from './instructor'
 
 export interface UpdateAssignmentData {
-    new_name?: string,
-    directory_path?: string,
+    name?: string | null,
+    directory_path?: string | null,
     master_notebook_path?: string,
     available_date?: string | null,
     due_date?: string | null,
