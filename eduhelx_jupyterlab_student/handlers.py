@@ -420,12 +420,12 @@ async def set_git_authentication(context: AppContext, course, student) -> None:
         execute(["git", "config", "--local", "--unset-all", "credential.helper"], cwd=repo_root)
         execute(["git", "config", "--local", "--unset-all", "core.sshCommand"], cwd=repo_root)
 
-        execute(["git", "config", "--local", "user.name", context.config.USER_NAME])
-        execute(["git", "config", "--local", "user.email", student["email"]])
-        execute(["git", "config", "--local", "author.name", context.config.USER_NAME])
-        execute(["git", "config", "--local", "author.email", student["email"]])
-        execute(["git", "config", "--local", "committer.name", context.config.USER_NAME])
-        execute(["git", "config", "--local", "committer.email", student["email"]])
+        execute(["git", "config", "--local", "user.name", context.config.USER_NAME], cwd=repo_root)
+        execute(["git", "config", "--local", "user.email", student["email"]], cwd=repo_root)
+        execute(["git", "config", "--local", "author.name", context.config.USER_NAME], cwd=repo_root)
+        execute(["git", "config", "--local", "author.email", student["email"]], cwd=repo_root)
+        execute(["git", "config", "--local", "committer.name", context.config.USER_NAME], cwd=repo_root)
+        execute(["git", "config", "--local", "committer.email", student["email"]], cwd=repo_root)
 
         if use_password_auth:
             execute(["git", "config", "--local", "credential.helper", ""], cwd=repo_root)
