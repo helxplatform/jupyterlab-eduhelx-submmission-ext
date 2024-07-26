@@ -335,7 +335,7 @@ async def create_repo_root_if_not_exists(context: AppContext) -> None:
     if not repo_root.exists():
         repo_root.mkdir(parents=True)
 
-async def create_ssh_config_if_not_exists(context: AppContext) -> None:
+async def create_ssh_config_if_not_exists(context: AppContext, course) -> None:
     course = await context.api.get_course()
     settings = await context.api.get_settings()
     repo_root = InstructorClassRepo._compute_repo_root(course["name"]).resolve()
@@ -378,8 +378,7 @@ async def create_ssh_config_if_not_exists(context: AppContext) -> None:
         public_key = f.read()
         await context.api.set_ssh_key("jlp-client", public_key)
 
-async def clone_repo_if_not_exists(context: AppContext) -> None:
-    course = await context.api.get_course()
+async def clone_repo_if_not_exists(context: AppContext, course) -> None:
     repo_root = InstructorClassRepo._compute_repo_root(course["name"])
     try:
         get_git_repo_root(path=repo_root)
@@ -396,9 +395,7 @@ async def clone_repo_if_not_exists(context: AppContext) -> None:
         
         
 
-async def set_git_authentication(context: AppContext) -> None:
-    course = await context.api.get_course()
-    instructor = await context.api.get_my_user()
+async def set_git_authentication(context: AppContext, course, instructor) -> None:
     repo_root = InstructorClassRepo._compute_repo_root(course["name"]).resolve()
     master_repository_url = course["master_remote_url"]
     ssh_config_file = repo_root / ".ssh" / "config"
@@ -468,8 +465,8 @@ async def set_root_folder_permissions(context: AppContext) -> None:
     # execute(["chmod", "a-w", repo_root.parent])
     ...
 
-async def sync_upstream_repository(context: AppContext) -> None:
-    course = await context.api.get_course()
+async def sync_upstream_repository(context: AppContext, course) -> None:
+    assignments = await context.api.get_my_assignments()
     repo_root = InstructorClassRepo._compute_repo_root(course["name"])
 
     try:
@@ -501,7 +498,7 @@ async def sync_upstream_repository(context: AppContext) -> None:
         # Untracked is a little deceptive here, since untracked files/directories are included regardless.
         # What untracked actually does is expand untracked directories into the untracked files inside them.
         files_to_stash = { file["path"]: file for file in get_modified_paths(untracked=True, path=repo_root) }
-        print("Stashed files:", files_to_stash.keys())
+        print("Stashed files:", " ".join(files_to_stash.keys()))
         for file_path in files_to_stash:
             file = files_to_stash[file_path]
             try:
@@ -515,9 +512,27 @@ async def sync_upstream_repository(context: AppContext) -> None:
 
         # Merge the upstream tracking branch into the merge branch
         merge_conflicts = git_merge(InstructorClassRepo.ORIGIN_TRACKING_BRANCH, commit=True, path=repo_root)
-        if len(merge_conflicts) > 0:
-            print("Encountered merge conflicts during merge: ", ", ".join(merge_conflicts))
-            raise Exception("Encountered merge conflicts during merge: ", ", ".join(merge_conflicts))
+        actual_merge_conflicts = []
+        for conflict in merge_conflicts:
+            repo = InstructorClassRepo(course, assignments, repo_root / conflict)
+            assignment, assignment_path = repo.current_assignment, repo.current_assignment_path
+            overwritable_paths = []
+            for glob_pattern in assignment["overwritable_files"]: overwritable_paths += assignment_path.glob(glob_pattern)
+            if repo_root / conflict in overwritable_paths:
+                # Overwrite the file with its incoming version
+                print(f"Detected overwritable merge conflict: '{ conflict }'")
+                git_restore(conflict, source="MERGE_HEAD", staged=True, worktree=True, path=repo_root)
+            else:
+                actual_merge_conflicts.append(conflict)
+
+        if len(actual_merge_conflicts) > 0:
+            print("Encountered merge conflicts during merge: ", ", ".join(actual_merge_conflicts))
+            raise Exception("Encountered merge conflicts during merge: ", ", ".join(actual_merge_conflicts))
+        
+        if len(actual_merge_conflicts) != len(merge_conflicts):
+            # There were conflicts, but we successfully resolved them with overwrites.
+            # Since there were conflicts, we need to create a commit.
+            commit(None, no_edit=True, path=repo_root)
         
         # After popping, we could have further conflicts between the student's local changes and the merge head
         pop_stash(path=repo_root)
@@ -535,7 +550,7 @@ async def sync_upstream_repository(context: AppContext) -> None:
             
             # Restore the file to its HEAD revision now that we've backed it up for the student. This will resolve the stash conflict.
             # Staged restores the file in the index, worktree restores the file in the working diretory
-            git_restore(conflict_file_path, source="HEAD", staged=True, worktree=True, path=repo_root)
+            git_restore(conflict_file_path, source="HEAD", staged=False, worktree=True, path=repo_root)
 
     except Exception as e:
         print("Fatal: Can't merge remote changes into student repository", e)
@@ -569,14 +584,16 @@ async def sync_upstream_repository(context: AppContext) -> None:
 
 async def setup_backend(context: AppContext):
     try:
+        course = await context.api.get_course()
+        instructor = await context.api.get_my_user()
         await create_repo_root_if_not_exists(context)
-        await create_ssh_config_if_not_exists(context)
-        await set_git_authentication(context)
-        await clone_repo_if_not_exists(context)
+        await create_ssh_config_if_not_exists(context, course)
+        await set_git_authentication(context, course, instructor)
+        await clone_repo_if_not_exists(context, course)
         await set_root_folder_permissions(context)
         while True:
             print("Pulling in upstream changes...")
-            await sync_upstream_repository(context)
+            await sync_upstream_repository(context, course)
             print(f"Sleeping for { context.config.UPSTREAM_SYNC_INTERVAL }...")
             await asyncio.sleep(context.config.UPSTREAM_SYNC_INTERVAL)
     except:
