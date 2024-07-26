@@ -13,6 +13,7 @@ from urllib.parse import urlparse
 from jupyter_server.base.handlers import APIHandler
 from jupyter_server.utils import url_path_join
 from pathlib import Path
+from datetime import datetime
 from collections.abc import Iterable
 from .config import ExtensionConfig
 from eduhelx_utils.git import (
@@ -22,7 +23,9 @@ from eduhelx_utils.git import (
     stage_files, commit, push, get_commit_info,
     get_modified_paths, checkout, get_repo_root as get_git_repo_root,
     get_head_commit_id, reset as git_reset, merge as git_merge,
-    abort_merge, delete_local_branch, is_ancestor_commit
+    abort_merge, delete_local_branch, is_ancestor_commit,
+    stash_changes, pop_stash, diff_status as git_diff_status,
+    restore as git_restore
 )
 from eduhelx_utils.api import Api, AuthType
 from eduhelx_utils.process import execute
@@ -473,6 +476,7 @@ async def sync_upstream_repository(context: AppContext) -> None:
         fetch_repository(InstructorClassRepo.ORIGIN_REMOTE_NAME, path=repo_root)
     except:
         print("Fatal: Couldn't fetch remote tracking branch, aborting sync...")
+        return
 
     checkout(InstructorClassRepo.MAIN_BRANCH_NAME, path=repo_root)
     local_head = get_head_commit_id(path=repo_root)
@@ -493,15 +497,53 @@ async def sync_upstream_repository(context: AppContext) -> None:
     # Merge the upstream tracking branch into the temp merge branch
     try:
         print(f"Merging { InstructorClassRepo.ORIGIN_TRACKING_BRANCH } ({ tracking_head[:8] }) --> { InstructorClassRepo.MAIN_BRANCH_NAME } ({ local_head[:8] }) on branch { merge_branch_name }")
+        
+        # Untracked is a little deceptive here, since untracked files/directories are included regardless.
+        # What untracked actually does is expand untracked directories into the untracked files inside them.
+        files_to_stash = { file["path"]: file for file in get_modified_paths(untracked=True, path=repo_root) }
+        print("Stashed files:", files_to_stash.keys())
+        for file_path in files_to_stash:
+            file = files_to_stash[file_path]
+            try:
+                with open(repo_root / file_path, "rb") as f:
+                    file["contents"] = f.read()
+            except FileNotFoundError:
+                pass
+
+        # We have to stash because git refuses to merge if the merge would overwrite local changes.
+        stash_changes(path=repo_root)
+
         # Merge the upstream tracking branch into the merge branch
-        conflicts = git_merge(InstructorClassRepo.ORIGIN_TRACKING_BRANCH, commit=True, path=repo_root)
-        if len(conflicts) > 0:
-            raise Exception("Encountered merge conflicts during merge: ", ", ".join(conflicts))
+        merge_conflicts = git_merge(InstructorClassRepo.ORIGIN_TRACKING_BRANCH, commit=True, path=repo_root)
+        if len(merge_conflicts) > 0:
+            print("Encountered merge conflicts during merge: ", ", ".join(merge_conflicts))
+            raise Exception("Encountered merge conflicts during merge: ", ", ".join(merge_conflicts))
+        
+        # After popping, we could have further conflicts between the student's local changes and the merge head
+        pop_stash(path=repo_root)
+        stash_conflicts = git_diff_status(diff_filter="U", path=repo_root)
+        isonow = datetime.now().isoformat()
+        for conflict_file_path in stash_conflicts:
+            print(f"Detected stash conflict: '{ conflict_file_path }'")
+            file = files_to_stash[conflict_file_path]
+            # If the local change was deleting the file, we don't need to back it up...
+            if file["modification_type"] != "D":
+                # Backup the student's changes to a new file.
+                backup_path = repo_root / Path(f"{ conflict_file_path }~{ isonow }~")
+                with open(backup_path, "wb+") as f:
+                    f.write(file["contents"])
+            
+            # Restore the file to its HEAD revision now that we've backed it up for the student. This will resolve the stash conflict.
+            # Staged restores the file in the index, worktree restores the file in the working diretory
+            git_restore(conflict_file_path, source="HEAD", staged=True, worktree=True, path=repo_root)
 
     except Exception as e:
         print("Fatal: Can't merge remote changes into student repository", e)
         # Cleanup the merge branch and return to main
         abort_merge(path=repo_root)
+        # if an error occurs after we've already popped, there won't be anything to pop on the stack.
+        try: pop_stash(path=repo_root)
+        except: pass
         checkout(InstructorClassRepo.MAIN_BRANCH_NAME, path=repo_root)
         delete_local_branch(merge_branch_name, force=True, path=repo_root)
         return
