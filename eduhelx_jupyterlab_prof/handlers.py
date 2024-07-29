@@ -207,7 +207,7 @@ class SubmissionHandler(BaseHandler):
             instructor_repo = InstructorClassRepo(course, assignments, current_assignment_path)
             instructor_repo.create_student_notebook()
         except Exception as e:
-            self.set_status(500)
+            self.set_status(400)
             self.finish(json.dumps({
                 "message": "Failed to generate student version of assignment notebook: " + str(e)
             }))
@@ -215,6 +215,12 @@ class SubmissionHandler(BaseHandler):
 
         rollback_id = get_head_commit_id(path=instructor_repo.repo_root)
         stage_files(".", path=current_assignment_path)
+
+        # Instead of annoying professors by constantly asking them to update their gitignore,
+        # we can reset protected files before hitting the pre-receive hook.
+        # for file in instructor_repo.get_protected_file_paths(instructor_repo.current_assignment):
+        #     git_reset(file, path=current_assignment_path)
+            
         
         try:
             commit_id = commit(
@@ -491,66 +497,89 @@ async def sync_upstream_repository(context: AppContext, course) -> None:
     # Branch onto the merge branch off the user's head
     checkout(merge_branch_name, new_branch=True, path=repo_root)
 
+    isonow = datetime.now().isoformat()
+    file_contents = { path: path.read_bytes() for path in repo_root.rglob("*") if path.is_file() and ".git" not in path.parts }
+    def backup_file(conflict_path: Path):
+        print("BACKING UP FILE", conflict_path)
+        full_conflict_path = repo_root / conflict_path
+        if full_conflict_path in file_contents:
+            # Backup the student's changes to a new file.
+            backup_path = repo_root / Path(f"{ conflict_path }~{ isonow }~backup")
+            with open(backup_path, "wb+") as f:
+                f.write(file_contents[full_conflict_path])
+        else:
+            print(str(conflict_path), "deleted locally, cannot create a backup.")
+
+    # These are relative to the repo root.
+    untracked_files = {
+        f["path"] for f in get_modified_paths(untracked=True, path=repo_root)
+        if f["modification_type"] == "??"
+    }
+    untracked_files_dir = repo_root / f".untracked-{ isonow }"
+    def move_untracked_files():
+        for file in untracked_files:
+            untracked_path = untracked_files_dir / file
+            untracked_path.parent.mkdir(parents=True, exist_ok=True)
+            (repo_root / file).rename(untracked_path)
+    
+    def restore_untracked_files():
+        # Git refuses to allow you to apply a stash if any untracked changes within the stash exist locally.
+        # Thus, we have to manually move and then backup untracked files after merging.
+        for original_file in untracked_files:
+            full_original_file_path = repo_root / original_file
+            untracked_path = untracked_files_dir / original_file
+
+            if not full_original_file_path.exists():
+                # If the file doesn't exist post-merge, it hasn't been changed at all, and we can just
+                # move the file back to its original path in the repo.
+                untracked_path.rename(full_original_file_path)
+            elif full_original_file_path.read_bytes() != untracked_path.read_bytes():
+                # If the file exists post merge, but its content is the exact same, we woudn't need to take any actions.
+                # The file exists but its content has changed, so backup the old version.
+                print(f"Couldn't restore untracked file '{ original_file }' as it already exists on HEAD, backing up instead...")
+                backup_file(original_file)
+
+    # Grab every overwritable path inside the repository.
+    # Note: we need to do again after the merge, since we can only pick up paths that exist on disk.
+    # If the local head deleted a file, it won't be picked up in the first pass.
+    # Vice-versa, if the merge head deleted a file, it won't be picked up in the second pass.
+    overwritable_paths = set()
+    def gather_overwritable_paths():
+        for assignment in assignments:
+            for glob_pattern in assignment["overwritable_files"]:
+                overwritable_paths.update((repo_root / assignment["directory_path"]).glob(glob_pattern))
+    gather_overwritable_paths() # pick up paths introduced by the local head
+
+    def rename_merge_conflicts(merge_conflicts):
+        for conflict in merge_conflicts:
+            if repo_root / conflict not in overwritable_paths:
+                # If the file isn't overwritable, make a backup of it.
+                print("Encountered non-overwriteable merge conflict", conflict, ". Creating backup...")
+                backup_file(conflict)
+            else: print(f"Detected overwritable merge conflict: '{ conflict }'")
+            # Overwrite the file with its incoming version -- resolve the conflict.
+            git_restore(conflict, source="MERGE_HEAD", staged=True, worktree=True, path=repo_root)
+
     # Merge the upstream tracking branch into the temp merge branch
     try:
         print(f"Merging { InstructorClassRepo.ORIGIN_TRACKING_BRANCH } ({ tracking_head[:8] }) --> { InstructorClassRepo.MAIN_BRANCH_NAME } ({ local_head[:8] }) on branch { merge_branch_name }")
-        
-        # Untracked is a little deceptive here, since untracked files/directories are included regardless.
-        # What untracked actually does is expand untracked directories into the untracked files inside them.
-        files_to_stash = { file["path"]: file for file in get_modified_paths(untracked=True, path=repo_root) }
-        print("Stashed files:", " ".join(files_to_stash.keys()))
-        for file_path in files_to_stash:
-            file = files_to_stash[file_path]
-            try:
-                with open(repo_root / file_path, "rb") as f:
-                    file["contents"] = f.read()
-            except FileNotFoundError:
-                pass
 
         # We have to stash because git refuses to merge if the merge would overwrite local changes.
+        move_untracked_files()
         stash_changes(path=repo_root)
 
         # Merge the upstream tracking branch into the merge branch
-        merge_conflicts = git_merge(InstructorClassRepo.ORIGIN_TRACKING_BRANCH, commit=True, path=repo_root)
-        actual_merge_conflicts = []
-        for conflict in merge_conflicts:
-            repo = InstructorClassRepo(course, assignments, repo_root / conflict)
-            assignment, assignment_path = repo.current_assignment, repo.current_assignment_path
-            overwritable_paths = []
-            for glob_pattern in assignment["overwritable_files"]: overwritable_paths += assignment_path.glob(glob_pattern)
-            if repo_root / conflict in overwritable_paths:
-                # Overwrite the file with its incoming version
-                print(f"Detected overwritable merge conflict: '{ conflict }'")
-                git_restore(conflict, source="MERGE_HEAD", staged=True, worktree=True, path=repo_root)
-            else:
-                actual_merge_conflicts.append(conflict)
+        merge_conflicts = git_merge(InstructorClassRepo.ORIGIN_TRACKING_BRANCH, commit=False, path=repo_root)
+        gather_overwritable_paths() # pick up paths introduced by the merge head
+        rename_merge_conflicts(merge_conflicts)
+        
+        commit(None, no_edit=True, path=repo_root)
 
-        if len(actual_merge_conflicts) > 0:
-            print("Encountered merge conflicts during merge: ", ", ".join(actual_merge_conflicts))
-            raise Exception("Encountered merge conflicts during merge: ", ", ".join(actual_merge_conflicts))
-        
-        if len(actual_merge_conflicts) != len(merge_conflicts):
-            # There were conflicts, but we successfully resolved them with overwrites.
-            # Since there were conflicts, we need to create a commit.
-            commit(None, no_edit=True, path=repo_root)
-        
         # After popping, we could have further conflicts between the student's local changes and the merge head
         pop_stash(path=repo_root)
         stash_conflicts = git_diff_status(diff_filter="U", path=repo_root)
-        isonow = datetime.now().isoformat()
-        for conflict_file_path in stash_conflicts:
-            print(f"Detected stash conflict: '{ conflict_file_path }'")
-            file = files_to_stash[conflict_file_path]
-            # If the local change was deleting the file, we don't need to back it up...
-            if file["modification_type"] != "D":
-                # Backup the student's changes to a new file.
-                backup_path = repo_root / Path(f"{ conflict_file_path }~{ isonow }~")
-                with open(backup_path, "wb+") as f:
-                    f.write(file["contents"])
-            
-            # Restore the file to its HEAD revision now that we've backed it up for the student. This will resolve the stash conflict.
-            # Staged restores the file in the index, worktree restores the file in the working diretory
-            git_restore(conflict_file_path, source="HEAD", staged=False, worktree=True, path=repo_root)
+        gather_overwritable_paths() # technically, not really necessary since we gather before stashing.
+        rename_merge_conflicts(stash_conflicts)
 
     except Exception as e:
         print("Fatal: Can't merge remote changes into student repository", e)
@@ -562,6 +591,11 @@ async def sync_upstream_repository(context: AppContext, course) -> None:
         checkout(InstructorClassRepo.MAIN_BRANCH_NAME, path=repo_root)
         delete_local_branch(merge_branch_name, force=True, path=repo_root)
         return
+    
+    finally:
+        # It doesn't really matter when we restore these, as long as it happens post-merge.
+        restore_untracked_files()
+        shutil.rmtree(untracked_files_dir)
 
     checkout(InstructorClassRepo.MAIN_BRANCH_NAME, path=repo_root)
 
