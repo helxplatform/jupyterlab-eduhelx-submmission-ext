@@ -582,13 +582,17 @@ async def sync_upstream_repository(context: AppContext, course) -> None:
         rename_merge_conflicts(stash_conflicts)
 
     except Exception as e:
-        print("Fatal: Can't merge remote changes into student repository", e)
         # Cleanup the merge branch and return to main
-        abort_merge(path=repo_root)
+        print("Fatal: Can't merge remote changes into student repository", e)
+        # If an error occurs, we're going to force checkout and delete so the merge head will delete regardless.
+        try: abort_merge(path=repo_root)
+        except:
+            print("(failed to abort merge)")
         # if an error occurs after we've already popped, there won't be anything to pop on the stack.
         try: pop_stash(path=repo_root)
-        except: pass
-        checkout(InstructorClassRepo.MAIN_BRANCH_NAME, path=repo_root)
+        except:
+            print("(failed to pop stash, already popped)")
+        checkout(InstructorClassRepo.MAIN_BRANCH_NAME, force=True, path=repo_root)
         delete_local_branch(merge_branch_name, force=True, path=repo_root)
         return
     
