@@ -25,7 +25,7 @@ from eduhelx_utils.git import (
     get_head_commit_id, reset as git_reset, merge as git_merge,
     abort_merge, delete_local_branch, is_ancestor_commit,
     stash_changes, pop_stash, diff_status as git_diff_status,
-    restore as git_restore
+    restore as git_restore, rm as git_rm
 )
 from eduhelx_utils.api import Api, AuthType
 from eduhelx_utils.process import execute
@@ -552,14 +552,25 @@ async def sync_upstream_repository(context: AppContext, course) -> None:
     gather_overwritable_paths() # pick up paths introduced by the local head
 
     def rename_merge_conflicts(merge_conflicts):
+        conflict_types = {
+            conflict["path"] : conflict["modification_type"] for conflict in get_modified_paths(path=repo_root)
+            if conflict["path"] in merge_conflicts
+        }
         for conflict in merge_conflicts:
             if repo_root / conflict not in overwritable_paths:
-                # If the file isn't overwritable, make a backup of it.
+                # If the file isn't overwritable, make a backup of it (as long as it's not deleted locally).
                 print("Encountered non-overwriteable merge conflict", conflict, ". Creating backup...")
                 backup_file(conflict)
-            else: print(f"Detected overwritable merge conflict: '{ conflict }'")
+            else:
+                print(f"Detected overwritable merge conflict: '{ conflict }'")
+            
             # Overwrite the file with its incoming version -- resolve the conflict.
-            git_restore(conflict, source="MERGE_HEAD", staged=True, worktree=True, path=repo_root)
+            if conflict_types[conflict][1] != "D":
+                git_restore(conflict, source="MERGE_HEAD", staged=True, worktree=True, path=repo_root)
+            else:
+                # If the conflict was deleted on the merge head, git restore won't be able to restore it.
+                # Instead, just update the index/worktree to also delete the file.
+                git_rm(conflict, cached=False, path=repo_root)
 
     # Merge the upstream tracking branch into the temp merge branch
     try:
@@ -584,7 +595,7 @@ async def sync_upstream_repository(context: AppContext, course) -> None:
 
     except Exception as e:
         # Cleanup the merge branch and return to main
-        print("Fatal: Can't merge remote changes into student repository", e)
+        print("Fatal: Can't merge remote changes into professor repository", e)
         # If an error occurs, we're going to force checkout and delete so the merge head will delete regardless.
         try: abort_merge(path=repo_root)
         except:
