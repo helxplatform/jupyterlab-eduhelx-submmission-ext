@@ -56,17 +56,24 @@ class InstructorClassRepo:
         
         assign_util = OtterAssignUtil(master_notebook_path)
         with tempfile.TemporaryDirectory() as dir:
-            processed_master_notebook_path = Path(dir) / student_notebook_path.name
+            temp_dist_path = Path(dir) / "dist"
+            processed_master_notebook_path = Path(dir) / self.current_assignment_path.name / student_notebook_path.name
             assign_util.update_assign_config({
                 "init_cell": True,
                 "generate": {
                     "zips": False,
-                    "pdfs": False,
+                    "pdf": True,
                 },
                 "export_cell": None
             })
+
+            shutil.copytree(self.current_assignment_path, processed_master_notebook_path.parent)
             assign_util.save(processed_master_notebook_path)
-            otter_assign(processed_master_notebook_path, dist_path, no_pdfs=True)
+            otter_assign(processed_master_notebook_path, temp_dist_path, no_pdfs=True)
+            # Bug with otter where it tries to create every single directory in the relative path
+            # between the notebook and the dist. If these are in different top-level directories,
+            # it's going to try to create folders it almost certainly lacks permission to tamper with.
+            shutil.move(temp_dist_path, dist_path)
 
         # Move default otter config for the assignment if it doesn't exist
         if not otter_config_path.exists():
