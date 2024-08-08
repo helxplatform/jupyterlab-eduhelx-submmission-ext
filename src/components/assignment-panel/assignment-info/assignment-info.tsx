@@ -185,10 +185,21 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
         commands.execute('docmanager:open', { path: gradedNotebookPath })
     }, [commands, assignment, gradedNotebookControlled])
 
-    const createTemplateNotebook = useCallback(async () => {
-        if (!commands || !assignment) return
+    const createTemplateNotebook = useCallback(async (setActive: boolean=true) => {
+        if (!commands || !assignment || !notebookFiles) return
         setCreatingTemplateNotebook(true)
-        const templateNotebookPath = assignment.absoluteDirectoryPath + "/" + assignment.name + ".ipynb"
+        
+        const assignmentNotebooks = notebookFiles[assignment.id]
+        const computeUniqueNotebookName = () => {
+            for (let i=0; true; i++) {
+                const name = `${ assignment.name }${ i ? " (" + i + ")" : ""}.ipynb`
+                if (!assignmentNotebooks.includes(name)) return name
+            }
+
+        }
+
+        const templateNotebookName = computeUniqueNotebookName()
+        const templateNotebookPath = `${ assignment.absoluteDirectoryPath }/${ templateNotebookName }`
         const templateNotebookContent = JSON.stringify({
             "cells":[
                 {"cell_type":"markdown","id":"b35bba0c-d691-43e9-852f-4cf05f651f2c","metadata":{},"source":["**Note**: You can find Otter Grader documentation on creating notebooks [here](https://otter-grader.readthedocs.io/en/latest/otter_assign/notebook_format.html) or [under section 3 of the full Otter docs](https://otter-grader.readthedocs.io/_/downloads/en/latest/pdf/). Make sure you restart kernel and run all cells before attempting to push the notebook.\n","\n","*This cell should be removed prior to pushing.*"]},
@@ -225,15 +236,16 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
             setCreatingTemplateNotebook(false)
             return
         }
-        try {
+
+        if (setActive) try {
             await updateAssignment(assignment.name, {
-                master_notebook_path: gradedNotebookControlled
+                master_notebook_path: templateNotebookName
             })
         } catch {}
         
         setCreatingTemplateNotebook(false)
         await commands.execute('docmanager:open', { path: templateNotebookPath })
-    }, [commands, assignment, gradedNotebookControlled, onGradedNotebookChanged])
+    }, [commands, assignment, notebookFiles, gradedNotebookControlled])
 
     useEffect(() => {
         setAvailableDateControlled(formatDateToMui(assignment.availableDate))
@@ -331,7 +343,7 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                         <button
                             className={ classNames(openFileBrowserButtonClass, creatingTemplateNotebook && disabledButtonClass) }
                             style={{ marginBottom: 0, width: "100%" }}
-                            onClick={ createTemplateNotebook }
+                            onClick={ () => createTemplateNotebook(true) }
                         >
                             { !creatingTemplateNotebook ? "Create Template Notebook" : (
                                 <CircularProgress color="inherit" size={ 16 } />
@@ -355,11 +367,18 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                         </Select>
                     ) }
                     { !gradedNotebookInvalid && (
-                        <FormHelperText style={{ color: "#1976d2" }}>
-                            <a onClick={ openGradedNotebook } style={{ cursor: "pointer" }}>
-                                Open notebook
-                            </a>
-                        </FormHelperText>
+                        <div style={{ display: "flex", gap: 8 }}>
+                            <FormHelperText style={{ color: "#1976d2" }}>
+                                <a onClick={ openGradedNotebook } style={{ cursor: "pointer" }}>
+                                    Open notebook
+                                </a>
+                            </FormHelperText>
+                            <FormHelperText style={{ color: "#1976d2" }}>
+                                <a onClick={ () => createTemplateNotebook(false) } style={{ cursor: "pointer" }}>
+                                    Create template
+                                </a>
+                            </FormHelperText>
+                        </div>
                     )}
                 </div>
             </div>
