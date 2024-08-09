@@ -16,6 +16,7 @@ from jupyter_server.auth.decorator import ws_authenticated
 from tornado.websocket import WebSocketHandler as WSHandler
 from jupyter_server.utils import url_path_join
 from pathlib import Path
+from datetime import datetime
 from collections.abc import Iterable
 from .config import ExtensionConfig
 from eduhelx_utils.git import (
@@ -24,25 +25,15 @@ from eduhelx_utils.git import (
     get_tail_commit_id, get_repo_name, add_remote,
     stage_files, commit, push, get_commit_info,
     get_modified_paths, get_repo_root as get_git_repo_root,
-    checkout, reset as git_reset, get_head_commit_id,
-    merge as git_merge, abort_merge, delete_local_branch,
-    is_ancestor_commit, diff_status as git_diff_status
+    checkout, reset as git_reset, get_head_commit_id, merge as git_merge,
+    abort_merge, delete_local_branch, is_ancestor_commit,
+    stash_changes, pop_stash, diff_status as git_diff_status,
+    restore as git_restore, rm as git_rm
 )
 from eduhelx_utils.api import Api, AuthType
 from eduhelx_utils.process import execute
 from .student_repo import StudentClassRepo, NotStudentClassRepositoryException
 from ._version import __version__
-
-FIXED_REPO_ROOT = "eduhelx/{}-student" # <class_name>
-ORIGIN_REMOTE_NAME = "origin"
-UPSTREAM_REMOTE_NAME = "upstream"
-# Local branch
-MAIN_BRANCH_NAME = "main"
-# We have to do a merge to sync changes. We stage the merge on a separate branch
-# to proactively guard against a merge conflict.
-MERGE_STAGING_BRANCH_NAME = "__temp__/merge_{}-from-{}" # Formatted with the local head and upstream head commit hashes
-UPSTREAM_TRACKING_BRANCH = f"{ UPSTREAM_REMOTE_NAME }/{ MAIN_BRANCH_NAME }"
-ORIGIN_TRACKING_BRANCH = f"{ ORIGIN_REMOTE_NAME }/{ MAIN_BRANCH_NAME }"
 
 class AppContext:
     def __init__(self, serverapp):
@@ -69,12 +60,7 @@ class AppContext:
 
     async def get_repo_root(self):
         course = await self.api.get_course()
-        return self._compute_repo_root(course["name"])
-
-    @staticmethod
-    def _compute_repo_root(course_name: str):
-        # NOTE: the relative path for the server is the root path for the UI
-        return Path(FIXED_REPO_ROOT.format(course_name.replace(" ", "_")))
+        return StudentClassRepo._compute_repo_root(course["name"])
         
 
 class BaseHandler(APIHandler):
@@ -275,7 +261,7 @@ class SubmissionHandler(BaseHandler):
         # so that we don't push the stages changes without actually creating a submission for the user
         # (which would be very misleading)
         try:
-            push(ORIGIN_REMOTE_NAME, MAIN_BRANCH_NAME, path=current_assignment_path)
+            push(StudentClassRepo.ORIGIN_REMOTE_NAME, StudentClassRepo.MAIN_BRANCH_NAME, path=current_assignment_path)
             self.finish()
         except Exception as e:
             # Need to rollback the commit if push failed too.
@@ -297,13 +283,13 @@ class SettingsHandler(BaseHandler):
 
 
 async def create_repo_root_if_not_exists(context: AppContext, course) -> None:
-    repo_root = context._compute_repo_root(course["name"])
+    repo_root = StudentClassRepo._compute_repo_root(course["name"])
     if not repo_root.exists():
         repo_root.mkdir(parents=True)
 
 async def create_ssh_config_if_not_exists(context: AppContext, course, student) -> None:
     settings = await context.api.get_settings()
-    repo_root = context._compute_repo_root(course["name"]).resolve()
+    repo_root = StudentClassRepo._compute_repo_root(course["name"]).resolve()
     ssh_config_dir = repo_root / ".ssh"
     ssh_config_file = ssh_config_dir / "config"
     ssh_identity_file = ssh_config_dir / "id_gitea"
@@ -348,7 +334,7 @@ async def create_ssh_config_if_not_exists(context: AppContext, course, student) 
         await context.api.set_ssh_key("jls-client", public_key)
 
 async def clone_repo_if_not_exists(context: AppContext, course, student) -> None:
-    repo_root = context._compute_repo_root(course["name"])
+    repo_root = StudentClassRepo._compute_repo_root(course["name"])
     try:
         # We're just confirming that the repo root is a git repository.
         # If it is, don't need to clone
@@ -389,17 +375,17 @@ async def clone_repo_if_not_exists(context: AppContext, course, student) -> None
             # This block should never fail. If it does, just abort.
             init_repository(repo_root)
             await set_git_authentication(context, course, student)
-            add_remote(UPSTREAM_REMOTE_NAME, master_repository_url, path=repo_root)
-            add_remote(ORIGIN_REMOTE_NAME, student_repository_url, path=repo_root)
+            add_remote(StudentClassRepo.UPSTREAM_REMOTE_NAME, master_repository_url, path=repo_root)
+            add_remote(StudentClassRepo.ORIGIN_REMOTE_NAME, student_repository_url, path=repo_root)
 
             @backoff.on_exception(backoff.constant, Exception, interval=2.5, max_time=15)
             def try_fetch(remote):
                 fetch_repository(remote, path=repo_root)
 
             # If either of these reach backoff and fail, just abort
-            try_fetch(ORIGIN_REMOTE_NAME)
-            checkout(f"{ MAIN_BRANCH_NAME }", path=repo_root)
-            try_fetch(UPSTREAM_REMOTE_NAME)
+            try_fetch(StudentClassRepo.ORIGIN_REMOTE_NAME)
+            checkout(f"{ StudentClassRepo.MAIN_BRANCH_NAME }", path=repo_root)
+            try_fetch(StudentClassRepo.UPSTREAM_REMOTE_NAME)
 
             @backoff.on_exception(backoff.constant, Exception, interval=2.5, max_time=15)
             async def mark_as_cloned():
@@ -413,7 +399,7 @@ async def clone_repo_if_not_exists(context: AppContext, course, student) -> None
             raise e
 
 async def set_git_authentication(context: AppContext, course, student) -> None:
-    repo_root = context._compute_repo_root(course["name"]).resolve()
+    repo_root = StudentClassRepo._compute_repo_root(course["name"]).resolve()
     student_repository_url = student["fork_remote_url"]
     ssh_config_file = repo_root / ".ssh" / "config"
     ssh_identity_file = repo_root / ".ssh" / "id_gitea"
@@ -482,19 +468,86 @@ async def set_root_folder_permissions(context: AppContext) -> None:
     ...
 
 async def sync_upstream_repository(context: AppContext, course) -> None:
-    repo_root = context._compute_repo_root(course["name"])
+    assignments = await context.api.get_my_assignments()
+    repo_root = StudentClassRepo._compute_repo_root(course["name"])
+
+    def backup_file(conflict_path: Path):
+        print("BACKING UP FILE", conflict_path)
+        full_conflict_path = repo_root / conflict_path
+        if full_conflict_path in file_contents:
+            # Backup the student's changes to a new file.
+            backup_path = repo_root / Path(f"{ conflict_path }~{ isonow }~backup")
+            with open(backup_path, "wb+") as f:
+                f.write(file_contents[full_conflict_path])
+        else:
+            print(str(conflict_path), "deleted locally, cannot create a backup.")
+
+    def move_untracked_files():
+        for file in untracked_files:
+            untracked_path = untracked_files_dir / file
+            untracked_path.parent.mkdir(parents=True, exist_ok=True)
+            (repo_root / file).rename(untracked_path)
+    
+    def restore_untracked_files():
+        # Git refuses to allow you to apply a stash if any untracked changes within the stash exist locally.
+        # Thus, we have to manually move and then backup untracked files after merging.
+        for original_file in untracked_files:
+            full_original_file_path = repo_root / original_file
+            untracked_path = untracked_files_dir / original_file
+
+            if not full_original_file_path.exists():
+                # If the file doesn't exist post-merge, it hasn't been changed at all, and we can just
+                # move the file back to its original path in the repo.
+                untracked_path.rename(full_original_file_path)
+            elif full_original_file_path.read_bytes() != untracked_path.read_bytes():
+                # If the file exists post merge, but its content is the exact same, we woudn't need to take any actions.
+                # The file exists but its content has changed, so backup the old version.
+                print(f"Couldn't restore untracked file '{ original_file }' as it already exists on HEAD, backing up instead...")
+                backup_file(original_file)
+
+    # Grab every overwritable path inside the repository.
+    # Note: we need to this multiple times, since we can only pick up paths that exist on disk.
+    # If the local head deleted a file, it won't be picked up in the first pass.
+    # Vice-versa, if the merge head deleted a file, it won't be picked up in the second pass.
+    def gather_overwritable_paths():
+        for assignment in assignments:
+            for glob_pattern in assignment["overwritable_files"]:
+                overwritable_paths.update((repo_root / assignment["directory_path"]).glob(glob_pattern))
+
+    def rename_merge_conflicts(merge_conflicts, source):
+        conflict_types = {
+            conflict["path"] : conflict["modification_type"] for conflict in get_modified_paths(path=repo_root)
+            if conflict["path"] in merge_conflicts
+        }
+        for conflict in merge_conflicts:
+            if repo_root / conflict not in overwritable_paths:
+                # If the file isn't overwritable, make a backup of it (as long as it's not deleted locally).
+                print("Encountered non-overwriteable merge conflict", conflict, ". Creating backup...")
+                backup_file(conflict)
+            else:
+                print(f"Detected overwritable merge conflict: '{ conflict }'")
+            
+            # Overwrite the file with its incoming version -- resolve the conflict.
+            if conflict_types[conflict][1] != "D":
+                git_restore(conflict, source=source, staged=True, worktree=True, path=repo_root)
+            else:
+                # If the conflict was deleted on the merge head, git restore won't be able to restore it.
+                # Instead, just update the index/worktree to also delete the file.
+                git_rm(conflict, cached=False, path=repo_root)
+
 
     try:
-        fetch_repository(UPSTREAM_REMOTE_NAME, path=repo_root)
+        fetch_repository(StudentClassRepo.UPSTREAM_REMOTE_NAME, path=repo_root)
         # In case we've pushed directly to the student's repository on the remote for some reason (through Gitea-Assist)
-        fetch_repository(ORIGIN_REMOTE_NAME, path=repo_root)
+        fetch_repository(StudentClassRepo.ORIGIN_REMOTE_NAME, path=repo_root)
     except:
         print("Fatal: Couldn't fetch remote tracking branches, aborting sync...")
+        return
 
-    checkout(MAIN_BRANCH_NAME, path=repo_root)
+    checkout(StudentClassRepo.MAIN_BRANCH_NAME, path=repo_root)
     local_head = get_head_commit_id(path=repo_root)
-    upstream_head = get_head_commit_id(UPSTREAM_TRACKING_BRANCH, path=repo_root)
-    merge_branch_name = MERGE_STAGING_BRANCH_NAME.format(local_head[:8], upstream_head[:8])
+    upstream_head = get_head_commit_id(StudentClassRepo.UPSTREAM_TRACKING_BRANCH, path=repo_root)
+    merge_branch_name = StudentClassRepo.MERGE_STAGING_BRANCH_NAME.format(local_head[:8], upstream_head[:8])
     if is_ancestor_commit(descendant=local_head, ancestor=upstream_head, path=repo_root):
         # If the local head is a descendant of the local head,
         # then any upstream changes have already been merged in.
@@ -507,27 +560,70 @@ async def sync_upstream_repository(context: AppContext, course) -> None:
     # Branch onto the merge branch off the user's head
     checkout(merge_branch_name, new_branch=True, path=repo_root)
 
+
+    isonow = datetime.now().isoformat()
+    # These are relative to the repo root.
+    file_contents = { path: path.read_bytes() for path in repo_root.rglob("*") if path.is_file() and ".git" not in path.parts }
+    untracked_files = {
+        f["path"] for f in get_modified_paths(untracked=True, path=repo_root)
+        if f["modification_type"] == "??"
+    }
+    untracked_files_dir = repo_root / f".untracked-{ isonow }"
+    overwritable_paths = set()
+
+    gather_overwritable_paths()
+
     # Merge the upstream tracking branch into the temp merge branch
     try:
-        print(f"Merging { UPSTREAM_TRACKING_BRANCH } ({ upstream_head[:8] }) --> { MAIN_BRANCH_NAME } ({ local_head[:8] }) on branch { merge_branch_name }")
+        print(f"Merging { StudentClassRepo.UPSTREAM_TRACKING_BRANCH } ({ upstream_head[:8] }) --> { StudentClassRepo.MAIN_BRANCH_NAME } ({ local_head[:8] }) on branch { merge_branch_name }")
+        
+        # We move untracked files because git can't merge them, so it will refuse if a conflict
+        # would be caused, which we don't want. 
+        move_untracked_files()
+
+        # We have to stash because git refuses to merge if the merge would overwrite local changes.
+        # NOTE: we don't use git stash --include-untracked because it does not work properly with merge.
+        stash_changes(path=repo_root)
+
         # Merge the upstream tracking branch into the merge branch
-        conflicts = git_merge(UPSTREAM_TRACKING_BRANCH, commit=True, path=repo_root)
-        if len(conflicts) > 0:
-            raise Exception("Encountered merge conflicts during merge: ", ", ".join(conflicts))
+        merge_conflicts = git_merge(StudentClassRepo.UPSTREAM_TRACKING_BRANCH, commit=False, path=repo_root)
+        gather_overwritable_paths() # pick up paths introduced by the merge head
+        rename_merge_conflicts(merge_conflicts, source="MERGE_HEAD") # restore conflicts using their incoming version from the MERGE_HEAD
+
+        commit(None, no_edit=True, path=repo_root)
+
+        # After popping, we could have further conflicts between the student's stashed changes and the new local head.
+        pop_stash(path=repo_root)
+        stash_conflicts = git_diff_status(diff_filter="U", path=repo_root)
+        gather_overwritable_paths() # technically, not really necessary since we gather before stashing.
+        rename_merge_conflicts(stash_conflicts, source="HEAD")
 
     except Exception as e:
-        print("Fatal: Can't merge upstream changes into student repository", e)
         # Cleanup the merge branch and return to main
-        abort_merge(path=repo_root)
-        checkout(MAIN_BRANCH_NAME, path=repo_root)
+        print("Fatal: Can't merge upstream changes into student repository", e)
+        # Since we force checkout and then delete the temp merge branch, it doesn't particularly
+        # matter to us if the merge fails to abort, since we delete the MERGE_HEAD regardless.
+        try: abort_merge(path=repo_root)
+        except:
+            print("(failed to abort merge)")
+        # if an error occurs after we've already popped, there won't be anything to pop on the stack.
+        try: pop_stash(path=repo_root)
+        except:
+            print("(failed to pop stash, already popped)")
+        checkout(StudentClassRepo.MAIN_BRANCH_NAME, force=True, path=repo_root)
         delete_local_branch(merge_branch_name, force=True, path=repo_root)
         return
+    
+    finally:
+        # It doesn't really matter when we restore these, as long as it happens post-merge.
+        restore_untracked_files()
+        shutil.rmtree(untracked_files_dir)
 
-    checkout(MAIN_BRANCH_NAME, path=repo_root)
+    checkout(StudentClassRepo.MAIN_BRANCH_NAME, path=repo_root)
 
     # If we successfully merged it, we can go ahead and merge the temp branch into our actual branch
     try:
-        print(f"Merging { merge_branch_name } --> { MAIN_BRANCH_NAME }")
+        print(f"Merging { merge_branch_name } --> { StudentClassRepo.MAIN_BRANCH_NAME }")
         # Merge the merge staging branch into the actual branch, don't need to commit since fast forward
         # We don't need to check for conflicts here since the actual branch can now be fast forwarded.
         git_merge(merge_branch_name, ff_only=True, commit=False, path=repo_root)
@@ -535,7 +631,9 @@ async def sync_upstream_repository(context: AppContext, course) -> None:
     except Exception as e:
         # Merging from temp to actual branch failed.
         print(f"Fatal: Failed to merge the merge staging branch into actual branch", e)
-        abort_merge(path=repo_root)
+        # Try to abort the merge, if started and unconcluded.
+        try: abort_merge(path=repo_root)
+        except: print("(failed to abort)")
     
     finally:
         delete_local_branch(merge_branch_name, force=True, path=repo_root)
