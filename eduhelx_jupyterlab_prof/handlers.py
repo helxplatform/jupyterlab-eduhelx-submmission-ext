@@ -369,6 +369,10 @@ async def create_ssh_config_if_not_exists(context: AppContext, course) -> None:
     if not ssh_identity_file.exists():
         ssh_config_dir.mkdir(parents=True, exist_ok=True)
         execute(["ssh-keygen", "-t", "rsa", "-f", ssh_identity_file, "-N", ""])
+        execute(["chmod", "700", ssh_config_dir])
+        execute(["ssh-keygen", "-t", "rsa", "-f", ssh_identity_file, "-N", ""])
+        execute(["chmod", "444", ssh_public_key_file])
+        execute(["chmod", "600", ssh_identity_file])
     with open(ssh_config_file, "w+") as f:
         # Host (public Gitea URL) is rewritten as an alias to HostName (private ssh URL)
         f.write( 
