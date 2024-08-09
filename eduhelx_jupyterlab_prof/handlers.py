@@ -629,7 +629,9 @@ async def sync_upstream_repository(context: AppContext, course) -> None:
     except Exception as e:
         # Merging from temp to actual branch failed.
         print(f"Fatal: Failed to merge the merge staging branch into actual branch", e)
-        abort_merge(path=repo_root)
+        # Try to abort the merge, if started and unconcluded.
+        try: abort_merge(path=repo_root)
+        except: print("(failed to abort)")
     
     finally:
         delete_local_branch(merge_branch_name, force=True, path=repo_root)
