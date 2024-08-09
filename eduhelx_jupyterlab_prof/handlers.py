@@ -368,7 +368,6 @@ async def create_ssh_config_if_not_exists(context: AppContext, course) -> None:
     
     if not ssh_identity_file.exists():
         ssh_config_dir.mkdir(parents=True, exist_ok=True)
-        execute(["ssh-keygen", "-t", "rsa", "-f", ssh_identity_file, "-N", ""])
         execute(["chmod", "700", ssh_config_dir])
         execute(["ssh-keygen", "-t", "rsa", "-f", ssh_identity_file, "-N", ""])
         execute(["chmod", "444", ssh_public_key_file])
@@ -389,7 +388,7 @@ async def create_ssh_config_if_not_exists(context: AppContext, course) -> None:
         public_key = f.read()
         await context.api.set_ssh_key("jlp-client", public_key)
 
-async def clone_repo_if_not_exists(context: AppContext, course) -> None:
+async def clone_repo_if_not_exists(context: AppContext, course, instructor) -> None:
     repo_root = InstructorClassRepo._compute_repo_root(course["name"])
     try:
         get_git_repo_root(path=repo_root)
@@ -399,7 +398,7 @@ async def clone_repo_if_not_exists(context: AppContext, course) -> None:
         """
         master_repository_url = course["master_remote_url"]
         init_repository(repo_root)
-        await set_git_authentication(context)
+        await set_git_authentication(context, course, instructor)
         add_remote(InstructorClassRepo.ORIGIN_REMOTE_NAME, master_repository_url, path=repo_root)
         fetch_repository(InstructorClassRepo.ORIGIN_REMOTE_NAME, path=repo_root)
         checkout(f"{ InstructorClassRepo.MAIN_BRANCH_NAME }", path=repo_root)
@@ -645,7 +644,7 @@ async def setup_backend(context: AppContext):
         await create_repo_root_if_not_exists(context)
         await create_ssh_config_if_not_exists(context, course)
         await set_git_authentication(context, course, instructor)
-        await clone_repo_if_not_exists(context, course)
+        await clone_repo_if_not_exists(context, course, instructor)
         await set_root_folder_permissions(context)
         while True:
             print("Pulling in upstream changes...")
