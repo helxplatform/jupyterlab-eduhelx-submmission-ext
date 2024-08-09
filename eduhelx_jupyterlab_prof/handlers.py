@@ -555,7 +555,7 @@ async def sync_upstream_repository(context: AppContext, course) -> None:
                 overwritable_paths.update((repo_root / assignment["directory_path"]).glob(glob_pattern))
     gather_overwritable_paths() # pick up paths introduced by the local head
 
-    def rename_merge_conflicts(merge_conflicts):
+    def rename_merge_conflicts(merge_conflicts, source):
         conflict_types = {
             conflict["path"] : conflict["modification_type"] for conflict in get_modified_paths(path=repo_root)
             if conflict["path"] in merge_conflicts
@@ -570,7 +570,7 @@ async def sync_upstream_repository(context: AppContext, course) -> None:
             
             # Overwrite the file with its incoming version -- resolve the conflict.
             if conflict_types[conflict][1] != "D":
-                git_restore(conflict, source="MERGE_HEAD", staged=True, worktree=True, path=repo_root)
+                git_restore(conflict, source=source, staged=True, worktree=True, path=repo_root)
             else:
                 # If the conflict was deleted on the merge head, git restore won't be able to restore it.
                 # Instead, just update the index/worktree to also delete the file.
@@ -587,7 +587,7 @@ async def sync_upstream_repository(context: AppContext, course) -> None:
         # Merge the upstream tracking branch into the merge branch
         merge_conflicts = git_merge(InstructorClassRepo.ORIGIN_TRACKING_BRANCH, commit=False, path=repo_root)
         gather_overwritable_paths() # pick up paths introduced by the merge head
-        rename_merge_conflicts(merge_conflicts)
+        rename_merge_conflicts(merge_conflicts, source="MERGE_HEAD") # restore conflicts using their incoming version from the MERGE_HEAD
         
         commit(None, no_edit=True, path=repo_root)
 
@@ -595,7 +595,7 @@ async def sync_upstream_repository(context: AppContext, course) -> None:
         pop_stash(path=repo_root)
         stash_conflicts = git_diff_status(diff_filter="U", path=repo_root)
         gather_overwritable_paths() # technically, not really necessary since we gather before stashing.
-        rename_merge_conflicts(stash_conflicts)
+        rename_merge_conflicts(stash_conflicts, source="HEAD")
 
     except Exception as e:
         # Cleanup the merge branch and return to main
