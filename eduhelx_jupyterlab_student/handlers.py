@@ -328,18 +328,18 @@ async def create_ssh_config_if_not_exists(context: AppContext, course, student) 
     if not ssh_identity_file.exists():
         ssh_config_dir.mkdir(parents=True, exist_ok=True)
         execute(["ssh-keygen", "-t", "rsa", "-f", ssh_identity_file, "-N", ""])
-        with open(ssh_config_file, "w+") as f:
-            # Host (public Gitea URL) is rewritten as an alias to HostName (private ssh URL)
-            f.write( 
-                # Note that Host is really a hostname in SSH config. and is an alias to HostName here.
-                f"Host { ssh_public_hostname }\n" \
-                f"   User { ssh_user }\n" \
-                f"   Port { ssh_port }\n" \
-                f"   IdentityFile { ssh_identity_file }\n" \
-                f"   HostName { ssh_private_hostname }\n" \
-                f"   StrictHostKeyChecking no\n" \
-                f"   UserKnownHostsFile /dev/null\n"
-            )
+    with open(ssh_config_file, "w+") as f:
+        # Host (public Gitea URL) is rewritten as an alias to HostName (private ssh URL)
+        f.write( 
+            # Note that Host is really a hostname in SSH config. and is an alias to HostName here.
+            f"Host { ssh_public_hostname }\n" \
+            f"   User { ssh_user }\n" \
+            f"   Port { ssh_port }\n" \
+            f"   IdentityFile { ssh_identity_file }\n" \
+            f"   HostName { ssh_private_hostname }\n" \
+            f"   StrictHostKeyChecking no\n" \
+            f"   UserKnownHostsFile /dev/null\n"
+        )
     with open(ssh_public_key_file, "r") as f:
         public_key = f.read()
         await context.api.set_ssh_key("jls-client", public_key)
