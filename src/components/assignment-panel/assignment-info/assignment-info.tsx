@@ -40,11 +40,21 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
 
     if (!instructor || !assignment || !course || !notebookFiles) return null
 
+    const multipleInstructors = useMemo(() => course.instructors.length > 1, [course])
+
     const hoursUntilDue = useMemo(() => (
         assignment.isCreated ? (
             (assignment.dueDate!.getTime() - Date.now()) / MS_IN_HOURS
         ) : Infinity
     ), [assignment])
+
+    const masterNotebookTooltipContent = useMemo(() => {
+        return (
+            <div>
+                This notebook contains the solutions and test cases used for autograding.
+            </div>
+        )
+    }, [])
 
     const assignmentReleasedTag = useMemo(() => {
         let color = undefined
@@ -333,22 +343,37 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                     Master notebook
                     { gradedNotebookInvalid && !showCreateGradedNotebookButton && ` (invalid)` }
                     <InfoTooltip
-                        title="This notebook contains Otter Grader test cases"
+                        title={ masterNotebookTooltipContent }
                         trigger="hover"
                         iconProps={{ style: { fontSize: 13, marginLeft: 4 } }}
                     />
                 </h5>
                 <div style={{ width: "100%" }}>
                     { showCreateGradedNotebookButton ? (
-                        <button
-                            className={ classNames(openFileBrowserButtonClass, creatingTemplateNotebook && disabledButtonClass) }
-                            style={{ marginBottom: 0, width: "100%" }}
-                            onClick={ () => createTemplateNotebook(true) }
-                        >
-                            { !creatingTemplateNotebook ? "Create Template Notebook" : (
-                                <CircularProgress color="inherit" size={ 16 } />
+                        <Fragment>
+                            <button
+                                className={ classNames(openFileBrowserButtonClass, creatingTemplateNotebook && disabledButtonClass) }
+                                style={{ marginBottom: 0, width: "100%" }}
+                                onClick={ () => createTemplateNotebook(true) }
+                            >
+                                { !creatingTemplateNotebook ? `Create Template Notebook${ multipleInstructors ? "*" : "" }` : (
+                                    <CircularProgress color="inherit" size={ 16 } />
+                                ) }
+                            </button>
+                            { multipleInstructors && (
+                                <p style={{
+                                    margin: 0,
+                                    marginTop: 8,
+                                    fontSize: 12,
+                                    color: "var(--jp-ui-font-color2)",
+                                    fontStyle: "italic"
+                                }}>
+                                    *Note: If you are not the instructor responsible for this assignment, please
+                                    avoid creating or changing the master notebook. Only one instructor should be
+                                    responsible for any given assignment.
+                                </p>
                             ) }
-                        </button>
+                        </Fragment>
                     ) : (
                         <Select
                             error={ gradedNotebookInvalid }
