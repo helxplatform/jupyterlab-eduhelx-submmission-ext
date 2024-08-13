@@ -5,7 +5,7 @@ import { ArrowBackSharp } from '@material-ui/icons'
 import moment from 'moment'
 import pluralize from 'pluralize'
 import { assignmentInfoClass, assignmentInfoSectionClass, assignmentInfoSectionHeaderClass, assignmentInfoSectionWarningClass, assignmentNameClass, tagClass } from './style'
-import { useAssignment, useCommands, useSnackbar } from '../../../contexts'
+import { useAssignment, useCommands, } from '../../../contexts'
 import { DateFormat } from '../../../utils'
 
 const MS_IN_HOURS = 3.6e6
@@ -16,7 +16,6 @@ interface AssignmentInfoProps {
 export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
     const { assignment, student, course, studentNotebookExists } = useAssignment()!
     const commands = useCommands()
-    const snackbar = useSnackbar()!
     if (!student || !assignment || !course) return null
 
     const hoursUntilDue = useMemo(() => (
@@ -108,9 +107,8 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
 
     const openStudentNotebook = useCallback(async () => {
         if (!commands || !assignment) return
-        const gradedNotebookPath = assignment.absoluteDirectoryPath + "/" + assignment.studentNotebookPath
-        const result = await commands.execute('docmanager:open', { path: gradedNotebookPath })
-        console.log(result)
+        const fullNotebookPath = assignment.absoluteDirectoryPath + "/" + assignment.studentNotebookPath
+        commands.execute('docmanager:open', { path: fullNotebookPath })
     }, [commands, assignment])
 
     return (
@@ -191,7 +189,8 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                         <Input
                             readOnly
                             value={ assignment.studentNotebookPath }
-                            inputProps={{ style: { width: "100%", height: 32 } }}
+                            inputProps={{ style: { height: 32 } }}
+                            style={{ width: "100%" }}
                         />
                         <FormHelperText style={{ color: "#1976d2" }}>
                             <a onClick={ openStudentNotebook } style={{ cursor: "pointer" }}>

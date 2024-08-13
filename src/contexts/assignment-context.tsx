@@ -34,6 +34,7 @@ const WEBSOCKET_URL = URLExt.join(
     "ws"
 )
 const WEBSOCKET_REOPEN_DELAY = 1000
+const POLL_DELAY = 15000
 
 export const AssignmentContext = createContext<IAssignmentContext|undefined>(undefined)
 
@@ -127,7 +128,7 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
                 setAssignments(undefined)
                 setCurrentAssignment(undefined)
             }
-            timeoutId = window.setTimeout(poll, 2500)
+            timeoutId = window.setTimeout(poll, POLL_DELAY)
         }
         poll()
         return () => {
@@ -161,7 +162,7 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
                 setCourse(undefined)
                 setStudent(undefined)
             }
-            timeoutId = window.setTimeout(poll, 2500)
+            timeoutId = window.setTimeout(poll, POLL_DELAY)
         }
         poll()
         return () => {
@@ -192,6 +193,8 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
             } else {
                 setNotebookFiles(undefined)
             }
+            // We don't use POLL_DELAY for fetching notebook files, since this needs to be reflected more rapidly
+            // to the user and also doesn't involve any API calls, only scanning the directory for ipynb files.
             timeoutId = window.setTimeout(poll, 2500)
         }
         poll()
