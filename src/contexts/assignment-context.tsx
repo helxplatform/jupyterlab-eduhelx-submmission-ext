@@ -145,7 +145,9 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
                 const { notebooks } = await listNotebookFiles()
                 if (!cancelled) {
                     setNotebookFiles(notebooks)
-                    timeoutId = window.setTimeout(timeout, POLL_DELAY)
+                    // We don't use POLL_DELAY for fetching notebook files, since this needs to be reflected more rapidly
+                    // to the user and also doesn't involve any API calls, only scanning the directory for ipynb files.
+                    timeoutId = window.setTimeout(timeout, 2500)
                 }
             } catch (e: any) {
                 // If the request fails, just maintain whatever state we already have
