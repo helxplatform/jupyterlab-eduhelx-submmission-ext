@@ -26,7 +26,7 @@ class StudentClassRepo:
         self.assignments = assignments
         self.current_path = os.path.realpath(current_path)
         
-        self.repo_root = self._compute_repo_root(self.course, self.current_path)
+        self.repo_root = self._compute_repo_root(self.course["name"], self.current_path)
         self.current_assignment = self._compute_current_assignment(self.assignments, self.repo_root, self.current_path)
     
     def get_assignment_path(self, assignment):
