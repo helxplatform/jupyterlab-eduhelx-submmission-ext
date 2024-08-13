@@ -54,12 +54,13 @@ class StudentClassRepo:
     @staticmethod
     def _compute_current_assignment(assignments, repo_root, current_path):
         current_assignment = None
+        current_path_abs = Path(current_path).resolve()
         for assignment in assignments:
             assignment_path = Path(os.path.join(
                 repo_root,
                 assignment["directory_path"]
-            ))
-            if assignment_path == Path(current_path) or assignment_path in Path(current_path).parents:
+            )).resolve()
+            if assignment_path == current_path_abs or assignment_path in current_path_abs.parents:
                 current_assignment = assignment
                 break
 
