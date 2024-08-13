@@ -521,6 +521,8 @@ async def sync_upstream_repository(context: AppContext, course) -> None:
     }
     untracked_files_dir = repo_root / f".untracked-{ isonow }"
     def move_untracked_files():
+        # In case there are no files, we still want to make the dir so no error when deleting later.
+        untracked_files_dir.mkdir(parents=True, exist_ok=True)
         for file in untracked_files:
             untracked_path = untracked_files_dir / file
             untracked_path.parent.mkdir(parents=True, exist_ok=True)
