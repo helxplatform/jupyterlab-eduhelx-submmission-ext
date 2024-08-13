@@ -37,7 +37,7 @@ export async function requestAPI<T>(
   }
 
   if (!response.ok) {
-    throw new ServerConnection.ResponseError(response, data.message || data)
+    throw new ServerConnection.ResponseError(response, data?.message || data)
   }
 
   return data
