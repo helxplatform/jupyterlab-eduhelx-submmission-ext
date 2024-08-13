@@ -26,6 +26,9 @@ interface IAssignmentProviderProps {
     children?: ReactNode
 }
 
+const POLL_DELAY = 15000
+const POLL_RETRY_DELAY = 1000
+
 export const AssignmentContext = createContext<IAssignmentContext|undefined>(undefined)
 
 export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProviderProps) => {
@@ -69,8 +72,6 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
         setAssignments(undefined)
         setCurrentAssignment(undefined)
         
-        const delay = 5000
-        const retryDelay = 1000
         let cancelled = false
         let timeoutId: number | undefined = undefined
         async function timeout() {
@@ -80,7 +81,7 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
                     if (!cancelled) {
                         setAssignments(data.assignments)
                         setCurrentAssignment(data.currentAssignment)
-                        timeoutId = window.setTimeout(timeout, delay)
+                        timeoutId = window.setTimeout(timeout, POLL_DELAY)
                     }
                 } catch (e: any) {
                     // If the request fails, just maintain whatever state we already have
@@ -89,7 +90,7 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
                         type: 'warning',
                         message: 'Failed to pull assignments...'
                     })
-                    if (!cancelled) timeoutId = window.setTimeout(timeout, retryDelay)
+                    if (!cancelled) timeoutId = window.setTimeout(timeout, POLL_RETRY_DELAY)
                 }
             }
         }
@@ -106,8 +107,6 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
         setInstructor(undefined)
         setStudents(undefined)
 
-        const delay = 5000
-        const retryDelay = 1000
         let cancelled = false
         let timeoutId: number | undefined = undefined
         async function timeout() {
@@ -117,7 +116,7 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
                     setCourse(data.course)
                     setInstructor(data.instructor)
                     setStudents(data.students)
-                    timeoutId = window.setTimeout(timeout, delay)
+                    timeoutId = window.setTimeout(timeout, POLL_DELAY)
                 }
             } catch (e: any) {
                 // If the request fails, just maintain whatever state we already have
@@ -126,7 +125,7 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
                     type: 'warning',
                     message: 'Failed to pull course data...'
                 })
-                if (!cancelled) timeoutId = window.setTimeout(timeout, retryDelay)
+                if (!cancelled) timeoutId = window.setTimeout(timeout, POLL_RETRY_DELAY)
             }
         }
         timeout()
@@ -139,8 +138,6 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
     useEffect(() => {
         setNotebookFiles(undefined)
 
-        const delay = 5000
-        const retryDelay = 1000
         let cancelled = false
         let timeoutId: number | undefined = undefined
         async function timeout() {
@@ -148,7 +145,7 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
                 const { notebooks } = await listNotebookFiles()
                 if (!cancelled) {
                     setNotebookFiles(notebooks)
-                    timeoutId = window.setTimeout(timeout, delay)
+                    timeoutId = window.setTimeout(timeout, POLL_DELAY)
                 }
             } catch (e: any) {
                 // If the request fails, just maintain whatever state we already have
@@ -157,7 +154,7 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
                     type: 'warning',
                     message: 'Failed to pull notebook files for assignments...'
                 })
-                if (!cancelled) timeoutId = window.setTimeout(timeout, retryDelay)
+                if (!cancelled) timeoutId = window.setTimeout(timeout, POLL_RETRY_DELAY)
             }
         }
         timeout()
