@@ -24,6 +24,17 @@ export interface GetStudentAndCourseResponse {
     course: ICourse
 }
 
+export interface NotebookFilesResponse {
+    notebooks: { [assignmentId: string]: string[] }
+}
+
+export async function listNotebookFiles(): Promise<NotebookFilesResponse> {
+    const data = await requestAPI<NotebookFilesResponse>(`/notebook_files`, {
+        method: 'GET'
+    })
+    return data
+}
+
 export async function getStudentAndCourse(): Promise<GetStudentAndCourseResponse> {
     const { student, course } = await requestAPI<{
         student: StudentResponse

@@ -269,6 +269,27 @@ class SubmissionHandler(BaseHandler):
             self.set_status(500)
             self.finish(str(e))
 
+class NotebookFilesHandler(BaseHandler):
+    @tornado.web.authenticated
+    async def get(self):
+        course = await self.api.get_course()
+        assignments = await self.api.get_my_assignments()
+
+        assignment_notebooks = {}
+        for assignment in assignments:
+            repo_root = StudentClassRepo._compute_repo_root(course["name"]).resolve()
+            assignment_path = repo_root / assignment["directory_path"]
+
+            notebooks = [path.relative_to(assignment_path) for path in assignment_path.rglob("*.ipynb")]
+            notebooks = [path for path in notebooks if ".ipynb_checkpoints" not in path.parts]
+            # Sort by nestedness, then alphabetically
+            notebooks.sort(key=lambda path: (len(path.parents), str(path)))
+
+            assignment_notebooks[assignment["id"]] = [str(path) for path in notebooks]
+
+        self.finish(json.dumps({
+            "notebooks": assignment_notebooks
+        }))
 
 class SettingsHandler(BaseHandler):
     @tornado.web.authenticated
@@ -679,6 +700,7 @@ def setup_handlers(server_app):
         ("assignments", AssignmentsHandler),
         ("course_student", CourseAndStudentHandler),
         ("submit_assignment", SubmissionHandler),
+        ("notebook_files", NotebookFilesHandler),
         ("settings", SettingsHandler)
     ]
 

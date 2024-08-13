@@ -1,4 +1,4 @@
-import React, { createContext, useContext, ReactNode, useState, useMemo, useEffect } from 'react'
+import React, { createContext, useContext, ReactNode, useState, useMemo, useEffect, useCallback } from 'react'
 import { IChangedArgs, URLExt } from '@jupyterlab/coreutils'
 import { ServerConnection } from '@jupyterlab/services'
 import { FileBrowserModel, IDefaultFileBrowser } from '@jupyterlab/filebrowser'
@@ -6,7 +6,11 @@ import { showDialog, Dialog } from '@jupyterlab/apputils'
 import { Button } from '@jupyterlab/ui-components'
 import { useSnackbar } from './snackbar-context'
 import { IEduhelxSubmissionModel } from '../tokens'
-import { IAssignment, IStudent, ICurrentAssignment, ICourse, getAssignmentsPolled, GetAssignmentsResponse, getStudentAndCoursePolled, getStudentAndCourse, getAssignments } from '../api'
+import { IAssignment, IStudent, ICurrentAssignment, ICourse, getAssignmentsPolled, GetAssignmentsResponse, getStudentAndCoursePolled, getStudentAndCourse, getAssignments, listNotebookFiles } from '../api'
+
+interface StudentNotebookExists {
+    (assignment: IAssignment, directoryPath?: string | undefined): boolean
+}
 
 interface IAssignmentContext {
     assignments: IAssignment[] | null | undefined
@@ -15,6 +19,7 @@ interface IAssignmentContext {
     course: ICourse | undefined
     path: string | null
     loading: boolean
+    studentNotebookExists: StudentNotebookExists
 }
 
 interface IAssignmentProviderProps {
@@ -40,14 +45,22 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
     const [assignments, setAssignments] = useState<IAssignment[]|null|undefined>(undefined)
     const [student, setStudent] = useState<IStudent|undefined>(undefined)
     const [course, setCourse] = useState<ICourse|undefined>(undefined)
+    const [notebookFiles, setNotebookFiles] = useState<{ [key: string]: string[] }|undefined>(undefined)
     const [ws, setWs] = useState<WebSocket>(() => new WebSocket(WEBSOCKET_URL))
 
     const loading = useMemo(() => (
         currentAssignment === undefined ||
         assignments === undefined ||
         student === undefined ||
-        course === undefined
-    ), [currentAssignment, assignments, student, course])
+        course === undefined ||
+        notebookFiles === undefined
+    ), [currentAssignment, assignments, student, course, notebookFiles])
+
+    const studentNotebookExists = useCallback((assignment: IAssignment, studentNotebookPath?: string | undefined) => {
+        if (!notebookFiles) return false
+        if (studentNotebookPath === undefined) studentNotebookPath = assignment.studentNotebookPath
+        return notebookFiles[assignment.id].some((file) => file === studentNotebookPath)
+    }, [notebookFiles])
 
     useEffect(() => {
         const triggerReconnect = () => {
@@ -92,6 +105,7 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
         setCurrentAssignment(undefined)
         
         let cancelled = false
+        let timeoutId: number | undefined = undefined
         const poll = async () => {
             let value
             if (currentPath !== null) {
@@ -113,11 +127,12 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
                 setAssignments(undefined)
                 setCurrentAssignment(undefined)
             }
-            setTimeout(poll, 2500)
+            timeoutId = window.setTimeout(poll, 2500)
         }
-        setTimeout(poll, 2500)
+        poll()
         return () => {
             cancelled = true
+            window.clearTimeout(timeoutId)
         }
     }, [currentPath])
 
@@ -126,6 +141,7 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
         setStudent(undefined)
 
         let cancelled = false
+        let timeoutId: number | undefined = undefined
         const poll = async () => {
             let value
             try {
@@ -145,11 +161,43 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
                 setCourse(undefined)
                 setStudent(undefined)
             }
-            setTimeout(poll, 2500)
+            timeoutId = window.setTimeout(poll, 2500)
         }
-        setTimeout(poll, 2500)
+        poll()
         return () => {
             cancelled = true
+            window.clearTimeout(timeoutId)
+        }
+    }, [])
+
+    useEffect(() => {
+        setNotebookFiles(undefined)
+
+        let cancelled = false
+        let timeoutId: number | undefined = undefined
+        const poll = async () => {
+            let value
+            try {
+                value = await listNotebookFiles()
+            } catch (e: any) {
+                console.error(e)
+                snackbar.open({
+                    type: 'warning',
+                    message: 'Failed to pull course data...'
+                })
+            }
+            if (cancelled) return
+            if (value !== undefined) {
+                setNotebookFiles(value.notebooks)
+            } else {
+                setNotebookFiles(undefined)
+            }
+            timeoutId = window.setTimeout(poll, 2500)
+        }
+        poll()
+        return () => {
+            cancelled = true
+            window.clearTimeout(timeoutId)
         }
     }, [])
 
@@ -160,7 +208,8 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
             student,
             course,
             path: currentPath,
-            loading
+            loading,
+            studentNotebookExists
         }}>
             { children }
         </AssignmentContext.Provider>
