@@ -13,6 +13,7 @@ from urllib.parse import urlparse
 from jupyter_server.base.handlers import APIHandler
 from jupyter_server.utils import url_path_join
 from pathlib import Path
+from datetime import datetime
 from collections.abc import Iterable
 from .config import ExtensionConfig
 from eduhelx_utils.git import (
@@ -22,9 +23,11 @@ from eduhelx_utils.git import (
     stage_files, commit, push, get_commit_info,
     get_modified_paths, checkout, get_repo_root as get_git_repo_root,
     get_head_commit_id, reset as git_reset, merge as git_merge,
-    abort_merge, delete_local_branch, is_ancestor_commit
+    abort_merge, delete_local_branch, is_ancestor_commit,
+    stash_changes, pop_stash, diff_status as git_diff_status,
+    restore as git_restore, rm as git_rm
 )
-from eduhelx_utils.api import Api, AuthType
+from eduhelx_utils.api import Api, AuthType, APIException
 from eduhelx_utils.process import execute
 from .instructor_repo import InstructorClassRepo, NotInstructorClassRepositoryException
 from ._version import __version__
@@ -67,6 +70,17 @@ class BaseHandler(APIHandler):
     @property
     def api(self) -> Api:
         return self.context.api
+    
+    # Default error handling
+    def write_error(self, status_code, **kwargs):
+        # If exc_info is present, the error is unhandled.
+        if "exc_info" not in kwargs: return
+
+        cls, exc, traceback = kwargs["exc_info"]
+        if isinstance(exc, APIException):
+            self.set_status(status_code)
+            self.finish(exc.response.text)
+
 
 class CourseAndInstructorAndStudentsHandler(BaseHandler):
     async def get_value(self):
@@ -114,7 +128,6 @@ class AssignmentsHandler(BaseHandler):
             # The cwd is the root in the frontend, so treat the path as such.
             # NOTE: IMPORTANT: this field is NOT absolute on the server. It's only the absolute path for the webapp.
             assignment["absolute_directory_path"] = os.path.join("/", rel_assignment_path)
-
             assignment["staged_changes"] = []
             for modified_path in get_modified_paths(path=instructor_repo.repo_root):
                 full_modified_path = instructor_repo.repo_root / modified_path["path"]
@@ -204,7 +217,7 @@ class SubmissionHandler(BaseHandler):
             instructor_repo = InstructorClassRepo(course, assignments, current_assignment_path)
             instructor_repo.create_student_notebook()
         except Exception as e:
-            self.set_status(500)
+            self.set_status(400)
             self.finish(json.dumps({
                 "message": "Failed to generate student version of assignment notebook: " + str(e)
             }))
@@ -212,6 +225,12 @@ class SubmissionHandler(BaseHandler):
 
         rollback_id = get_head_commit_id(path=instructor_repo.repo_root)
         stage_files(".", path=current_assignment_path)
+
+        # Instead of annoying professors by constantly asking them to update their gitignore,
+        # we can reset protected files before hitting the pre-receive hook.
+        # for file in instructor_repo.get_protected_file_paths(instructor_repo.current_assignment):
+        #     git_reset(file, path=current_assignment_path)
+            
         
         try:
             commit_id = commit(
@@ -332,7 +351,7 @@ async def create_repo_root_if_not_exists(context: AppContext) -> None:
     if not repo_root.exists():
         repo_root.mkdir(parents=True)
 
-async def create_ssh_config_if_not_exists(context: AppContext) -> None:
+async def create_ssh_config_if_not_exists(context: AppContext, course) -> None:
     course = await context.api.get_course()
     settings = await context.api.get_settings()
     repo_root = InstructorClassRepo._compute_repo_root(course["name"]).resolve()
@@ -359,24 +378,27 @@ async def create_ssh_config_if_not_exists(context: AppContext) -> None:
     
     if not ssh_identity_file.exists():
         ssh_config_dir.mkdir(parents=True, exist_ok=True)
+        execute(["chmod", "700", ssh_config_dir])
         execute(["ssh-keygen", "-t", "rsa", "-f", ssh_identity_file, "-N", ""])
-        with open(ssh_config_file, "w+") as f:
-            # Host (public Gitea URL) is rewritten as an alias to HostName (private ssh URL)
-            f.write( 
-                # Note that Host is really a hostname in SSH config. and is an alias to HostName here.
-                f"Host { ssh_public_hostname }\n" \
-                f"   User { ssh_user }\n" \
-                f"   Port { ssh_port }\n" \
-                f"   IdentityFile { ssh_identity_file }\n" \
-                f"   HostName { ssh_private_hostname }\n" \
-                f"   StrictHostKeyChecking no\n"
-            )
+        execute(["chmod", "444", ssh_public_key_file])
+        execute(["chmod", "600", ssh_identity_file])
+    with open(ssh_config_file, "w+") as f:
+        # Host (public Gitea URL) is rewritten as an alias to HostName (private ssh URL)
+        f.write( 
+            # Note that Host is really a hostname in SSH config. and is an alias to HostName here.
+            f"Host { ssh_public_hostname }\n" \
+            f"   User { ssh_user }\n" \
+            f"   Port { ssh_port }\n" \
+            f"   IdentityFile { ssh_identity_file }\n" \
+            f"   HostName { ssh_private_hostname }\n" \
+            f"   StrictHostKeyChecking no\n" \
+            f"   UserKnownHostsFile /dev/null\n"
+        )
     with open(ssh_public_key_file, "r") as f:
         public_key = f.read()
         await context.api.set_ssh_key("jlp-client", public_key)
 
-async def clone_repo_if_not_exists(context: AppContext) -> None:
-    course = await context.api.get_course()
+async def clone_repo_if_not_exists(context: AppContext, course, instructor) -> None:
     repo_root = InstructorClassRepo._compute_repo_root(course["name"])
     try:
         get_git_repo_root(path=repo_root)
@@ -386,16 +408,14 @@ async def clone_repo_if_not_exists(context: AppContext) -> None:
         """
         master_repository_url = course["master_remote_url"]
         init_repository(repo_root)
-        await set_git_authentication(context)
+        await set_git_authentication(context, course, instructor)
         add_remote(InstructorClassRepo.ORIGIN_REMOTE_NAME, master_repository_url, path=repo_root)
         fetch_repository(InstructorClassRepo.ORIGIN_REMOTE_NAME, path=repo_root)
         checkout(f"{ InstructorClassRepo.MAIN_BRANCH_NAME }", path=repo_root)
         
         
 
-async def set_git_authentication(context: AppContext) -> None:
-    course = await context.api.get_course()
-    instructor = await context.api.get_my_user()
+async def set_git_authentication(context: AppContext, course, instructor) -> None:
     repo_root = InstructorClassRepo._compute_repo_root(course["name"]).resolve()
     master_repository_url = course["master_remote_url"]
     ssh_config_file = repo_root / ".ssh" / "config"
@@ -465,14 +485,15 @@ async def set_root_folder_permissions(context: AppContext) -> None:
     # execute(["chmod", "a-w", repo_root.parent])
     ...
 
-async def sync_upstream_repository(context: AppContext) -> None:
-    course = await context.api.get_course()
+async def sync_upstream_repository(context: AppContext, course) -> None:
+    assignments = await context.api.get_my_assignments()
     repo_root = InstructorClassRepo._compute_repo_root(course["name"])
 
     try:
         fetch_repository(InstructorClassRepo.ORIGIN_REMOTE_NAME, path=repo_root)
     except:
         print("Fatal: Couldn't fetch remote tracking branch, aborting sync...")
+        return
 
     checkout(InstructorClassRepo.MAIN_BRANCH_NAME, path=repo_root)
     local_head = get_head_commit_id(path=repo_root)
@@ -490,21 +511,122 @@ async def sync_upstream_repository(context: AppContext) -> None:
     # Branch onto the merge branch off the user's head
     checkout(merge_branch_name, new_branch=True, path=repo_root)
 
+    isonow = datetime.now().isoformat()
+    file_contents = { path: path.read_bytes() for path in repo_root.rglob("*") if path.is_file() and ".git" not in path.parts }
+    def backup_file(conflict_path: Path):
+        print("BACKING UP FILE", conflict_path)
+        full_conflict_path = repo_root / conflict_path
+        if full_conflict_path in file_contents:
+            # Backup the student's changes to a new file.
+            backup_path = repo_root / Path(f"{ conflict_path }~{ isonow }~backup")
+            with open(backup_path, "wb+") as f:
+                f.write(file_contents[full_conflict_path])
+        else:
+            print(str(conflict_path), "deleted locally, cannot create a backup.")
+
+    # These are relative to the repo root.
+    untracked_files = {
+        f["path"] for f in get_modified_paths(untracked=True, path=repo_root)
+        if f["modification_type"] == "??"
+    }
+    untracked_files_dir = repo_root / f".untracked-{ isonow }"
+    def move_untracked_files():
+        # In case there are no files, we still want to make the dir so no error when deleting later.
+        untracked_files_dir.mkdir(parents=True, exist_ok=True)
+        for file in untracked_files:
+            untracked_path = untracked_files_dir / file
+            untracked_path.parent.mkdir(parents=True, exist_ok=True)
+            (repo_root / file).rename(untracked_path)
+    
+    def restore_untracked_files():
+        # Git refuses to allow you to apply a stash if any untracked changes within the stash exist locally.
+        # Thus, we have to manually move and then backup untracked files after merging.
+        for original_file in untracked_files:
+            full_original_file_path = repo_root / original_file
+            untracked_path = untracked_files_dir / original_file
+
+            if not full_original_file_path.exists():
+                # If the file doesn't exist post-merge, it hasn't been changed at all, and we can just
+                # move the file back to its original path in the repo.
+                untracked_path.rename(full_original_file_path)
+            elif full_original_file_path.read_bytes() != untracked_path.read_bytes():
+                # If the file exists post merge, but its content is the exact same, we woudn't need to take any actions.
+                # The file exists but its content has changed, so backup the old version.
+                print(f"Couldn't restore untracked file '{ original_file }' as it already exists on HEAD, backing up instead...")
+                backup_file(original_file)
+
+    # Grab every overwritable path inside the repository.
+    # Note: we need to do again after the merge, since we can only pick up paths that exist on disk.
+    # If the local head deleted a file, it won't be picked up in the first pass.
+    # Vice-versa, if the merge head deleted a file, it won't be picked up in the second pass.
+    overwritable_paths = set()
+    def gather_overwritable_paths():
+        for assignment in assignments:
+            for glob_pattern in assignment["overwritable_files"]:
+                overwritable_paths.update((repo_root / assignment["directory_path"]).glob(glob_pattern))
+    gather_overwritable_paths() # pick up paths introduced by the local head
+
+    def rename_merge_conflicts(merge_conflicts, source):
+        conflict_types = {
+            conflict["path"] : conflict["modification_type"] for conflict in get_modified_paths(path=repo_root)
+            if conflict["path"] in merge_conflicts
+        }
+        for conflict in merge_conflicts:
+            if repo_root / conflict not in overwritable_paths:
+                # If the file isn't overwritable, make a backup of it (as long as it's not deleted locally).
+                print("Encountered non-overwriteable merge conflict", conflict, ". Creating backup...")
+                backup_file(conflict)
+            else:
+                print(f"Detected overwritable merge conflict: '{ conflict }'")
+            
+            # Overwrite the file with its incoming version -- resolve the conflict.
+            if conflict_types[conflict][1] != "D":
+                git_restore(conflict, source=source, staged=True, worktree=True, path=repo_root)
+            else:
+                # If the conflict was deleted on the merge head, git restore won't be able to restore it.
+                # Instead, just update the index/worktree to also delete the file.
+                git_rm(conflict, cached=False, path=repo_root)
+
     # Merge the upstream tracking branch into the temp merge branch
     try:
         print(f"Merging { InstructorClassRepo.ORIGIN_TRACKING_BRANCH } ({ tracking_head[:8] }) --> { InstructorClassRepo.MAIN_BRANCH_NAME } ({ local_head[:8] }) on branch { merge_branch_name }")
+
+        # We have to stash because git refuses to merge if the merge would overwrite local changes.
+        move_untracked_files()
+        stash_changes(path=repo_root)
+
         # Merge the upstream tracking branch into the merge branch
-        conflicts = git_merge(InstructorClassRepo.ORIGIN_TRACKING_BRANCH, commit=True, path=repo_root)
-        if len(conflicts) > 0:
-            raise Exception("Encountered merge conflicts during merge: ", ", ".join(conflicts))
+        merge_conflicts = git_merge(InstructorClassRepo.ORIGIN_TRACKING_BRANCH, commit=False, path=repo_root)
+        gather_overwritable_paths() # pick up paths introduced by the merge head
+        rename_merge_conflicts(merge_conflicts, source="MERGE_HEAD") # restore conflicts using their incoming version from the MERGE_HEAD
+        
+        commit(None, no_edit=True, path=repo_root)
+
+        # After popping, we could have further conflicts between the student's local changes and the merge head
+        pop_stash(path=repo_root)
+        stash_conflicts = git_diff_status(diff_filter="U", path=repo_root)
+        gather_overwritable_paths() # technically, not really necessary since we gather before stashing.
+        rename_merge_conflicts(stash_conflicts, source="HEAD")
 
     except Exception as e:
-        print("Fatal: Can't merge remote changes into student repository", e)
         # Cleanup the merge branch and return to main
-        abort_merge(path=repo_root)
-        checkout(InstructorClassRepo.MAIN_BRANCH_NAME, path=repo_root)
+        print("Fatal: Can't merge remote changes into professor repository", e)
+        # If an error occurs, we're going to force checkout and delete so the merge head will delete regardless.
+        try: abort_merge(path=repo_root)
+        except:
+            print("(failed to abort merge)")
+        # if an error occurs after we've already popped, there won't be anything to pop on the stack.
+        try: pop_stash(path=repo_root)
+        except:
+            print("(failed to pop stash, already popped)")
+        checkout(InstructorClassRepo.MAIN_BRANCH_NAME, force=True, path=repo_root)
         delete_local_branch(merge_branch_name, force=True, path=repo_root)
         return
+    
+    finally:
+        # It doesn't really matter when we restore these, as long as it happens post-merge.
+        restore_untracked_files()
+        shutil.rmtree(untracked_files_dir)
 
     checkout(InstructorClassRepo.MAIN_BRANCH_NAME, path=repo_root)
 
@@ -518,7 +640,9 @@ async def sync_upstream_repository(context: AppContext) -> None:
     except Exception as e:
         # Merging from temp to actual branch failed.
         print(f"Fatal: Failed to merge the merge staging branch into actual branch", e)
-        abort_merge(path=repo_root)
+        # Try to abort the merge, if started and unconcluded.
+        try: abort_merge(path=repo_root)
+        except: print("(failed to abort)")
     
     finally:
         delete_local_branch(merge_branch_name, force=True, path=repo_root)
@@ -527,14 +651,16 @@ async def sync_upstream_repository(context: AppContext) -> None:
 
 async def setup_backend(context: AppContext):
     try:
+        course = await context.api.get_course()
+        instructor = await context.api.get_my_user()
         await create_repo_root_if_not_exists(context)
-        await create_ssh_config_if_not_exists(context)
-        await set_git_authentication(context)
-        await clone_repo_if_not_exists(context)
+        await create_ssh_config_if_not_exists(context, course)
+        await set_git_authentication(context, course, instructor)
+        await clone_repo_if_not_exists(context, course, instructor)
         await set_root_folder_permissions(context)
         while True:
             print("Pulling in upstream changes...")
-            await sync_upstream_repository(context)
+            await sync_upstream_repository(context, course)
             print(f"Sleeping for { context.config.UPSTREAM_SYNC_INTERVAL }...")
             await asyncio.sleep(context.config.UPSTREAM_SYNC_INTERVAL)
     except:

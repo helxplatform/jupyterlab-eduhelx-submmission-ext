@@ -1,6 +1,8 @@
 import os
 import shutil
 import json
+import tempfile
+from .otter_util import OtterAssignUtil
 from otter.assign import main as otter_assign
 from pathlib import Path
 
@@ -47,27 +49,53 @@ class InstructorClassRepo:
         master_notebook_path = self.current_assignment_path / assignment["master_notebook_path"]
         student_notebook_path = self.current_assignment_path / assignment["student_notebook_path"]
         dist_path = self.current_assignment_path / f"{ assignment['name'] }-dist"
-        student_notebook_dist_path = dist_path / "student" / master_notebook_path.name
+        student_notebook_dist_path = dist_path / "student" / student_notebook_path.name
 
         otter_config_path = self.current_assignment_path / "otter_grading_config.json"
         otter_config_dist_path = dist_path / "autograder" / "otter_config.json"
+        
+        assign_util = OtterAssignUtil(master_notebook_path)
+        with tempfile.TemporaryDirectory() as dir:
+            temp_dist_path = Path(dir) / "dist"
+            processed_master_notebook_path = Path(dir) / self.current_assignment_path.name / student_notebook_path.name
+            assign_util.update_assign_config({
+                "init_cell": True,
+                "generate": {
+                    "zips": False,
+                    "pdf": True,
+                },
+                "export_cell": None
+            })
 
-        otter_assign(master_notebook_path, dist_path, no_pdfs=True)
+            shutil.copytree(self.current_assignment_path, processed_master_notebook_path.parent)
+            assign_util.save(processed_master_notebook_path)
+            otter_assign(processed_master_notebook_path, temp_dist_path, no_pdfs=True)
+            # Bug with otter where it tries to create every single directory in the relative path
+            # between the notebook and the dist. If these are in different top-level directories,
+            # it's going to try to create folders it almost certainly lacks permission to tamper with.
+            shutil.move(temp_dist_path, dist_path)
 
         # Move default otter config for the assignment if it doesn't exist
         if not otter_config_path.exists():
             otter_config_dist_path.rename(otter_config_path)
         # Process student notebook
         shutil.move(student_notebook_dist_path, student_notebook_path)
-        with open(student_notebook_path, "r") as f:
-            student_notebook = json.load(f)
-            for cell in student_notebook["cells"]:
-                # Since we rename the notebook, need to replace the references to the old name.
-                cell["source"] = [line.replace(master_notebook_path.name, student_notebook_path.name) for line in cell["source"]]
-        with open(student_notebook_path, "w") as f:
-            json.dump(student_notebook, f)
+
+        # with open(student_notebook_path, "r") as f:
+        #     student_notebook = json.load(f)
+        #     for cell in student_notebook["cells"]:
+        #         # Since we rename the notebook, need to replace the references to the old name.
+        #         cell["source"] = [line.replace(master_notebook_path.name, student_notebook_path.name) for line in cell["source"]]
+        # with open(student_notebook_path, "w") as f:
+        #     json.dump(student_notebook, f)
 
         shutil.rmtree(dist_path)
+
+    def get_protected_file_paths(self, assignment) -> list[Path]:
+        files = []
+        for glob_pattern in assignment["protected_files"]:
+            files += self.get_assignment_path(assignment).glob(glob_pattern)
+        return files
     
     @classmethod
     def _compute_repo_root(cls, course_name, current_path: str | None=None):
@@ -83,12 +111,13 @@ class InstructorClassRepo:
     @staticmethod
     def _compute_current_assignment(assignments, repo_root, current_path):
         current_assignment = None
+        current_path_abs = Path(current_path).resolve()
         for assignment in assignments:
             assignment_path = Path(os.path.join(
-                os.path.realpath(repo_root),
+                repo_root,
                 assignment["directory_path"]
-            ))
-            if assignment_path.resolve() == Path(current_path).resolve() or assignment_path in Path(current_path).parents:
+            )).resolve()
+            if assignment_path == current_path_abs or assignment_path in current_path_abs.parents:
                 current_assignment = assignment
                 break
 

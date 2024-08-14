@@ -10,11 +10,12 @@ import { ServerConnection } from '@jupyterlab/services'
  */
 export async function requestAPI<T>(
   endPoint = '',
-  init: RequestInit = {}
+  init: RequestInit = {},
+  useBaseUrl: boolean = false
 ): Promise<T> {
   // Make request to Jupyter API
   const settings = ServerConnection.makeSettings()
-  const requestUrl = URLExt.join(
+  const requestUrl = useBaseUrl ? URLExt.join(settings.baseUrl, endPoint) : URLExt.join(
     settings.baseUrl,
     'eduhelx-jupyterlab-prof', // API Namespace
     endPoint
@@ -36,7 +37,7 @@ export async function requestAPI<T>(
   }
 
   if (!response.ok) {
-    throw new ServerConnection.ResponseError(response, data.message || data)
+    throw new ServerConnection.ResponseError(response, data?.message || data)
   }
 
   return data
