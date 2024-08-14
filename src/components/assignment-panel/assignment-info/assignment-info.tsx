@@ -1,10 +1,11 @@
-import React, { Fragment, useMemo } from 'react'
+import React, { Fragment, useCallback, useMemo } from 'react'
 import { Tooltip } from 'antd'
+import { FormHelperText, Input } from '@material-ui/core'
+import { ArrowBackSharp } from '@material-ui/icons'
 import moment from 'moment'
 import pluralize from 'pluralize'
-import { ArrowBackSharp } from '@material-ui/icons'
 import { assignmentInfoClass, assignmentInfoSectionClass, assignmentInfoSectionHeaderClass, assignmentInfoSectionWarningClass, assignmentNameClass, tagClass } from './style'
-import { useAssignment } from '../../../contexts'
+import { useAssignment, useCommands, } from '../../../contexts'
 import { DateFormat } from '../../../utils'
 
 const MS_IN_HOURS = 3.6e6
@@ -13,7 +14,8 @@ interface AssignmentInfoProps {
 }
 
 export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
-    const { assignment, student, course } = useAssignment()!
+    const { assignment, student, course, studentNotebookExists } = useAssignment()!
+    const commands = useCommands()
     if (!student || !assignment || !course) return null
 
     const hoursUntilDue = useMemo(() => (
@@ -99,6 +101,16 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
         else return `You are allowed to submit ${ remainingAttempts }${ assignment.currentAttempts > 0 ? ' more' : ''} ${ pluralize("time", remainingAttempts) }`
     }, [assignment])
 
+    const studentNotebookInvalid = useMemo(() => (
+        !studentNotebookExists(assignment)
+    ), [studentNotebookExists, assignment])
+
+    const openStudentNotebook = useCallback(async () => {
+        if (!commands || !assignment) return
+        const fullNotebookPath = assignment.absoluteDirectoryPath + "/" + assignment.studentNotebookPath
+        commands.execute('docmanager:open', { path: fullNotebookPath })
+    }, [commands, assignment])
+
     return (
         <div className={ assignmentInfoClass }>
             <div>
@@ -132,7 +144,7 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                 <span>{ course.instructors.map((ins) => ins.name).join(", ") }</span>
             </div>
             <div className={ assignmentInfoSectionClass }>
-                <h5 className={ assignmentInfoSectionHeaderClass }>Due date</h5>
+                <h5 className={ assignmentInfoSectionHeaderClass }>Due Date</h5>
                 <div>
                     { assignment.isCreated ? (
                         new DateFormat(assignment.adjustedDueDate!).toBasicDatetime()
@@ -167,6 +179,32 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                     </div>
                 </div>
             ) }
+            <div className={ assignmentInfoSectionClass } style={{ marginTop: 0 }}>
+                <h5 className={ assignmentInfoSectionHeaderClass }>
+                    Assignment Notebook
+                </h5>
+                <div style={{ width: "100%" }}>
+                    { !studentNotebookInvalid ? (
+                        <Fragment>
+                        <Input
+                            readOnly
+                            value={ assignment.studentNotebookPath }
+                            inputProps={{ style: { height: 32 } }}
+                            style={{ width: "100%" }}
+                        />
+                        <FormHelperText style={{ color: "#1976d2" }}>
+                            <a onClick={ openStudentNotebook } style={{ cursor: "pointer" }}>
+                                Open notebook
+                            </a>
+                        </FormHelperText>
+                        </Fragment>
+                    ) : (
+                        <span>
+                            Not published yet
+                        </span>
+                    ) }
+                </div>
+            </div>
         </div>
     )
 }
