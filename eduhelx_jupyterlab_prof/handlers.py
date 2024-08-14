@@ -27,7 +27,7 @@ from eduhelx_utils.git import (
     stash_changes, pop_stash, diff_status as git_diff_status,
     restore as git_restore, rm as git_rm
 )
-from eduhelx_utils.api import Api, AuthType
+from eduhelx_utils.api import Api, AuthType, APIException
 from eduhelx_utils.process import execute
 from .instructor_repo import InstructorClassRepo, NotInstructorClassRepositoryException
 from ._version import __version__
@@ -70,6 +70,17 @@ class BaseHandler(APIHandler):
     @property
     def api(self) -> Api:
         return self.context.api
+    
+    # Default error handling
+    def write_error(self, status_code, **kwargs):
+        # If exc_info is present, the error is unhandled.
+        if "exc_info" not in kwargs: return
+
+        cls, exc, traceback = kwargs["exc_info"]
+        if isinstance(exc, APIException):
+            self.set_status(status_code)
+            self.finish(exc.response.text)
+
 
 class CourseAndInstructorAndStudentsHandler(BaseHandler):
     async def get_value(self):
@@ -117,7 +128,6 @@ class AssignmentsHandler(BaseHandler):
             # The cwd is the root in the frontend, so treat the path as such.
             # NOTE: IMPORTANT: this field is NOT absolute on the server. It's only the absolute path for the webapp.
             assignment["absolute_directory_path"] = os.path.join("/", rel_assignment_path)
-
             assignment["staged_changes"] = []
             for modified_path in get_modified_paths(path=instructor_repo.repo_root):
                 full_modified_path = instructor_repo.repo_root / modified_path["path"]
