@@ -28,7 +28,7 @@ from eduhelx_utils.git import (
     merge as git_merge, abort_merge, delete_local_branch,
     is_ancestor_commit, diff_status as git_diff_status
 )
-from eduhelx_utils.api import Api, AuthType
+from eduhelx_utils.api import Api, AuthType, APIException
 from eduhelx_utils.process import execute
 from .student_repo import StudentClassRepo, NotStudentClassRepositoryException
 from ._version import __version__
@@ -87,6 +87,16 @@ class BaseHandler(APIHandler):
     @property
     def api(self) -> Api:
         return self.context.api
+    
+    # Default error handling
+    def write_error(self, status_code, **kwargs):
+        # If exc_info is present, the error is unhandled.
+        if "exc_info" not in kwargs: return
+
+        cls, exc, traceback = kwargs["exc_info"]
+        if isinstance(exc, APIException):
+            self.set_status(status_code)
+            self.finish(exc.response.text)
     
 class WebsocketHandler(WSMixin, WSHandler, BaseHandler):
     clients = []

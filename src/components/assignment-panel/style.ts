@@ -7,6 +7,7 @@ export const panelWrapperClass = (style as any)({
     color: 'var(--jp-ui-font-color1)',
     fontSize: 'var(--jp-ui-font-size1)',
     background: 'var(--jp-layout-color1) !important',
+    minWidth: 'var(--jp-sidebar-min-width)',
     '&, & *': { boxSizing: 'border-box' } 
 })
 

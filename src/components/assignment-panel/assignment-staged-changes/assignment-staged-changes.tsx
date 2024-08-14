@@ -101,9 +101,9 @@ export const AssignmentStagedChanges = ({ ...props }: AssignmentStagedChangesPro
             {/* <TextDivider innerStyle={{ fontSize: 'var(--jp-ui-font-size2)' }} style={{ marginBottom: 4 }}>Unsubmitted changes</TextDivider> */}
             <div className={ stagedChangesListClass }>
             {
-                stagedChangesSource.slice(0, showMore ? undefined : SHOW_MORE_CUTOFF).map((change) => (
+                stagedChangesSource.slice(0, showMore ? undefined : SHOW_MORE_CUTOFF).map((change, i) => (
                     <div className={ stagedChangeListItemClass }>
-                        <div style={{ display: "flex", alignItems: "center" }}>
+                        <div style={{ display: "flex", alignItems: "center", marginTop: i === 0 ? 4 : 0 }}>
                             { change.type === "directory" ? (
                                 <folderIcon.react
                                     className={ assignmentStagedChangesFolderIconClass }

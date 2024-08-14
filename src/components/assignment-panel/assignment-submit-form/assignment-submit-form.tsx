@@ -123,7 +123,7 @@ export const AssignmentSubmitForm = ({ }: AssignmentSubmitFormProps) => {
                     disabled: disabledStyle
                 }}
                 multiline
-                rows={ 5 }
+                rows={ 3 }
                 rowsMax={ 10 }
                 placeholder="Description (optional)"
                 title="Enter a description for the submission"
