@@ -58,12 +58,16 @@ class InstructorClassRepo:
         with tempfile.TemporaryDirectory() as dir:
             temp_dist_path = Path(dir) / "dist"
             processed_master_notebook_path = Path(dir) / self.current_assignment_path.name / student_notebook_path.name
+            config = assign_util.get_assign_config()
+            generate_config = config.get("generate", {})
+            generate_config.update({
+                "zips": False,
+                "pdf": True,
+                "autograder_dir": "/autograder"
+            })
             assign_util.update_assign_config({
                 "init_cell": True,
-                "generate": {
-                    "zips": False,
-                    "pdf": True,
-                },
+                "generate": generate_config,
                 "export_cell": None
             })
 

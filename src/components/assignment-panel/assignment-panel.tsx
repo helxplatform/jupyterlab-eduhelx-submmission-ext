@@ -18,7 +18,7 @@ export const AssignmentPanel = ({}: IAssignmentPanelProps) => {
     const commands = useCommands()!
     const snackbar = useSnackbar()!
     const { repoRoot } = useSettings()!
-    const { course, students, assignment } = useAssignment()!
+    const { course, students, assignment, triggerImmediateUpdate } = useAssignment()!
     
     const [syncLoading, setSyncLoading] = useState<boolean>(false)
 
@@ -37,8 +37,8 @@ export const AssignmentPanel = ({}: IAssignmentPanelProps) => {
     const doSync = useCallback(async () => {
         setSyncLoading(true)
         try {
-            await new Promise((resolve) => setTimeout(resolve, 2000))
             await syncToLMS()
+            await triggerImmediateUpdate()
             snackbar.open({
                 type: 'success',
                 message: 'Successfully synced with LMS'
@@ -50,7 +50,7 @@ export const AssignmentPanel = ({}: IAssignmentPanelProps) => {
             })
         }
         setSyncLoading(false)
-    }, [snackbar])
+    }, [triggerImmediateUpdate, snackbar])
 
     /** On page load, we want to `cd` to the repo root. */
     useEffect(() => {

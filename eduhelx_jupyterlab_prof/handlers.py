@@ -1,14 +1,9 @@
 import json
 import os
-import tempfile
 import shutil
 import tornado
 import asyncio
-import httpx
 import traceback
-import csv
-# from numpy import median, mean, std
-from io import StringIO
 from urllib.parse import urlparse
 from jupyter_server.base.handlers import APIHandler
 from jupyter_server.utils import url_path_join
@@ -54,7 +49,6 @@ class AppContext:
                 appstore_access_token=self.config.ACCESS_TOKEN,
                 auth_type=AuthType.APPSTORE_INSTRUCTOR
             )
-        self.api.client.timeout = httpx.Timeout(15.0, read=15.0)
 
     async def get_repo_root(self):
         course = await self.api.get_course()
@@ -169,13 +163,34 @@ class AssignmentsHandler(BaseHandler):
     @tornado.web.authenticated
     async def patch(self):
         name = self.get_argument("name")
-        data = self.get_json_body()
-
+        data = self.get_json_body()        
         try:
             await self.api.update_assignment(name, **data)
+            if "master_notebook_path" in data:
+                await self.update_gitignore_master_notebook(name, data["master_notebook_path"])
         except Exception as e:
             self.set_status(e.response.status_code)
             self.finish(e.response.text)
+
+    async def update_gitignore_master_notebook(self, assignment_name, master_notebook_path):
+        course = await self.api.get_course()
+        assignments = await self.api.get_my_assignments()
+        assignment = [assignment for assignment in assignments if assignment["name"] == assignment_name][0]
+        
+        repo_root = InstructorClassRepo._compute_repo_root(course["name"])
+        assignment_gitignore_path: Path = repo_root / assignment["directory_path"] / ".gitignore"
+        
+        # The professor could always delete their gitignore if they really wanted to...
+        try:
+            with open(assignment_gitignore_path, "r") as f: gitignore_lines = f.readlines()
+        except FileNotFoundError:
+            assignment_gitignore_path.touch()
+            gitignore_lines = []
+            
+        line_to_ignore = f"{ master_notebook_path }\n"
+        if not line_to_ignore in gitignore_lines:
+            with open(assignment_gitignore_path, "w") as f:
+                f.writelines([*gitignore_lines, line_to_ignore])
 
 class SubmissionHandler(BaseHandler):
     @tornado.web.authenticated
@@ -275,7 +290,7 @@ class NotebookFilesHandler(BaseHandler):
             assignment_path = repo_root / assignment["directory_path"]
 
             notebooks = [path.relative_to(assignment_path) for path in assignment_path.rglob("*.ipynb")]
-            notebooks = [path for path in notebooks if ".ipynb_checkpoints" not in path.parts and path != Path(assignment["student_notebook_path"])]
+            notebooks = [path for path in notebooks if ".ipynb_checkpoints" not in path.parts and not path.name.endswith("-student.ipynb") ]
             # Sort by nestedness, then alphabetically
             notebooks.sort(key=lambda path: (len(path.parents), str(path)))
 
