@@ -76,26 +76,33 @@ export const AssignmentStagedChanges = ({ ...props }: AssignmentStagedChangesPro
     
     const hideShowMoreButton = useMemo(() => !showMore && stagedChangesSource.length <= SHOW_MORE_CUTOFF, [showMore, stagedChangesSource])
 
-    const ignoredFilesInfoPopover = useMemo(() => (
-        <InfoPopover
-            title={
-                <span>Ignored Files</span>
-            }
-            content={
-                <ul style={{ margin: 0, paddingLeft: 16 }}>
-                { assignment?.ignoredFiles.map((fileName) => (
-                    <li key={ fileName }>
-                        { fileName }
-                    </li>
-                )) } 
-                </ul>
-            }
-            overlayClassName={ capitalizedTitlePopoverOverlayClass }
-            trigger="hover"
-            placement="right"
-            iconProps={{ style: { fontSize: 13, marginLeft: 6, color: "var(--jp-content-font-color2)" } }}
-        />
-    ), [assignment])
+    const ignoredFilesInfoPopover = useMemo(() => {
+        if (!assignment) return null
+        return (
+            <InfoPopover
+                title={
+                    <span>Ignored Files</span>
+                }
+                content={
+                    assignment.ignoredFiles.length > 0 ? (
+                        <ul style={{ margin: 0, paddingLeft: 16 }}>
+                        { assignment.ignoredFiles.map((fileName) => (
+                            <li key={ fileName }>
+                                { fileName }
+                            </li>
+                        )) } 
+                        </ul>
+                    ) : (
+                        <span>No files are being ignored.</span>
+                    )
+                }
+                overlayClassName={ capitalizedTitlePopoverOverlayClass }
+                trigger="hover"
+                placement="right"
+                iconProps={{ style: { fontSize: 13, marginLeft: 6, color: "var(--jp-content-font-color2)" } }}
+            />
+        )
+        }, [assignment])
     
     const openAssignmentGitignore = useCallback(() => {
         if (!commands || !assignment) return

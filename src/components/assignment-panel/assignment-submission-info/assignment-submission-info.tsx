@@ -139,7 +139,7 @@ export const AssignmentSubmissionInfo = ({ }: AssignmentSubmissionInfoProps) => 
     }, [])
 
     if (!assignment?.isAvailable) return (
-        <div className={ assignmentSubmissionInfoClass }>
+        <div className={ assignmentSubmissionInfoClass } style={{ marginBottom: 8 }}>
             <TextDivider innerStyle={{ fontSize: 16 }} style={{ marginBottom: 8 }}>Submissions</TextDivider>
             The assignment is not open to submissions yet.
         </div>
