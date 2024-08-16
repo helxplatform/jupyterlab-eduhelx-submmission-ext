@@ -76,6 +76,27 @@ export const AssignmentStagedChanges = ({ ...props }: AssignmentStagedChangesPro
     
     const hideShowMoreButton = useMemo(() => !showMore && stagedChangesSource.length <= SHOW_MORE_CUTOFF, [showMore, stagedChangesSource])
 
+    const ignoredFilesInfoPopover = useMemo(() => (
+        <InfoPopover
+            title={
+                <span>Ignored Files</span>
+            }
+            content={
+                <ul style={{ margin: 0, paddingLeft: 16 }}>
+                { assignment?.ignoredFiles.map((fileName) => (
+                    <li key={ fileName }>
+                        { fileName }
+                    </li>
+                )) } 
+                </ul>
+            }
+            overlayClassName={ capitalizedTitlePopoverOverlayClass }
+            trigger="hover"
+            placement="right"
+            iconProps={{ style: { fontSize: 13, marginLeft: 6, color: "var(--jp-content-font-color2)" } }}
+        />
+    ), [assignment])
+    
     const openAssignmentGitignore = useCallback(() => {
         if (!commands || !assignment) return
         const gitignorePath = assignment.absoluteDirectoryPath + "/.gitignore"
@@ -99,28 +120,11 @@ export const AssignmentStagedChanges = ({ ...props }: AssignmentStagedChangesPro
             }}>
                 <h3 style={{ fontSize: 15, marginTop: 0, marginBottom: 12, fontWeight: 500 }}>
                     No Changes
-                    <InfoPopover
-                        title={
-                            <span>Ignored Files</span>
-                        }
-                        content={
-                            <ul style={{ margin: 0, paddingLeft: 16 }}>
-                            { assignment?.ignoredFiles.map((fileName) => (
-                                <li key={ fileName }>
-                                    { fileName }
-                                </li>
-                            )) } 
-                            </ul>
-                        }
-                        overlayClassName={ capitalizedTitlePopoverOverlayClass }
-                        trigger="hover"
-                        placement="right"
-                        iconProps={{ style: { fontSize: 13, marginLeft: 6, color: "var(--jp-content-font-color2)" } }}
-                    />
+                    { ignoredFilesInfoPopover }
                 </h3>
                 <p style={{ fontSize: 13, margin: 0 }}>
                     Files you've changed since your last submission will appear here.
-                    Anything listed under your
+                    Anything listed under your&nbsp;
                     <Button
                         type="link"
                         size="small"
@@ -138,7 +142,10 @@ export const AssignmentStagedChanges = ({ ...props }: AssignmentStagedChangesPro
     )
     return (
         <div className={ assignmentStagedChangesClass } { ...props }>
-            <TextDivider innerStyle={{ fontSize: 15 }} style={{ marginBottom: 8 }}>Staged changes</TextDivider>
+            <TextDivider innerStyle={{ fontSize: 15 }} style={{ marginBottom: 8 }}>
+                Staged changes
+                { ignoredFilesInfoPopover }
+            </TextDivider>
             <div className={ stagedChangesListClass }>
             {
                 stagedChangesSource.slice(0, showMore ? undefined : SHOW_MORE_CUTOFF).map((change) => (
