@@ -13,6 +13,7 @@ import type { IAssignment } from '../../../api'
 import { DateFormat } from '../../../utils'
 import { assignmentsListClass } from '../assignment-submissions/style'
 import { disabledButtonClass } from '../../style'
+import { AssignmentStatus } from '../../../api/api-responses'
 
 const ListItemAvatar = _ListItemAvatar as any
 
@@ -56,34 +57,43 @@ const AssignmentListItem = ({ assignment }: AssignmentListItemProps) => {
                 </div>
                 <div style={{ fontSize: 13, color: 'var(--jp-ui-font-color2' }}>
                     {
-                        !assignment.isPublished ? (
-                            <span>No release date yet</span>
-                        ) :
-                        assignment.isClosed ? (
-                            <span title={ new DateFormat(assignment.adjustedDueDate!).toBasicDatetime() }>
-                                Closed on { new DateFormat(assignment.adjustedDueDate!).toBasicDatetime() }
-                            </span>
-                        ) : assignment.isAvailable ? (
+                        assignment.status === AssignmentStatus.UNPUBLISHED ? (
+                            <span>Unpublished</span>
+                        ) : assignment.status === AssignmentStatus.UPCOMING ? (
+                                assignment.adjustedAvailableDate === null || assignment.adjustedAvailableDate === null ? (
+                                    <div>
+                                        Pending release
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                        <div
+                                            title={ new DateFormat(assignment.adjustedAvailableDate!).toBasicDatetime() }
+                                        >
+                                            Opens in { new DateFormat(assignment.adjustedAvailableDate!).toRelativeDatetime() }
+                                        </div>
+                                        <div
+                                            title={ new DateFormat(assignment.adjustedDueDate!).toBasicDatetime() }
+                                            style={{ marginTop: 4, fontSize: 12, display: 'flex', alignItems: 'center' }}
+                                        >
+                                            <QueryBuilderOutlined style={{ fontSize: 16 }} />
+                                            &nbsp;Lasts { new DateFormat(assignment.adjustedDueDate!).toRelativeDatetime(assignment.adjustedAvailableDate!) }
+                                        </div>
+                                    </div>
+                                )
+                        ) : assignment.status === AssignmentStatus.OPEN ? (
                             <span title={ new DateFormat(assignment.adjustedDueDate!).toBasicDatetime() }>
                                 Closes in { new DateFormat(assignment.adjustedDueDate!).toRelativeDatetime() }
                                 { assignment.isExtended && (
                                     <i>&nbsp;(extended)</i>
                                 ) }
                             </span>
+                        ) : assignment.status === AssignmentStatus.CLOSED ? (
+                            <span title={ new DateFormat(assignment.adjustedDueDate!).toBasicDatetime() }>
+                                Closed on { new DateFormat(assignment.adjustedDueDate!).toBasicDatetime() }
+                            </span>
                         ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                <div
-                                    title={ new DateFormat(assignment.adjustedAvailableDate!).toBasicDatetime() }
-                                >
-                                    Opens in { new DateFormat(assignment.adjustedAvailableDate!).toRelativeDatetime() }
-                                </div>
-                                <div
-                                    title={ new DateFormat(assignment.adjustedDueDate!).toBasicDatetime() }
-                                    style={{ marginTop: 4, fontSize: 12, display: 'flex', alignItems: 'center' }}
-                                >
-                                    <QueryBuilderOutlined style={{ fontSize: 16 }} />
-                                    &nbsp;Lasts { new DateFormat(assignment.adjustedDueDate!).toRelativeDatetime(assignment.adjustedAvailableDate!) }
-                                </div>
+                            <div>
+                                Unrecognized assignment status "{ assignment.status }"
                             </div>
                         )
                     }
@@ -118,7 +128,7 @@ const AssignmentsBucket = ({
     const [expanded, setExpanded] = useState<boolean>(defaultExpanded)
 
     const assignmentsSource = useMemo(() => (
-        assignments?.sort((a, b) => (a.adjustedAvailableDate?.getTime() ?? 0) - (b.adjustedAvailableDate?.getTime() ?? 0))
+        assignments?.sort((a, b) => (a.adjustedDueDate?.getTime() ?? 0) - (b.adjustedDueDate?.getTime() ?? 0))
     ), [assignments])
 
     const isEmpty = useMemo(() => !assignmentsSource || assignmentsSource.length === 0, [assignmentsSource])
@@ -156,9 +166,9 @@ const AssignmentsBucket = ({
 export const AssignmentsList = () => {
     const { assignments } = useAssignment()!
 
-    const upcomingAssignments = useMemo(() => assignments?.filter((assignment) => !assignment.isAvailable), [assignments])
-    const activeAssignments = useMemo(() => assignments?.filter((assignment) => assignment.isAvailable && !assignment.isClosed), [assignments])
-    const pastAssignments = useMemo(() => assignments?.filter((assignment) => assignment.isAvailable && assignment.isClosed), [assignments])
+    const upcomingAssignments = useMemo(() => assignments?.filter((assignment) => assignment.status === AssignmentStatus.UPCOMING), [assignments])
+    const activeAssignments = useMemo(() => assignments?.filter((assignment) => assignment.status === AssignmentStatus.OPEN), [assignments])
+    const pastAssignments = useMemo(() => assignments?.filter((assignment) => assignment.status === AssignmentStatus.CLOSED), [assignments])
 
     return (
         <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', width: 'calc(100% + 22px)' }}>

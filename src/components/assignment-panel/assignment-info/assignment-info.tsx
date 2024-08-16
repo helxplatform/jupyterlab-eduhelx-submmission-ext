@@ -6,6 +6,7 @@ import { ArrowBackSharp } from '@material-ui/icons'
 import { assignmentInfoClass, assignmentInfoSectionClass, assignmentInfoSectionHeaderClass, assignmentInfoSectionWarningClass, assignmentNameClass, tagClass } from './style'
 import { useAssignment } from '../../../contexts'
 import { DateFormat } from '../../../utils'
+import { AssignmentStatus } from '../../../api/api-responses'
 
 const MS_IN_HOURS = 3.6e6
 
@@ -17,8 +18,8 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
     if (!student || !assignment || !course) return null
 
     const hoursUntilDue = useMemo(() => (
-        assignment.isPublished ? (
-            (assignment.adjustedDueDate!.getTime() - Date.now()) / MS_IN_HOURS
+        assignment.adjustedDueDate ? (
+            (assignment.adjustedDueDate.getTime() - Date.now()) / MS_IN_HOURS
         ) : Infinity
     ), [assignment])
 
@@ -29,48 +30,52 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
         let text = undefined
         let tooltip = undefined
         let filled = false
-        if (!assignment.isPublished || !assignment.isAvailable) {
-            // Upcoming assignment (missing either an open/close date OR open date not reached yet)
-            color = "white"
-            backgroundColor = "#1890ff"
-            text = "Upcoming"
-            tooltip = `Your ${ pluralize("instructor", course.instructors.length) } has not released this assignment yet`
-            filled = true
+        switch (assignment.status) {
+            // We don't actually show this tag if the assignment is unpublished.
+            case AssignmentStatus.UNPUBLISHED:
+            case AssignmentStatus.UPCOMING: {
+                color = "white"
+                backgroundColor = "#1890ff"
+                text = "Upcoming"
+                tooltip = `Your ${ course.instructors.length === 1 ? "instructor has" : "instructors have" } not released this assignment yet`
+                break
+            }
+            case AssignmentStatus.OPEN: {
+                color = assignment.activeSubmission ? "var(--jp-success-color1)" : "var(--jp-ui-font-color1)"
+                backgroundColor = assignment.activeSubmission ? "var(--jp-success-color1)" : "#fafafa"
+                borderColor = assignment.activeSubmission ? undefined : "#d9d9d9"
+                text = assignment.activeSubmission ? "Submitted" : "Not Submitted"
+                tooltip = assignment.activeSubmission ? `You have submitted this assignment` : `You haven't submitted this assignment yet`
+                filled = !assignment.activeSubmission
+                break
+            }
+            case AssignmentStatus.CLOSED: {
+                if (assignment.activeSubmission) {
+                    // Closed and submitted
+                    color = "var(--jp-success-color1)"
+                    backgroundColor = "var(--jp-success-color1)"
+                    text = (
+                        <span>
+                            Submitted { new DateFormat(assignment.activeSubmission.submissionTime).toRelativeDatetimeNoArticle() } ago
+                        </span>
+                    )
+                    tooltip = `You submitted this assignment before it closed. Please contact your ${ pluralize("instructor", course.instructors.length) } if you need to resubmit`
+                    filled = false
+                } else {
+                    // Closed and never submitted
+                    color = "var(--jp-error-color1)"
+                    backgroundColor = "var(--jp-error-color1)"
+                    text = (
+                        <span>
+                            { new DateFormat(assignment.adjustedDueDate!).toRelativeDatetimeNoArticle() } past due
+                        </span>
+                    )
+                    tooltip = `You never submitted this assignment. Please contact your ${ pluralize("instructor", course.instructors.length) } to request an extension`
+                    filled = false
+                }
+            }
         }
-        else if (assignment.isClosed) {
-            // Not available to work on anymore
-            if (assignment.activeSubmission) {
-                // Closed and submitted
-                color = "var(--jp-success-color1)"
-                backgroundColor = "var(--jp-success-color1)"
-                text = (
-                    <span>
-                        Submitted { new DateFormat(assignment.activeSubmission.submissionTime).toRelativeDatetimeNoArticle() } ago
-                    </span>
-                )
-                tooltip = `You submitted this assignment before it closed. Please contact your ${ pluralize("instructor", course.instructors.length) } if you need to resubmit`
-                filled = false
-            } else {
-                // Closed and never submitted
-                color = "var(--jp-error-color1)"
-                backgroundColor = "var(--jp-error-color1)"
-                text = (
-                    <span>
-                        { new DateFormat(assignment.adjustedDueDate!).toRelativeDatetimeNoArticle() } past due
-                    </span>
-                )
-                tooltip = `You never submitted this assignment. Please contact your ${ pluralize("instructor", course.instructors.length) } to request an extension`
-                filled = false
-            }            
-        } else if (assignment.isAvailable) {
-            // Available
-            color = assignment.activeSubmission ? "var(--jp-success-color1)" : "var(--jp-ui-font-color1)"
-            backgroundColor = assignment.activeSubmission ? "var(--jp-success-color1)" : "#fafafa"
-            borderColor = assignment.activeSubmission ? undefined : "#d9d9d9"
-            text = assignment.activeSubmission ? "Submitted" : "Not Submitted"
-            tooltip = assignment.activeSubmission ? `You have submitted this assignment` : `You haven't submitted this assignment yet`
-            filled = !assignment.activeSubmission
-        }
+        
         return (
             <Tooltip title={ tooltip } placement="right">
                 <span
@@ -87,7 +92,7 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                 </span>
             </Tooltip>
         )
-    }, [course, assignment, hoursUntilDue])
+    }, [course, assignment])
     
     const attemptsDescriptionText = useMemo(() => {
         if (assignment.maxAttempts === null) return "This assignment has unlimited attempts"
@@ -104,7 +109,7 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
             <div>
                 <header className={ assignmentNameClass }>{ assignment.name }</header>
                 { assignmentStatusTag }
-                { assignment.isPublished && !assignment.isClosed && hoursUntilDue <= 4 && (
+                { assignment.status === AssignmentStatus.OPEN && hoursUntilDue <= 4 && (
                     <span
                         className={ tagClass }
                         style={{
@@ -134,10 +139,10 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
             <div className={ assignmentInfoSectionClass }>
                 <h5 className={ assignmentInfoSectionHeaderClass }>Due date</h5>
                 <div>
-                    { assignment.isPublished ? (
+                    { assignment.adjustedDueDate !== null ? (
                         new DateFormat(assignment.adjustedDueDate!).toBasicDatetime()
                     ) : (
-                        `To be determined`
+                        `No closing date`
                     ) }
                     { assignment.isExtended ? (
                         <i>&nbsp;(extended)</i>
