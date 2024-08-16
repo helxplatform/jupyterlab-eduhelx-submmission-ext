@@ -139,10 +139,6 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                     </span>
                 ) }
             </div>
-            <div className={ assignmentInfoSectionClass } style={{ marginTop: 16 }}>
-                <h5 className={ assignmentInfoSectionHeaderClass }>Student</h5>
-                <span>{ student.name }</span>
-            </div>
             <div className={ assignmentInfoSectionClass }>
                 <h5 className={ assignmentInfoSectionHeaderClass }>
                     { pluralize("Instructor", course.instructors.length) }
