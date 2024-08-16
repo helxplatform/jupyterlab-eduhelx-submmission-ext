@@ -10,6 +10,7 @@ from jupyter_server.utils import url_path_join
 from pathlib import Path
 from datetime import datetime
 from collections.abc import Iterable
+from gitignore_parser import parse_gitignore
 from .config import ExtensionConfig
 from eduhelx_utils.git import (
     InvalidGitRepositoryException,
@@ -139,6 +140,13 @@ class AssignmentsHandler(BaseHandler):
         
         current_assignment = instructor_repo.current_assignment
         if current_assignment:
+            matches_gitignore = parse_gitignore(instructor_repo.current_assignment_path / ".gitignore")
+            current_assignment["ignored_files"] = [
+                str(file.relative_to(instructor_repo.current_assignment_path))
+                for file in instructor_repo.current_assignment_path.rglob("*")
+                if matches_gitignore(file)
+            ]
+            
             current_assignment["student_submissions"] = await self.api.get_submissions(current_assignment["id"])
             for student in current_assignment["student_submissions"]:
                 for i, submission in enumerate(current_assignment["student_submissions"][student]):

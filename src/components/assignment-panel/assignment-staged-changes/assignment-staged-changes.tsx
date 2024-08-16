@@ -1,10 +1,12 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState, useCallback } from 'react'
+import { Button } from 'antd'
 import { folderIcon, fileIcon } from '@jupyterlab/ui-components'
 import { assignmentStagedChangesClass, assignmentStagedChangesFolderIconClass, largeBulletClass, modifiedTypeBadgeClass, showMoreBtnClass, stagedChangeListItemClass, stagedChangesListClass } from './style'
 import { TextDivider } from '../../text-divider'
-import { InfoTooltip } from '../../info-tooltip'
-import { useAssignment } from '../../../contexts'
+import { InfoPopover, InfoTooltip } from '../../info-tooltip'
+import { useAssignment, useCommands } from '../../../contexts'
 import { IStagedChange } from '../../../api/staged-change'
+import { capitalizedTitlePopoverOverlayClass } from '../style'
 
 const SHOW_MORE_CUTOFF = Infinity
 
@@ -64,6 +66,7 @@ const ModifiedTypeBadge = ({ modificationType }: ModifiedTypeBadgeProps) => {
 
 export const AssignmentStagedChanges = ({ ...props }: AssignmentStagedChangesProps) => {
     const { assignment } = useAssignment()!
+    const commands = useCommands()
     const [showMore, setShowMore] = useState<boolean>(false)
 
     const stagedChangesSource = useMemo<IStagedChange[]>(() => {
@@ -73,6 +76,12 @@ export const AssignmentStagedChanges = ({ ...props }: AssignmentStagedChangesPro
     
     const hideShowMoreButton = useMemo(() => !showMore && stagedChangesSource.length <= SHOW_MORE_CUTOFF, [showMore, stagedChangesSource])
 
+    const openAssignmentGitignore = useCallback(() => {
+        if (!commands || !assignment) return
+        const gitignorePath = assignment.absoluteDirectoryPath + "/.gitignore"
+        commands.execute('docmanager:open', { path: gitignorePath })
+    }, [commands, assignment])
+    
     useEffect(() => {
         if (stagedChangesSource.length <= SHOW_MORE_CUTOFF) setShowMore(false)
     }, [stagedChangesSource])
@@ -88,17 +97,41 @@ export const AssignmentStagedChanges = ({ ...props }: AssignmentStagedChangesPro
                 padding: "8px 12px",
                 paddingTop: 4
             }}>
-                <h3 style={{ fontSize: 15, marginBottom: 12, fontWeight: 500 }}>
+                <h3 style={{ fontSize: 15, marginTop: 0, marginBottom: 12, fontWeight: 500 }}>
                     No Changes
-                    <InfoTooltip
-                        title="Files included in your .gitignore will not appear here."
+                    <InfoPopover
+                        title={
+                            <span>Ignored Files</span>
+                        }
+                        content={
+                            <ul style={{ margin: 0, paddingLeft: 16 }}>
+                            { assignment?.ignoredFiles.map((fileName) => (
+                                <li key={ fileName }>
+                                    { fileName }
+                                </li>
+                            )) } 
+                            </ul>
+                        }
+                        overlayClassName={ capitalizedTitlePopoverOverlayClass }
                         trigger="hover"
                         placement="right"
                         iconProps={{ style: { fontSize: 13, marginLeft: 6, color: "var(--jp-content-font-color2)" } }}
                     />
                 </h3>
-                <p style={{ fontSize: 13, marginTop: 0 }}>
+                <p style={{ fontSize: 13, margin: 0 }}>
                     Files you've changed since your last submission will appear here.
+                    Anything listed under your
+                    <Button
+                        type="link"
+                        size="small"
+                        onClick={ openAssignmentGitignore }
+                        style={{ padding: 0 }}
+                    >gitignore</Button>
+                    &nbsp;is excluded from this list. 
+                </p>
+                <p style={{ fontSize: 13 }}>
+                    Don't worry if you've only changed master notebooks, you can still submit and
+                    the student version will be generated and uploaded upon submission.
                 </p>
             </div>
         </div>

@@ -69,6 +69,7 @@ export interface AssignmentResponse {
     is_closed: boolean
 
     student_submissions?: { [onyen: string]: SubmissionResponse[] }
+    ignored_files?: string[]
 }
 
 export interface CourseResponse {

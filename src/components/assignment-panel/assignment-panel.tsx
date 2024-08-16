@@ -5,7 +5,7 @@ import { ArrowBackSharp, SupervisorAccountOutlined, SyncOutlined } from '@materi
 import {
     panelWrapperClass,
     panelHeaderClass,
-    studentManagementPopoverOverlayClass
+    capitalizedTitlePopoverOverlayClass
 } from './style'
 import { AssignmentContent } from './assignment-content'
 import { useAssignment, useCommands, useSettings, useSnackbar } from '../../contexts'
@@ -77,12 +77,7 @@ export const AssignmentPanel = ({}: IAssignmentPanelProps) => {
                 <div style={{ flexGrow: 1 }} />
                 { students && (
                     <Popover title={
-                        <span style={{
-                            fontSize: 12,
-                            fontWeight: 700,
-                            letterSpacing: 0.5,
-                            textTransform: "uppercase"
-                        }}>Students</span>
+                        <span>Students</span>
                     } content={
                         <ul style={{ margin: 0, paddingLeft: 16 }}>
                            { students.map((student) => (
@@ -91,7 +86,7 @@ export const AssignmentPanel = ({}: IAssignmentPanelProps) => {
                             </li>
                            )) } 
                         </ul>
-                    } overlayClassName={ studentManagementPopoverOverlayClass }>
+                    } overlayClassName={ capitalizedTitlePopoverOverlayClass }>
                         <div style={{ display: "flex", alignItems: "center" }}>
                             { students.length } <SupervisorAccountOutlined style={{ fontSize: 20, marginLeft: 4 }} />
                         </div>

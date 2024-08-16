@@ -26,10 +26,16 @@ export const panelHeaderClass = style({
     textTransform: 'uppercase'
 })
 
-export const studentManagementPopoverOverlayClass = style({
+export const capitalizedTitlePopoverOverlayClass = style({
     $nest: {
         '& .ant-popover-title': {
             marginBottom: 4
+        },
+        '& .ant-popover-title > span': {
+            fontSize: 12,
+            fontWeight: 700,
+            letterSpacing: 0.5,
+            textTransform: 'uppercase'
         }
     }
 })

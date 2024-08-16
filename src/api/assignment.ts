@@ -21,6 +21,8 @@ export interface IAssignment {
     readonly dueDate: Date | null
     readonly lastModifiedDate: Date
     readonly stagedChanges: IStagedChange[]
+    readonly protectedFiles: string[]
+    readonly overwritableFiles: string[]
 
     // Indicates that release date has been deferred to a later date for the student
     readonly isDeferred: boolean
@@ -37,6 +39,7 @@ export interface IAssignment {
 // Submissions and staged changes are definitely defined in an ICurrentAssignment
 export interface ICurrentAssignment extends IAssignment {
     readonly studentSubmissions: StudentSubmissions
+    readonly ignoredFiles: string[]
 }
 
 export class Assignment implements IAssignment {
@@ -61,9 +64,12 @@ export class Assignment implements IAssignment {
         private _isAvailable: boolean,
         private _isClosed: boolean,
 
-        private _studentSubmissions: StudentSubmissions | undefined
+        /** Current assignment */
+        private _studentSubmissions: StudentSubmissions | undefined,
+        private _ignoredFiles: string[] | undefined
     ) {}
     get studentSubmissions() { return this._studentSubmissions }
+    get ignoredFiles() { return this._ignoredFiles }
     
     get id() { return this._id }
     get name() { return this._name }
@@ -113,7 +119,8 @@ export class Assignment implements IAssignment {
             data.is_available,
             data.is_closed,
 
-            studentSubmissions
+            studentSubmissions,
+            data.ignored_files
         )
     }
 }
