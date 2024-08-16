@@ -111,7 +111,7 @@ export const RestoreFileButton = ({ stagedChange }: RestoreFileButtonProps) => {
     return (
         <Tooltip title={ !loading ? "Restore this file to its previous revision" : "Loading..." }>
             <div
-                style={{ display: "flex", alignItems: "center", cursor: !loading ? "pointer" : "default" }}
+                style={{ display: "flex", alignItems: "center", cursor: !loading ? "pointer" : "default", marginRight: 4 }}
                 onClick={ !loading ? restoreFile : undefined }
             >
                 { !loading ? (
