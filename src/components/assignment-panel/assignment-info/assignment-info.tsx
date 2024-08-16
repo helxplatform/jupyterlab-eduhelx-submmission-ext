@@ -187,19 +187,6 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                     </div>
                 </div>
             ) }
-            { assignment.status === AssignmentStatus.CLOSED && !assignment.activeSubmission && (
-                <div className={ assignmentInfoSectionClass }>
-                    <h5
-                        className={ `${ assignmentInfoSectionHeaderClass} ${ assignmentInfoSectionWarningClass }` }
-                    >
-                        Assignment is past due
-                    </h5>
-                    <div className={ assignmentInfoSectionWarningClass }>
-                        No further changes can be submitted.
-                        Please contact your {pluralize("instructor", course.instructors.length)} for an extension.
-                    </div>
-                </div>
-            ) }
             <div className={ assignmentInfoSectionClass } style={{ marginTop: 0 }}>
                 <h5 className={ assignmentInfoSectionHeaderClass }>
                     Assignment Notebook
@@ -226,6 +213,19 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                     ) }
                 </div>
             </div>
+            { assignment.status === AssignmentStatus.CLOSED && !assignment.activeSubmission && (
+                <div className={ assignmentInfoSectionClass }>
+                    <h5
+                        className={ `${ assignmentInfoSectionHeaderClass} ${ assignmentInfoSectionWarningClass }` }
+                    >
+                        Assignment is past due
+                    </h5>
+                    <div className={ assignmentInfoSectionWarningClass }>
+                        No further changes can be submitted.
+                        Please contact your {pluralize("instructor", course.instructors.length)} for an extension.
+                    </div>
+                </div>
+            ) }
         </div>
     )
 }
