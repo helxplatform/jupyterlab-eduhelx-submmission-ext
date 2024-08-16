@@ -81,9 +81,9 @@ const AssignmentListItem = ({ assignment }: AssignmentListItemProps) => {
                                     `No close date`
                                 ) }
                             </div>
-                            { assignment.isCreated && (
+                            { assignment.availableDate && assignment.dueDate && (
                                 <div
-                                    title={ new DateFormat(assignment.dueDate!).toBasicDatetime() }
+                                    title={ `Due ${ new DateFormat(assignment.dueDate!).toBasicDatetime() }` }
                                     style={{ marginTop: 6, fontSize: 12, display: 'flex', alignItems: 'center' }}
                                 >
                                     <QueryBuilderOutlined style={{ fontSize: 16 }} />
@@ -159,8 +159,8 @@ const AssignmentsBucket = ({
 export const AssignmentsList = () => {
     const { assignments } = useAssignment()!
 
-    const publishedAssignments = useMemo(() => assignments?.filter((assignment) => assignment.isCreated), [assignments])
-    const unpublishedAssignments = useMemo(() => assignments?.filter((assignment) => !assignment.isCreated), [assignments])
+    const publishedAssignments = useMemo(() => assignments?.filter((assignment) => assignment.isPublished), [assignments])
+    const unpublishedAssignments = useMemo(() => assignments?.filter((assignment) => !assignment.isPublished), [assignments])
     
     return (
         <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', width: 'calc(100% + 22px)' }}>

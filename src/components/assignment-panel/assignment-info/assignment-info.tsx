@@ -12,6 +12,7 @@ import { useAssignment, useCommands, useSnackbar } from '../../../contexts'
 import { addLocalTimezone, getLocalTimezoneAbbr } from '../../../utils'
 import { createFile, updateAssignment } from '../../../api'
 import { openFileBrowserButtonClass } from '../no-assignment-warning/style'
+import { AssignmentStatus } from '../../../api/api-responses'
 
 const MS_IN_HOURS = 3.6e6
 
@@ -43,7 +44,7 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
     const multipleInstructors = useMemo(() => course.instructors.length > 1, [course])
 
     const hoursUntilDue = useMemo(() => (
-        assignment.isCreated ? (
+        assignment.status === AssignmentStatus.OPEN ? (
             (assignment.dueDate!.getTime() - Date.now()) / MS_IN_HOURS
         ) : Infinity
     ), [assignment])
@@ -63,18 +64,18 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
         let text = undefined
         let tooltip = undefined
         let filled = false
-        if (assignment.isCreated) {
+        if (assignment.isPublished) {
             color = "white"
             backgroundColor = "#1890ff"
-            text = "Released"
-            tooltip = `Clear the available date or due date to unrelease the assignment`
+            text = "Published"
+            tooltip = `You can unpublish this assignment in Canvas`
             filled = true
         } else {
             color = "rgba(0, 0, 0, 0.88)"
             backgroundColor = "#fafafa"
             borderColor = "#d9d9d9"
-            text = "Not Released"
-            tooltip = `Set the available date and due date to release the assignment`
+            text = "Unpublished"
+            tooltip = `You can publish this assignment in Canvas`
             filled = true
         }
         return (
@@ -93,7 +94,7 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                 </span>
             </Tooltip>
         )
-    }, [assignment.isCreated])
+    }, [assignment.isPublished])
 
     const assignmentStatusTag = useMemo(() => {
         let color = undefined
@@ -102,25 +103,33 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
         let text = undefined
         let tooltip = undefined
         let filled = false
-        if (!assignment.isAvailable) {
-            color = "rgba(0, 0, 0, 0.88)"
-            backgroundColor = "#fafafa"
-            borderColor = "#d9d9d9"
-            text = "Not Open Yet"
-            tooltip = "The assignment has not opened yet for students"
-        }
-        else if (!assignment.isClosed) {
-            color = "rgba(0, 0, 0, 0.88)"
-            backgroundColor = "#fafafa"
-            borderColor = "#d9d9d9"
-            text = "Open"
-            tooltip = "The assignment is currently open for students to work"
-        } else {
-            color = "var(--jp-error-color1)"
-            backgroundColor = "var(--jp-error-color1)"
-            text = "Closed"
-            tooltip = "The assignment has closed for students"
-            filled = false
+        switch (assignment.status) {
+            // We don't actually show this tag if the assignment is unpublished.
+            case AssignmentStatus.UNPUBLISHED:
+            case AssignmentStatus.UPCOMING: {
+                color = "rgba(0, 0, 0, 0.88)"
+                backgroundColor = "#fafafa"
+                borderColor = "#d9d9d9"
+                text = "Upcoming"
+                tooltip = "The assignment has not opened yet for students"
+                break
+            }
+            case AssignmentStatus.OPEN: {
+                color = "rgba(0, 0, 0, 0.88)"
+                backgroundColor = "#fafafa"
+                borderColor = "#d9d9d9"
+                text = "Open"
+                tooltip = "The assignment is currently open for students to work"
+                break
+            }
+            case AssignmentStatus.CLOSED: {
+                color = "var(--jp-error-color1)"
+                backgroundColor = "var(--jp-error-color1)"
+                text = "Closed"
+                tooltip = "The assignment has closed for students"
+                filled = false
+                break
+            }
         }
         return (
             <Tooltip title={ tooltip }>
@@ -277,7 +286,7 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                 }
                 */}
                 { assignmentReleasedTag }
-                { assignment.isCreated && assignmentStatusTag }
+                { assignment.isPublished && assignmentStatusTag }
             </div>
             <div className={ assignmentInfoSectionClass } style={{ marginTop: 16 }}>
                 <h5 className={ assignmentInfoSectionHeaderClass }>

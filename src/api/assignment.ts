@@ -1,6 +1,6 @@
 import { IStudent, Student } from './student'
 import { ISubmission, Submission } from './submission'
-import { AssignmentResponse } from './api-responses'
+import { AssignmentResponse, AssignmentStatus } from './api-responses'
 import { IStagedChange, StagedChange } from './staged-change'
 
 interface StudentSubmissions {
@@ -24,12 +24,13 @@ export interface IAssignment {
     readonly protectedFiles: string[]
     readonly overwritableFiles: string[]
 
+    readonly isPublished: boolean
+    readonly status: AssignmentStatus
+
     // Indicates that release date has been deferred to a later date for the student
     readonly isDeferred: boolean
     // Indicates that due date is extended to a later date for the student
     readonly isExtended: boolean
-    // Indicates if an assignment has an available_date and a due_date assigned to it.
-    readonly isCreated: boolean
     // Indicates if an assignment is available to work on (e.g. date is greater than available_date)
     readonly isAvailable: boolean
     // Indicates if an assignment is no longer available to work on (e.g. date is greater than due_date)
@@ -58,9 +59,11 @@ export class Assignment implements IAssignment {
         private _lastModifiedDate: Date,
         private _stagedChanges: IStagedChange[],
 
+        private _isPublished: boolean,
+        private _status: AssignmentStatus,
+
         private _isDeferred: boolean,
         private _isExtended: boolean,
-        private _isCreated: boolean,
         private _isAvailable: boolean,
         private _isClosed: boolean,
 
@@ -85,10 +88,11 @@ export class Assignment implements IAssignment {
     get lastModifiedDate() { return this._lastModifiedDate }
     get stagedChanges() { return this._stagedChanges }
     
+    get isPublished() { return this._isPublished }
+    get status() { return this._status }
 
     get isDeferred() { return this._isDeferred }
     get isExtended() { return this._isExtended }
-    get isCreated() { return this._isCreated }
     get isAvailable() { return this._isAvailable }
     get isClosed() { return this._isClosed }
     
@@ -113,9 +117,11 @@ export class Assignment implements IAssignment {
             new Date(data.last_modified_date),
             data.staged_changes.map((s) => StagedChange.fromResponse(s)),
 
+            data.is_published,
+            data.status,
+
             data.is_deferred,
             data.is_extended,
-            data.is_created,
             data.is_available,
             data.is_closed,
 
