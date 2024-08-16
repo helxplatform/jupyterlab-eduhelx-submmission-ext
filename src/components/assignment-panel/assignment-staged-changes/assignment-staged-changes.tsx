@@ -1,10 +1,14 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react'
-import { Button } from 'antd'
+import { Button, Tooltip } from 'antd'
+import { CircularProgress } from '@material-ui/core'
+import { RestoreOutlined } from '@material-ui/icons'
 import { folderIcon, fileIcon } from '@jupyterlab/ui-components'
+import { Dialog, showDialog } from '@jupyterlab/apputils'
 import { assignmentStagedChangesClass, assignmentStagedChangesFolderIconClass, largeBulletClass, modifiedTypeBadgeClass, showMoreBtnClass, stagedChangeListItemClass, stagedChangesListClass } from './style'
 import { TextDivider } from '../../text-divider'
 import { InfoPopover, InfoTooltip } from '../../info-tooltip'
-import { useAssignment, useCommands } from '../../../contexts'
+import { useAssignment, useCommands, useSnackbar } from '../../../contexts'
+import { restoreFile as restoreFileApi } from '../../../api'
 import { IStagedChange } from '../../../api/staged-change'
 import { capitalizedTitlePopoverOverlayClass } from '../style'
 
@@ -12,6 +16,10 @@ const SHOW_MORE_CUTOFF = Infinity
 
 interface ModifiedTypeBadgeProps {
     modificationType: IStagedChange["modificationType"]
+}
+
+interface RestoreFileButtonProps {
+    stagedChange: IStagedChange
 }
 
 interface AssignmentStagedChangesProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -61,6 +69,60 @@ const ModifiedTypeBadge = ({ modificationType }: ModifiedTypeBadgeProps) => {
         >
             { text }
         </div>
+    )
+}
+
+export const RestoreFileButton = ({ stagedChange }: RestoreFileButtonProps) => {
+    const [loading, setLoading] = useState<boolean>(false)
+    const { triggerImmediateUpdate } = useAssignment()!
+    const snackbar = useSnackbar()!
+    
+    const restoreFile = useCallback(async () => {
+        setLoading(true)
+        
+        const confirmRequired = stagedChange.modificationType !== "D"
+        if (confirmRequired) {
+            const confirm = await showDialog({
+                title: "Confirm restore",
+                body: "Restoring this file will overwrite any changes you've made to it locally. Are you sure you want to proceed?",
+                buttons: [
+                    Dialog.cancelButton(),
+                    Dialog.okButton({ label: "Confirm" })
+                ]
+            })
+            if (!confirm.button.accept) return
+        }
+        
+        try {
+            await restoreFileApi(stagedChange)
+        } catch (e: any) {
+            snackbar.open({
+                type: 'error',
+                message: `Failed to restore file`
+            })
+        }
+        try {
+            await triggerImmediateUpdate()
+        } catch {}
+
+        setLoading(false)
+    }, [snackbar, stagedChange, triggerImmediateUpdate])
+
+    return (
+        <Tooltip title={ !loading ? "Restore this file to its previous revision" : "Loading..." }>
+            <div
+                style={{ display: "flex", alignItems: "center", cursor: !loading ? "pointer" : "default" }}
+                onClick={ !loading ? restoreFile : undefined }
+            >
+                { !loading ? (
+                    <RestoreOutlined style={{ fontSize: 17, color: "var(--jp-ui-font-color1)" }} />
+                ) : (
+                    <div style={{ width: 20, height: 20, display: "flex", justifyContent: "center", alignItems: "center" }}>
+                        <CircularProgress color="inherit" size={ 16 } />
+                    </div>
+                ) }
+            </div>
+        </Tooltip>
     )
 }
 
@@ -171,7 +233,12 @@ export const AssignmentStagedChanges = ({ ...props }: AssignmentStagedChangesPro
                                 { change.type === "directory" && !change.pathFromAssignmentRoot.endsWith("/") ? "/*" : "" }
                             </span>
                         </div>
-                        <ModifiedTypeBadge modificationType={ change.modificationType } />
+                        <div style={{ display: "flex", alignItems: "center" }}>
+                            <ModifiedTypeBadge modificationType={ change.modificationType } />
+                            { change.modificationType === "D" && (
+                                <RestoreFileButton stagedChange={ change } />
+                            ) }
+                        </div>
                     </div>
                 ))
             }

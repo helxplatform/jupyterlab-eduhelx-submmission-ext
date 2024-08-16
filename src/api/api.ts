@@ -16,6 +16,7 @@ import {
     InstructorResponse,
 } from './api-responses'
 import { IInstructor, Instructor } from './instructor'
+import { IStagedChange } from './staged-change'
 
 export interface UpdateAssignmentData {
     name?: string | null,
@@ -38,6 +39,15 @@ export interface GetInstructorAndStudentsAndCourseResponse {
 
 export interface NotebookFilesResponse {
     notebooks: { [assignmentId: string]: string[] }
+}
+
+export async function restoreFile(stagedChange: IStagedChange): Promise<void> {
+    await requestAPI<void>(`/restore_file`, {
+        method: 'PUT',
+        body: JSON.stringify({
+            path_from_repo_root: stagedChange.pathFromRepositoryRoot
+        })
+    })
 }
 
 export async function listNotebookFiles(): Promise<NotebookFilesResponse> {

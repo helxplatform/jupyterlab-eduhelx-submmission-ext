@@ -308,6 +308,18 @@ class NotebookFilesHandler(BaseHandler):
             "notebooks": assignment_notebooks
         }))
 
+class RestoreFileHandler(BaseHandler):
+    @tornado.web.authenticated
+    async def put(self):
+        data = self.get_json_body()
+        path_from_repo_root: str = data["path_from_repo_root"]
+
+        course = await self.api.get_course()
+        repo_root = InstructorClassRepo._compute_repo_root(course["name"])
+        
+        git_restore(path_from_repo_root, source="HEAD", worktree=True, path=repo_root)
+        self.finish()
+
 class SyncToLMSHandler(BaseHandler):
     @tornado.web.authenticated
     async def post(self):
@@ -703,6 +715,7 @@ def setup_handlers(server_app):
         ("assignments", AssignmentsHandler),
         ("course_instructor_students", CourseAndInstructorAndStudentsHandler),
         ("notebook_files", NotebookFilesHandler),
+        ("restore_file", RestoreFileHandler),
         ("submit_assignment", SubmissionHandler),
         ("sync_to_lms", SyncToLMSHandler),
         ("grade_assignment", GradeAssignmentHandler),
