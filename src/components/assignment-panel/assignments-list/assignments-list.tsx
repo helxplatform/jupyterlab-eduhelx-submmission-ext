@@ -60,23 +60,23 @@ const AssignmentListItem = ({ assignment }: AssignmentListItemProps) => {
                         assignment.status === AssignmentStatus.UNPUBLISHED ? (
                             <span>Unpublished</span>
                         ) : assignment.status === AssignmentStatus.UPCOMING ? (
-                                assignment.adjustedAvailableDate === null || assignment.adjustedAvailableDate === null ? (
+                                assignment.adjustedAvailableDate === null || assignment.adjustedDueDate === null ? (
                                     <div>
                                         Pending release
                                     </div>
                                 ) : (
                                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                                         <div
-                                            title={ new DateFormat(assignment.adjustedAvailableDate!).toBasicDatetime() }
+                                            title={ new DateFormat(assignment.adjustedAvailableDate).toBasicDatetime() }
                                         >
-                                            Opens in { new DateFormat(assignment.adjustedAvailableDate!).toRelativeDatetime() }
+                                            Opens in { new DateFormat(assignment.adjustedAvailableDate).toRelativeDatetime() }
                                         </div>
                                         <div
                                             title={ new DateFormat(assignment.adjustedDueDate!).toBasicDatetime() }
                                             style={{ marginTop: 4, fontSize: 12, display: 'flex', alignItems: 'center' }}
                                         >
                                             <QueryBuilderOutlined style={{ fontSize: 16 }} />
-                                            &nbsp;Lasts { new DateFormat(assignment.adjustedDueDate!).toRelativeDatetime(assignment.adjustedAvailableDate!) }
+                                            &nbsp;Lasts { new DateFormat(assignment.adjustedDueDate).toRelativeDatetime(assignment.adjustedAvailableDate) }
                                         </div>
                                     </div>
                                 )

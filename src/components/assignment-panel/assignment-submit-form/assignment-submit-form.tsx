@@ -12,6 +12,7 @@ import {
 } from './style'
 import { useAssignment, useBackdrop, useSnackbar } from '../../../contexts'
 import { submitAssignment as apiSubmitAssignment } from '../../../api'
+import { AssignmentStatus } from '../../../api/api-responses'
 
 interface AssignmentSubmitFormProps {
 
@@ -29,12 +30,13 @@ export const AssignmentSubmitForm = ({ }: AssignmentSubmitFormProps) => {
     const maxAttemptsReached = !!assignment && assignment.maxAttempts !== null && assignment.currentAttempts >= assignment.maxAttempts
     const contactText = `Please contact your ${ pluralize("instructor", course!.instructors.length) }`
 
-    const disabled = submitting || summaryText === "" || !assignment?.isAvailable || assignment?.isClosed || maxAttemptsReached
+    const disabled = submitting || summaryText === "" || assignment?.status !== AssignmentStatus.OPEN || maxAttemptsReached
     const disabledReason = disabled ? (
         !assignment ? undefined :
         submitting ? `Currently uploading submission` :
-        !assignment.isAvailable ? `Assignment is not available for you to work on yet` :
-        assignment.isClosed ?
+        assignment.status === AssignmentStatus.UNPUBLISHED || assignment.status === AssignmentStatus.UPCOMING ?
+            `Assignment is not available for you to work on yet` :
+        assignment.status === AssignmentStatus.CLOSED ?
             `Past due. ${ contactText } if you need an extension` :
         maxAttemptsReached ? `You have reached the maximum number of submissions. ${ contactText } if you need to resubmit` :
         summaryText === "" ? `Please enter a summary for the submission` : undefined

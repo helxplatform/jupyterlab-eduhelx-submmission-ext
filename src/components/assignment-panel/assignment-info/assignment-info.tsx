@@ -38,6 +38,7 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                 backgroundColor = "#1890ff"
                 text = "Upcoming"
                 tooltip = `Your ${ course.instructors.length === 1 ? "instructor has" : "instructors have" } not released this assignment yet`
+                filled = true
                 break
             }
             case AssignmentStatus.OPEN: {
@@ -136,11 +137,26 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                 </h5>
                 <span>{ course.instructors.map((ins) => ins.name).join(", ") }</span>
             </div>
+            { assignment.status === AssignmentStatus.UPCOMING && (
+                <div className={ assignmentInfoSectionClass }>
+                    <h5 className={ assignmentInfoSectionHeaderClass }>Open date</h5>
+                    <div>
+                        { assignment.adjustedAvailableDate !== null ? (
+                            new DateFormat(assignment.adjustedAvailableDate).toBasicDatetime()
+                        ) : (
+                            `No open date`
+                        ) }
+                        { assignment.isDeferred ? (
+                            <i>&nbsp;(deferred)</i>
+                        ) : null }
+                    </div>
+                </div>
+            ) }
             <div className={ assignmentInfoSectionClass }>
                 <h5 className={ assignmentInfoSectionHeaderClass }>Due date</h5>
                 <div>
                     { assignment.adjustedDueDate !== null ? (
-                        new DateFormat(assignment.adjustedDueDate!).toBasicDatetime()
+                        new DateFormat(assignment.adjustedDueDate).toBasicDatetime()
                     ) : (
                         `No closing date`
                     ) }
@@ -159,7 +175,7 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                     </div>
                 </div>
             ) }
-            { assignment.isPublished && assignment.isClosed && (
+            { assignment.status === AssignmentStatus.CLOSED && !assignment.activeSubmission && (
                 <div className={ assignmentInfoSectionClass }>
                     <h5
                         className={ `${ assignmentInfoSectionHeaderClass} ${ assignmentInfoSectionWarningClass }` }
