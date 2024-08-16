@@ -317,7 +317,7 @@ class RestoreFileHandler(BaseHandler):
         course = await self.api.get_course()
         repo_root = InstructorClassRepo._compute_repo_root(course["name"])
         
-        git_restore(path_from_repo_root, source="HEAD", worktree=True, path=repo_root)
+        git_restore(path_from_repo_root, source="HEAD", staged=True, worktree=True, path=repo_root)
         self.finish()
 
 class SyncToLMSHandler(BaseHandler):
