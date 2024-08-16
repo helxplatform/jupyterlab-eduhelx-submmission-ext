@@ -121,7 +121,7 @@ const AssignmentsBucket = ({
     const [expanded, setExpanded] = useState<boolean>(defaultExpanded)
 
     const assignmentsSource = useMemo(() => (
-        assignments?.sort((a, b) => (a.availableDate?.getTime() ?? 0) - (b.availableDate?.getTime() ?? 0))
+        assignments?.sort((a, b) => (a.dueDate?.getTime() ?? 0) - (b.dueDate?.getTime() ?? 0))
     ), [assignments])
 
     const isEmpty = useMemo(() => !assignmentsSource || assignmentsSource.length === 0, [assignmentsSource])
