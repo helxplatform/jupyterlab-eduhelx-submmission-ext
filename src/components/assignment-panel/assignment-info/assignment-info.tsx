@@ -44,7 +44,7 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
     const multipleInstructors = useMemo(() => course.instructors.length > 1, [course])
 
     const hoursUntilDue = useMemo(() => (
-        assignment.status === AssignmentStatus.OPEN ? (
+        assignment.dueDate ? (
             (assignment.dueDate!.getTime() - Date.now()) / MS_IN_HOURS
         ) : Infinity
     ), [assignment])
@@ -148,7 +148,7 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                 </span>
             </Tooltip>
         )
-    }, [course, assignment, hoursUntilDue])
+    }, [course, assignment])
 
     const showCreateGradedNotebookButton = useMemo(() => notebookFiles[assignment.id].length === 0, [notebookFiles])
     
