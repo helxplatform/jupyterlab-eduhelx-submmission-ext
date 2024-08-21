@@ -171,14 +171,10 @@ class AssignmentsHandler(BaseHandler):
     @tornado.web.authenticated
     async def patch(self):
         name = self.get_argument("name")
-        data = self.get_json_body()        
-        try:
-            await self.api.update_assignment(name, **data)
-            if "master_notebook_path" in data:
-                await self.update_gitignore_master_notebook(name, data["master_notebook_path"])
-        except Exception as e:
-            self.set_status(e.response.status_code)
-            self.finish(e.response.text)
+        data = self.get_json_body()
+        await self.api.update_assignment(name, **data)
+        if "master_notebook_path" in data:
+            await self.update_gitignore_master_notebook(name, data["master_notebook_path"])
 
     async def update_gitignore_master_notebook(self, assignment_name, master_notebook_path):
         course = await self.api.get_course()
@@ -195,10 +191,10 @@ class AssignmentsHandler(BaseHandler):
             assignment_gitignore_path.touch()
             gitignore_lines = []
             
-        line_to_ignore = f"{ master_notebook_path }\n"
-        if not line_to_ignore in gitignore_lines:
+        matches_gitignore = parse_gitignore(assignment_gitignore_path)
+        if not matches_gitignore(repo_root / assignment["directory_path"] / master_notebook_path):
             with open(assignment_gitignore_path, "w") as f:
-                f.writelines([*gitignore_lines, line_to_ignore])
+                f.writelines([*gitignore_lines, f"{ master_notebook_path }\n"])
 
 class SubmissionHandler(BaseHandler):
     @tornado.web.authenticated
