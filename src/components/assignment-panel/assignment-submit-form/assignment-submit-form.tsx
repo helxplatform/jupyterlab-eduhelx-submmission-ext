@@ -54,13 +54,26 @@ export const AssignmentSubmitForm = ({ }: AssignmentSubmitFormProps) => {
                 message: 'Successfully uploaded assignment!'
             })
         } catch (e: any) {
-            if (e.response?.status === 409) {
+            let data = undefined
+            try { data = await e.response?.json() }
+            catch {}
+
+            if (e.response?.status === 400 && data?.error_code === "NOTEBOOK_GENERATION") {
+                showErrorMessage(
+                    'Failed to generate student notebook',
+                    {
+                        message: <pre>{ data.error }</pre>
+                    },
+                    [Dialog.warnButton({ label: 'Dismiss' })]
+                )
+            }
+            else if (e.response?.status === 409) {
                 showErrorMessage(
                     'Push policy violation',
                     {
                         message: (
                             <PushPolicyViolationMessage
-                                remoteMessages={ await e.response.json() }
+                                remoteMessages={ data }
                                 assignmentPath={ assignment!.directoryPath }
                             />
                         )

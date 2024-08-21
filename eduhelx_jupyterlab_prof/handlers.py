@@ -226,7 +226,7 @@ class SubmissionHandler(BaseHandler):
         if instructor_repo.current_assignment is None:
             self.set_status(400)
             self.finish(json.dumps({
-                "message": "Not in an assignment directory"
+                "message": "Not in an assignment directory",
             }))
             return
 
@@ -238,7 +238,9 @@ class SubmissionHandler(BaseHandler):
         except Exception as e:
             self.set_status(400)
             self.finish(json.dumps({
-                "message": "Failed to generate student version of assignment notebook: " + str(e)
+                "message": "Failed to generate student version of assignment notebook",
+                "error": str(e),
+                "error_code": "NOTEBOOK_GENERATION"
             }))
             return
 
