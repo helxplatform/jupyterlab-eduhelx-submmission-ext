@@ -179,3 +179,12 @@ export async function createFile(path: string, content: string): Promise<void> {
     }, true)
 
 }
+
+export async function createStudentNotebook(assignmentId: number): Promise<void> {
+    await requestAPI<void>(`/create_student_notebook`, {
+        method: 'POST',
+        body: JSON.stringify({
+            assignment_id: assignmentId
+        })
+    })
+}

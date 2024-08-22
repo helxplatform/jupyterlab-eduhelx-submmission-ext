@@ -283,6 +283,27 @@ class SubmissionHandler(BaseHandler):
                 self.set_status(500)
                 self.finish(str(e))
 
+class StudentNotebookHandler(BaseHandler):
+    @tornado.web.authenticated
+    async def post(self):
+        data = self.get_json_body()
+        assignment_id = data["assignment_id"]
+        
+        course = await self.api.get_course()
+        assignments = await self.api.get_my_assignments()
+        
+        try:
+            instructor_repo = InstructorClassRepo.from_assignment_no_path(course, assignments, assignment_id)
+            instructor_repo.create_student_notebook()
+        except Exception as e:
+            self.set_status(400)
+            self.finish(json.dumps({
+                "message": "Failed to generate student version of assignment notebook",
+                "error": str(e),
+                "error_code": "NOTEBOOK_GENERATION"
+            }))
+            return
+
 """ This is used for selecting the graded notebook. """
 class NotebookFilesHandler(BaseHandler):
     @tornado.web.authenticated
@@ -371,7 +392,7 @@ class SettingsHandler(BaseHandler):
     @tornado.web.authenticated
     async def get(self):
         server_version = str(__version__)
-        settings = await self.context.api.get_settings()
+        settings = await self.api.get_settings()
         repo_root = await self.context.get_repo_root()
 
         self.finish(json.dumps({
@@ -717,6 +738,7 @@ def setup_handlers(server_app):
         ("notebook_files", NotebookFilesHandler),
         ("restore_file", RestoreFileHandler),
         ("submit_assignment", SubmissionHandler),
+        ("create_student_notebook", StudentNotebookHandler),
         ("sync_to_lms", SyncToLMSHandler),
         ("grade_assignment", GradeAssignmentHandler),
         ("settings", SettingsHandler)

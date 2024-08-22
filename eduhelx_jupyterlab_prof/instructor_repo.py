@@ -126,3 +126,19 @@ class InstructorClassRepo:
                 break
 
         return current_assignment
+    
+    @classmethod
+    def from_assignment_no_path(cls, course, assignments, assignment_id: int):
+        try:
+            assignment = [a for a in assignments if a["id"] == assignment_id][0]
+        except IndexError:
+            raise NotInAnAssignmentException
+        
+        repo_root = cls._compute_repo_root(course["name"]).resolve()
+        assignment_path = repo_root / assignment["directory_path"]
+
+        return cls(
+            course=course,
+            assignments=assignments,
+            current_path=assignment_path
+        )
