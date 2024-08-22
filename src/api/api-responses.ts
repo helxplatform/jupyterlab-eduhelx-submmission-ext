@@ -91,4 +91,5 @@ export interface CourseResponse {
 export interface ServerSettingsResponse {
     serverVersion: string
     repoRoot: string
+    documentationUrl: string | null
 }

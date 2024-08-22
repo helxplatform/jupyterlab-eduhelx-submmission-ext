@@ -1,7 +1,7 @@
 import React, { Fragment, ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
 import { CircularProgress } from '@material-ui/core'
 import { Popover, Tooltip } from 'antd'
-import { ArrowBackSharp, SupervisorAccountOutlined, SyncOutlined } from '@material-ui/icons'
+import { ArrowBackSharp, HelpOutlineOutlined, SupervisorAccountOutlined, SyncOutlined } from '@material-ui/icons'
 import {
     panelWrapperClass,
     panelHeaderClass,
@@ -17,7 +17,7 @@ interface IAssignmentPanelProps {
 export const AssignmentPanel = ({}: IAssignmentPanelProps) => {
     const commands = useCommands()!
     const snackbar = useSnackbar()!
-    const { repoRoot } = useSettings()!
+    const { repoRoot, documentationUrl } = useSettings()!
     const { course, students, assignment, triggerImmediateUpdate } = useAssignment()!
     
     const [syncLoading, setSyncLoading] = useState<boolean>(false)
@@ -51,6 +51,12 @@ export const AssignmentPanel = ({}: IAssignmentPanelProps) => {
         }
         setSyncLoading(false)
     }, [triggerImmediateUpdate, snackbar])
+
+    const openDocumentation = useCallback(() => {
+        if (!documentationUrl) return
+
+        window.open(documentationUrl, "_blank")
+    }, [documentationUrl])
 
     /** On page load, we want to `cd` to the repo root. */
     useEffect(() => {
@@ -93,7 +99,7 @@ export const AssignmentPanel = ({}: IAssignmentPanelProps) => {
                     </Popover>
                 ) }
                 { students && (
-                    <Tooltip  title={ !syncLoading ? "Immediately sync with LMS" : "Syncing..." }>
+                    <Tooltip title={ !syncLoading ? "Immediately sync with LMS" : "Syncing..." }>
                         <div
                             style={{ display: "flex", alignItems: "center", marginLeft: 8, cursor: !syncLoading ? "pointer" : "default" }}
                             onClick={ !syncLoading ? doSync : undefined }
@@ -105,6 +111,16 @@ export const AssignmentPanel = ({}: IAssignmentPanelProps) => {
                                     <CircularProgress color="inherit" size={ 16 } />
                                 </div>
                             ) }
+                        </div>
+                    </Tooltip>
+                ) }
+                { students && documentationUrl && (
+                    <Tooltip title="Open user documentation">
+                        <div
+                            style={{ display: "flex", alignItems: "center", marginLeft: 8, cursor: "pointer" }}
+                            onClick={ openDocumentation }
+                        >
+                            <HelpOutlineOutlined style={{ fontSize: 20 }} />
                         </div>
                     </Tooltip>
                 ) }
