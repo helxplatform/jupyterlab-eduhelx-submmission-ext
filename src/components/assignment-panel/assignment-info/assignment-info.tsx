@@ -121,7 +121,7 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                 backgroundColor = "#fafafa"
                 borderColor = "#d9d9d9"
                 text = "Open"
-                tooltip = "The assignment is currently open for students to work"
+                tooltip = "The assignment is currently open for students to work on"
                 break
             }
             case AssignmentStatus.CLOSED: {
