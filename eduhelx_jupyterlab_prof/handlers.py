@@ -1,20 +1,16 @@
 import json
 import os
-import tempfile
 import shutil
 import tornado
 import asyncio
-import httpx
 import traceback
-import csv
-# from numpy import median, mean, std
-from io import StringIO
 from urllib.parse import urlparse
 from jupyter_server.base.handlers import APIHandler
 from jupyter_server.utils import url_path_join
 from pathlib import Path
 from datetime import datetime
 from collections.abc import Iterable
+from gitignore_parser import parse_gitignore
 from .config import ExtensionConfig
 from eduhelx_utils.git import (
     InvalidGitRepositoryException,
@@ -54,7 +50,6 @@ class AppContext:
                 appstore_access_token=self.config.ACCESS_TOKEN,
                 auth_type=AuthType.APPSTORE_INSTRUCTOR
             )
-        self.api.client.timeout = httpx.Timeout(15.0, read=15.0)
 
     async def get_repo_root(self):
         course = await self.api.get_course()
@@ -145,6 +140,13 @@ class AssignmentsHandler(BaseHandler):
         
         current_assignment = instructor_repo.current_assignment
         if current_assignment:
+            matches_gitignore = parse_gitignore(instructor_repo.current_assignment_path / ".gitignore")
+            current_assignment["ignored_files"] = [
+                str(file.relative_to(instructor_repo.current_assignment_path))
+                for file in instructor_repo.current_assignment_path.rglob("*")
+                if matches_gitignore(file)
+            ]
+            
             current_assignment["student_submissions"] = await self.api.get_submissions(current_assignment["id"])
             for student in current_assignment["student_submissions"]:
                 for i, submission in enumerate(current_assignment["student_submissions"][student]):
@@ -170,12 +172,29 @@ class AssignmentsHandler(BaseHandler):
     async def patch(self):
         name = self.get_argument("name")
         data = self.get_json_body()
+        await self.api.update_assignment(name, **data)
+        if "master_notebook_path" in data:
+            await self.update_gitignore_master_notebook(name, data["master_notebook_path"])
 
+    async def update_gitignore_master_notebook(self, assignment_name, master_notebook_path):
+        course = await self.api.get_course()
+        assignments = await self.api.get_my_assignments()
+        assignment = [assignment for assignment in assignments if assignment["name"] == assignment_name][0]
+        
+        repo_root = InstructorClassRepo._compute_repo_root(course["name"])
+        assignment_gitignore_path: Path = repo_root / assignment["directory_path"] / ".gitignore"
+        
+        # The professor could always delete their gitignore if they really wanted to...
         try:
-            await self.api.update_assignment(name, **data)
-        except Exception as e:
-            self.set_status(e.response.status_code)
-            self.finish(e.response.text)
+            with open(assignment_gitignore_path, "r") as f: gitignore_lines = f.readlines()
+        except FileNotFoundError:
+            assignment_gitignore_path.touch()
+            gitignore_lines = []
+            
+        matches_gitignore = parse_gitignore(assignment_gitignore_path)
+        if not matches_gitignore(repo_root / assignment["directory_path"] / master_notebook_path):
+            with open(assignment_gitignore_path, "w") as f:
+                f.writelines([*gitignore_lines, f"{ master_notebook_path }\n"])
 
 class SubmissionHandler(BaseHandler):
     @tornado.web.authenticated
@@ -207,7 +226,7 @@ class SubmissionHandler(BaseHandler):
         if instructor_repo.current_assignment is None:
             self.set_status(400)
             self.finish(json.dumps({
-                "message": "Not in an assignment directory"
+                "message": "Not in an assignment directory",
             }))
             return
 
@@ -219,7 +238,9 @@ class SubmissionHandler(BaseHandler):
         except Exception as e:
             self.set_status(400)
             self.finish(json.dumps({
-                "message": "Failed to generate student version of assignment notebook: " + str(e)
+                "message": "Failed to generate student version of assignment notebook",
+                "error": str(e),
+                "error_code": "NOTEBOOK_GENERATION"
             }))
             return
 
@@ -262,6 +283,27 @@ class SubmissionHandler(BaseHandler):
                 self.set_status(500)
                 self.finish(str(e))
 
+class StudentNotebookHandler(BaseHandler):
+    @tornado.web.authenticated
+    async def post(self):
+        data = self.get_json_body()
+        assignment_id = data["assignment_id"]
+        
+        course = await self.api.get_course()
+        assignments = await self.api.get_my_assignments()
+        
+        try:
+            instructor_repo = InstructorClassRepo.from_assignment_no_path(course, assignments, assignment_id)
+            instructor_repo.create_student_notebook()
+        except Exception as e:
+            self.set_status(400)
+            self.finish(json.dumps({
+                "message": "Failed to generate student version of assignment notebook",
+                "error": str(e),
+                "error_code": "NOTEBOOK_GENERATION"
+            }))
+            return
+
 """ This is used for selecting the graded notebook. """
 class NotebookFilesHandler(BaseHandler):
     @tornado.web.authenticated
@@ -275,7 +317,7 @@ class NotebookFilesHandler(BaseHandler):
             assignment_path = repo_root / assignment["directory_path"]
 
             notebooks = [path.relative_to(assignment_path) for path in assignment_path.rglob("*.ipynb")]
-            notebooks = [path for path in notebooks if ".ipynb_checkpoints" not in path.parts and path != Path(assignment["student_notebook_path"])]
+            notebooks = [path for path in notebooks if ".ipynb_checkpoints" not in path.parts and not path.name.endswith("-student.ipynb") ]
             # Sort by nestedness, then alphabetically
             notebooks.sort(key=lambda path: (len(path.parents), str(path)))
 
@@ -284,6 +326,18 @@ class NotebookFilesHandler(BaseHandler):
         self.finish(json.dumps({
             "notebooks": assignment_notebooks
         }))
+
+class RestoreFileHandler(BaseHandler):
+    @tornado.web.authenticated
+    async def put(self):
+        data = self.get_json_body()
+        path_from_repo_root: str = data["path_from_repo_root"]
+
+        course = await self.api.get_course()
+        repo_root = InstructorClassRepo._compute_repo_root(course["name"])
+        
+        git_restore(path_from_repo_root, source="HEAD", staged=True, worktree=True, path=repo_root)
+        self.finish()
 
 class SyncToLMSHandler(BaseHandler):
     @tornado.web.authenticated
@@ -338,11 +392,13 @@ class SettingsHandler(BaseHandler):
     @tornado.web.authenticated
     async def get(self):
         server_version = str(__version__)
+        settings = await self.api.get_settings()
         repo_root = await self.context.get_repo_root()
 
         self.finish(json.dumps({
             "serverVersion": server_version,
-            "repoRoot": str(repo_root)
+            "repoRoot": str(repo_root),
+            "documentationUrl": settings["documentation_url"]
         }))
 
 
@@ -680,7 +736,9 @@ def setup_handlers(server_app):
         ("assignments", AssignmentsHandler),
         ("course_instructor_students", CourseAndInstructorAndStudentsHandler),
         ("notebook_files", NotebookFilesHandler),
+        ("restore_file", RestoreFileHandler),
         ("submit_assignment", SubmissionHandler),
+        ("create_student_notebook", StudentNotebookHandler),
         ("sync_to_lms", SyncToLMSHandler),
         ("grade_assignment", GradeAssignmentHandler),
         ("settings", SettingsHandler)

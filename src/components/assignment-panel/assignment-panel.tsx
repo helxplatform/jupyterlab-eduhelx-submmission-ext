@@ -1,11 +1,11 @@
 import React, { Fragment, ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
 import { CircularProgress } from '@material-ui/core'
 import { Popover, Tooltip } from 'antd'
-import { ArrowBackSharp, SupervisorAccountOutlined, SyncOutlined } from '@material-ui/icons'
+import { ArrowBackSharp, HelpOutlineOutlined, SupervisorAccountOutlined, SyncOutlined } from '@material-ui/icons'
 import {
     panelWrapperClass,
     panelHeaderClass,
-    studentManagementPopoverOverlayClass
+    capitalizedTitlePopoverOverlayClass
 } from './style'
 import { AssignmentContent } from './assignment-content'
 import { useAssignment, useCommands, useSettings, useSnackbar } from '../../contexts'
@@ -17,8 +17,8 @@ interface IAssignmentPanelProps {
 export const AssignmentPanel = ({}: IAssignmentPanelProps) => {
     const commands = useCommands()!
     const snackbar = useSnackbar()!
-    const { repoRoot } = useSettings()!
-    const { course, students, assignment } = useAssignment()!
+    const { repoRoot, documentationUrl } = useSettings()!
+    const { course, students, assignment, triggerImmediateUpdate } = useAssignment()!
     
     const [syncLoading, setSyncLoading] = useState<boolean>(false)
 
@@ -37,8 +37,8 @@ export const AssignmentPanel = ({}: IAssignmentPanelProps) => {
     const doSync = useCallback(async () => {
         setSyncLoading(true)
         try {
-            await new Promise((resolve) => setTimeout(resolve, 2000))
             await syncToLMS()
+            await triggerImmediateUpdate()
             snackbar.open({
                 type: 'success',
                 message: 'Successfully synced with LMS'
@@ -50,7 +50,13 @@ export const AssignmentPanel = ({}: IAssignmentPanelProps) => {
             })
         }
         setSyncLoading(false)
-    }, [snackbar])
+    }, [triggerImmediateUpdate, snackbar])
+
+    const openDocumentation = useCallback(() => {
+        if (!documentationUrl) return
+
+        window.open(documentationUrl, "_blank")
+    }, [documentationUrl])
 
     /** On page load, we want to `cd` to the repo root. */
     useEffect(() => {
@@ -77,12 +83,7 @@ export const AssignmentPanel = ({}: IAssignmentPanelProps) => {
                 <div style={{ flexGrow: 1 }} />
                 { students && (
                     <Popover title={
-                        <span style={{
-                            fontSize: 12,
-                            fontWeight: 700,
-                            letterSpacing: 0.5,
-                            textTransform: "uppercase"
-                        }}>Students</span>
+                        <span>Students</span>
                     } content={
                         <ul style={{ margin: 0, paddingLeft: 16 }}>
                            { students.map((student) => (
@@ -91,14 +92,14 @@ export const AssignmentPanel = ({}: IAssignmentPanelProps) => {
                             </li>
                            )) } 
                         </ul>
-                    } overlayClassName={ studentManagementPopoverOverlayClass }>
+                    } overlayClassName={ capitalizedTitlePopoverOverlayClass }>
                         <div style={{ display: "flex", alignItems: "center" }}>
                             { students.length } <SupervisorAccountOutlined style={{ fontSize: 20, marginLeft: 4 }} />
                         </div>
                     </Popover>
                 ) }
                 { students && (
-                    <Tooltip  title={ !syncLoading ? "Immediately sync with LMS" : "Syncing..." }>
+                    <Tooltip title={ !syncLoading ? "Immediately sync with LMS" : "Syncing..." }>
                         <div
                             style={{ display: "flex", alignItems: "center", marginLeft: 8, cursor: !syncLoading ? "pointer" : "default" }}
                             onClick={ !syncLoading ? doSync : undefined }
@@ -110,6 +111,16 @@ export const AssignmentPanel = ({}: IAssignmentPanelProps) => {
                                     <CircularProgress color="inherit" size={ 16 } />
                                 </div>
                             ) }
+                        </div>
+                    </Tooltip>
+                ) }
+                { students && documentationUrl && (
+                    <Tooltip title="Open user documentation">
+                        <div
+                            style={{ display: "flex", alignItems: "center", marginLeft: 8, cursor: "pointer" }}
+                            onClick={ openDocumentation }
+                        >
+                            <HelpOutlineOutlined style={{ fontSize: 20 }} />
                         </div>
                     </Tooltip>
                 ) }

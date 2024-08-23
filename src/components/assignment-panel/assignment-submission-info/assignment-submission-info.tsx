@@ -10,6 +10,7 @@ import { TextDivider } from '../../text-divider'
 import { disabledButtonClass } from '../../style'
 import { useAssignment, useSnackbar } from '../../../contexts'
 import { gradeAssignment, IStudent, ISubmission } from '../../../api'
+import { AssignmentStatus } from '../../../api/api-responses'
 
 interface SubmissionLegendProps {
     graded: IStudent[]
@@ -138,8 +139,8 @@ export const AssignmentSubmissionInfo = ({ }: AssignmentSubmissionInfoProps) => 
         setGradingActive(false)
     }, [])
 
-    if (!assignment?.isAvailable) return (
-        <div className={ assignmentSubmissionInfoClass }>
+    if (assignment?.status === AssignmentStatus.UNPUBLISHED || assignment?.status === AssignmentStatus.UPCOMING) return (
+        <div className={ assignmentSubmissionInfoClass } style={{ marginBottom: 8 }}>
             <TextDivider innerStyle={{ fontSize: 16 }} style={{ marginBottom: 8 }}>Submissions</TextDivider>
             The assignment is not open to submissions yet.
         </div>

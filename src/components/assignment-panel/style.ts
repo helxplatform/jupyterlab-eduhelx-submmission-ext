@@ -7,7 +7,7 @@ export const panelWrapperClass = (style as any)({
     color: 'var(--jp-ui-font-color1)',
     fontSize: 'var(--jp-ui-font-size1)',
     background: 'var(--jp-layout-color1) !important',
-    minWidth: 315,
+    minWidth: 'var(--jp-sidebar-min-width)',
     '&, & *': { boxSizing: 'border-box' } 
 })
 
@@ -26,10 +26,16 @@ export const panelHeaderClass = style({
     textTransform: 'uppercase'
 })
 
-export const studentManagementPopoverOverlayClass = style({
+export const capitalizedTitlePopoverOverlayClass = style({
     $nest: {
         '& .ant-popover-title': {
             marginBottom: 4
+        },
+        '& .ant-popover-title > span': {
+            fontSize: 12,
+            fontWeight: 700,
+            letterSpacing: 0.5,
+            textTransform: 'uppercase'
         }
     }
 })

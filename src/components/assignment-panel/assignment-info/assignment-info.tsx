@@ -2,6 +2,7 @@ import React, { ChangeEvent, Fragment, useCallback, useEffect, useMemo, useRef, 
 import { Tooltip } from 'antd'
 import moment from 'moment'
 import classNames from 'classnames'
+import { Dialog, showErrorMessage } from '@jupyterlab/apputils'
 import { TextField, MenuItem, Select, FormHelperText, CircularProgress } from '@material-ui/core'
 import { ArrowBackSharp } from '@material-ui/icons'
 import { useDebouncedCallback } from 'use-debounce'
@@ -10,8 +11,9 @@ import { InfoTooltip } from '../../info-tooltip'
 import { disabledButtonClass } from '../../style'
 import { useAssignment, useCommands, useSnackbar } from '../../../contexts'
 import { addLocalTimezone, getLocalTimezoneAbbr } from '../../../utils'
-import { createFile, updateAssignment } from '../../../api'
+import { createFile, updateAssignment, createStudentNotebook as apiCreateStudentNotebook } from '../../../api'
 import { openFileBrowserButtonClass } from '../no-assignment-warning/style'
+import { AssignmentStatus } from '../../../api/api-responses'
 
 const MS_IN_HOURS = 3.6e6
 
@@ -37,13 +39,14 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
     const [dueDateControlled, setDueDateControlled] = useState<string|undefined>(formatDateToMui(assignment?.dueDate))
     const [gradedNotebookControlled, setGradedNotebookControlled] = useState<string|undefined>(assignment?.masterNotebookPath)
     const [creatingTemplateNotebook, setCreatingTemplateNotebook] = useState<boolean>(false)
+    const [creatingStudentNotebook, setCreatingStudentNotebook] = useState<boolean>(false)
 
     if (!instructor || !assignment || !course || !notebookFiles) return null
 
     const multipleInstructors = useMemo(() => course.instructors.length > 1, [course])
 
     const hoursUntilDue = useMemo(() => (
-        assignment.isCreated ? (
+        assignment.dueDate ? (
             (assignment.dueDate!.getTime() - Date.now()) / MS_IN_HOURS
         ) : Infinity
     ), [assignment])
@@ -63,18 +66,18 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
         let text = undefined
         let tooltip = undefined
         let filled = false
-        if (assignment.isCreated) {
+        if (assignment.isPublished) {
             color = "white"
             backgroundColor = "#1890ff"
-            text = "Released"
-            tooltip = `Clear the available date or due date to unrelease the assignment`
+            text = "Published"
+            tooltip = `You can unpublish this assignment in Canvas`
             filled = true
         } else {
             color = "rgba(0, 0, 0, 0.88)"
             backgroundColor = "#fafafa"
             borderColor = "#d9d9d9"
-            text = "Not Released"
-            tooltip = `Set the available date and due date to release the assignment`
+            text = "Unpublished"
+            tooltip = `You can publish this assignment in Canvas`
             filled = true
         }
         return (
@@ -93,7 +96,7 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                 </span>
             </Tooltip>
         )
-    }, [assignment.isCreated])
+    }, [assignment.isPublished])
 
     const assignmentStatusTag = useMemo(() => {
         let color = undefined
@@ -102,25 +105,33 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
         let text = undefined
         let tooltip = undefined
         let filled = false
-        if (!assignment.isAvailable) {
-            color = "rgba(0, 0, 0, 0.88)"
-            backgroundColor = "#fafafa"
-            borderColor = "#d9d9d9"
-            text = "Not Open Yet"
-            tooltip = "The assignment has not opened yet for students"
-        }
-        else if (!assignment.isClosed) {
-            color = "rgba(0, 0, 0, 0.88)"
-            backgroundColor = "#fafafa"
-            borderColor = "#d9d9d9"
-            text = "Open"
-            tooltip = "The assignment is currently open for students to work"
-        } else {
-            color = "var(--jp-error-color1)"
-            backgroundColor = "var(--jp-error-color1)"
-            text = "Closed"
-            tooltip = "The assignment has closed for students"
-            filled = false
+        switch (assignment.status) {
+            // We don't actually show this tag if the assignment is unpublished.
+            case AssignmentStatus.UNPUBLISHED:
+            case AssignmentStatus.UPCOMING: {
+                color = "rgba(0, 0, 0, 0.88)"
+                backgroundColor = "#fafafa"
+                borderColor = "#d9d9d9"
+                text = "Upcoming"
+                tooltip = "The assignment has not opened yet for students"
+                break
+            }
+            case AssignmentStatus.OPEN: {
+                color = "rgba(0, 0, 0, 0.88)"
+                backgroundColor = "#fafafa"
+                borderColor = "#d9d9d9"
+                text = "Open"
+                tooltip = "The assignment is currently open for students to work on"
+                break
+            }
+            case AssignmentStatus.CLOSED: {
+                color = "var(--jp-error-color1)"
+                backgroundColor = "var(--jp-error-color1)"
+                text = "Closed"
+                tooltip = "The assignment has closed for students"
+                filled = false
+                break
+            }
         }
         return (
             <Tooltip title={ tooltip }>
@@ -139,13 +150,17 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                 </span>
             </Tooltip>
         )
-    }, [course, assignment, hoursUntilDue])
+    }, [course, assignment])
 
     const showCreateGradedNotebookButton = useMemo(() => notebookFiles[assignment.id].length === 0, [notebookFiles])
     
     const gradedNotebookInvalid = useMemo(() => (
         !gradedNotebookExists(assignment, gradedNotebookControlled)
     ), [gradedNotebookExists, assignment, gradedNotebookControlled])
+
+    const studentNotebookInvalid = useMemo(() => (
+        !gradedNotebookExists(assignment, assignment.studentNotebookPath)
+    ), [gradedNotebookExists, assignment])
 
     const onAvailableDateChanged = useDebouncedCallback((e: ChangeEvent<HTMLInputElement>) => {
         void async function() {
@@ -195,6 +210,25 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
         commands.execute('docmanager:open', { path: gradedNotebookPath })
     }, [commands, assignment, gradedNotebookControlled])
 
+    const createStudentNotebook = useCallback(async () => {
+        if (!commands || !assignment) return
+        setCreatingStudentNotebook(true)
+        try {
+            await apiCreateStudentNotebook(assignment.id)
+            await commands.execute('docmanager:open', { path: assignment.absoluteDirectoryPath + "/" + assignment.studentNotebookPath })
+        } catch (e: any) {
+            const data = await e.response?.json()
+            showErrorMessage(
+                'Failed to generate student notebook',
+                {
+                    message: <pre>{ data.error }</pre>
+                },
+                [Dialog.warnButton({ label: 'Dismiss' })]
+            )
+        }
+        setCreatingStudentNotebook(false)
+    }, [commands, assignment])
+
     const createTemplateNotebook = useCallback(async (setActive: boolean=true) => {
         if (!commands || !assignment || !notebookFiles) return
         setCreatingTemplateNotebook(true)
@@ -212,7 +246,7 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
         const templateNotebookPath = `${ assignment.absoluteDirectoryPath }/${ templateNotebookName }`
         const templateNotebookContent = JSON.stringify({
             "cells":[
-                {"cell_type":"markdown","id":"b35bba0c-d691-43e9-852f-4cf05f651f2c","metadata":{},"source":["**Note**: You can find Otter Grader documentation on creating notebooks [here](https://otter-grader.readthedocs.io/en/latest/otter_assign/notebook_format.html) or [under section 3 of the full Otter docs](https://otter-grader.readthedocs.io/_/downloads/en/latest/pdf/). Make sure you restart kernel and run all cells before attempting to push the notebook.\n","\n","*This cell should be removed prior to pushing.*"]},
+                {"cell_type":"markdown","id":"b35bba0c-d691-43e9-852f-4cf05f651f2c","metadata":{},"source": ["## This is a template. Delete this cell.\n","\n","This template is intended to help you start writing an assignment for Otter.\n","\n","You can find Otter Grader documentation on creating notebooks [here](https://otter-grader.readthedocs.io/en/latest/otter_assign/notebook_format.html) and [EduHeLx user documentation here](https://renci.atlassian.net/wiki/spaces/EHI/overview). Make sure you restart kernel and run all cells before attempting to push the notebook.\n","\n","*This cell should be removed prior to pushing.*"]},
                 {"cell_type":"raw","id":"0f25e6b1-e3f3-4d6f-828b-d002f4f84f0f","metadata":{},"source":["# ASSIGNMENT CONFIG\n","requirements: requirements.txt\n","show_question_points: true"]},
                 {"cell_type":"markdown","id":"efa64998-0bee-4ec4-8b2f-ae369eb24b73","metadata":{},"source":["# Assignment 1: Test Juypter"]},
                 {"cell_type":"code","execution_count":1,"id":"a018cc99-7dc6-4cbc-a919-8fafc2a3b3b3","metadata":{},"outputs":[],"source":["# Import statements\n","import pandas as pd\n","import numpy as np"]},
@@ -238,23 +272,20 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
         })
         try {
             await createFile(templateNotebookPath, templateNotebookContent)
+            if (setActive) try {
+                await updateAssignment(assignment.name, {
+                    master_notebook_path: templateNotebookName
+                })
+            } catch {}
+            await commands.execute('docmanager:open', { path: templateNotebookPath })
         } catch (e: any) {
             snackbar.open({
                 type: 'error',
                 message: "Sorry! Unable to create template notebook. Please contact support."
             })
-            setCreatingTemplateNotebook(false)
-            return
         }
-
-        if (setActive) try {
-            await updateAssignment(assignment.name, {
-                master_notebook_path: templateNotebookName
-            })
-        } catch {}
         
         setCreatingTemplateNotebook(false)
-        await commands.execute('docmanager:open', { path: templateNotebookPath })
     }, [commands, assignment, notebookFiles, gradedNotebookControlled])
 
     useEffect(() => {
@@ -277,7 +308,7 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                 }
                 */}
                 { assignmentReleasedTag }
-                { assignment.isCreated && assignmentStatusTag }
+                { assignment.isPublished && assignmentStatusTag }
             </div>
             <div className={ assignmentInfoSectionClass } style={{ marginTop: 16 }}>
                 <h5 className={ assignmentInfoSectionHeaderClass }>
@@ -394,13 +425,27 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                     { !gradedNotebookInvalid && (
                         <div style={{ display: "flex", gap: 8 }}>
                             <FormHelperText style={{ color: "#1976d2" }}>
-                                <a onClick={ openGradedNotebook } style={{ cursor: "pointer" }}>
+                                <a
+                                    onClick={ openGradedNotebook }
+                                    style={{ cursor: "pointer", whiteSpace: "nowrap" }}
+                                >
                                     Open notebook
                                 </a>
                             </FormHelperText>
-                            <FormHelperText style={{ color: "#1976d2" }}>
-                                <a onClick={ () => createTemplateNotebook(false) } style={{ cursor: "pointer" }}>
+                            <FormHelperText style={{ color: creatingTemplateNotebook ? "var(--jp-ui-font-color2)" : "#1976d2" }}>
+                                <a
+                                    onClick={ () => createTemplateNotebook(false) }
+                                    style={{ cursor: creatingTemplateNotebook ? "default" : "pointer", whiteSpace: "nowrap" }}
+                                >
                                     Create template
+                                </a>
+                            </FormHelperText>
+                            <FormHelperText style={{ color: creatingStudentNotebook ? "var(--jp-ui-font-color2)" : "#1976d2" }}>
+                                <a
+                                    onClick={ createStudentNotebook }
+                                    style={{ cursor: creatingStudentNotebook ? "default" : "pointer", whiteSpace: "nowrap" }}
+                                >
+                                    { studentNotebookInvalid ? "Create" : "Recreate" } student version
                                 </a>
                             </FormHelperText>
                         </div>

@@ -3,6 +3,13 @@ export enum UserType {
     INSTRUCTOR = 'instructor'
 }
 
+export enum AssignmentStatus {
+    UNPUBLISHED = 'UNPUBLISHED',
+    UPCOMING    = 'UPCOMING',
+    OPEN        = 'OPEN',
+    CLOSED      = 'CLOSED'
+}
+
 export interface CommitResponse {
     id: string
     message: string
@@ -62,13 +69,15 @@ export interface AssignmentResponse {
     last_modified_date: string
     staged_changes: StagedChangeResponse[]
 
+    status: AssignmentStatus
     is_deferred: boolean
     is_extended: boolean
-    is_created: boolean
+    is_published: boolean
     is_available: boolean
     is_closed: boolean
 
     student_submissions?: { [onyen: string]: SubmissionResponse[] }
+    ignored_files?: string[]
 }
 
 export interface CourseResponse {
@@ -82,4 +91,5 @@ export interface CourseResponse {
 export interface ServerSettingsResponse {
     serverVersion: string
     repoRoot: string
+    documentationUrl: string | null
 }

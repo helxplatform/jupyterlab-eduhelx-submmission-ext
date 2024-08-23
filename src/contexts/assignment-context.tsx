@@ -19,6 +19,7 @@ interface IAssignmentContext {
     path: string | null
     loading: boolean
     gradedNotebookExists: GradedNotebookExists
+    triggerImmediateUpdate: () => Promise<void>
 }
 
 interface IAssignmentProviderProps {
@@ -55,6 +56,27 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
         if (gradedNotebookPath === undefined) gradedNotebookPath = assignment.masterNotebookPath
         return notebookFiles[assignment.id].some((file) => file === gradedNotebookPath)
     }, [notebookFiles])
+
+    const triggerImmediateUpdate = useCallback(async () => {
+        if (!currentPath) return
+        try {
+            const [
+                assignmentData,
+                courseUserData,
+                { notebooks }
+            ] = await Promise.all([
+                getAssignments(currentPath),
+                getInstructorAndStudentsAndCourse(),
+                listNotebookFiles()
+            ])
+            setAssignments(assignmentData.assignments)
+            setCurrentAssignment(assignmentData.currentAssignment)
+            setCourse(courseUserData.course)
+            setInstructor(courseUserData.instructor)
+            setStudents(courseUserData.students)
+            setNotebookFiles(notebooks)
+        } catch {}
+    }, [currentPath])
     
     useEffect(() => {
         setCurrentPath(fileBrowser.model.path)
@@ -176,7 +198,8 @@ export const AssignmentProvider = ({ fileBrowser, children }: IAssignmentProvide
             notebookFiles,
             path: currentPath,
             loading,
-            gradedNotebookExists
+            gradedNotebookExists,
+            triggerImmediateUpdate
         }}>
             { children }
         </AssignmentContext.Provider>
