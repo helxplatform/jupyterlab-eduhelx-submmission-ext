@@ -84,6 +84,16 @@ class BaseHandler(APIHandler):
             self.set_status(status_code)
             self.finish(exc.response.text)
     
+    # Default error handling
+    def write_error(self, status_code, **kwargs):
+        # If exc_info is present, the error is unhandled.
+        if "exc_info" not in kwargs: return
+
+        cls, exc, traceback = kwargs["exc_info"]
+        if isinstance(exc, APIException):
+            self.set_status(status_code)
+            self.finish(exc.response.text)
+    
 class WebsocketHandler(WSMixin, WSHandler, BaseHandler):
     clients = []
     queued_messages = []
