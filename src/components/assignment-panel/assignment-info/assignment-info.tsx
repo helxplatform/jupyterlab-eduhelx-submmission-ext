@@ -183,24 +183,7 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                     </div>
                 </div>
             ) }
-<<<<<<< HEAD
-            <div className={ assignmentInfoSectionClass } style={{ marginTop: 0 }}>
-=======
-            { assignment.isCreated && assignment.isClosed && (
-                <div className={ assignmentInfoSectionClass }>
-                    <h5
-                        className={ `${ assignmentInfoSectionHeaderClass} ${ assignmentInfoSectionWarningClass }` }
-                    >
-                        Assignment is past due
-                    </h5>
-                    <div className={ assignmentInfoSectionWarningClass }>
-                        No further changes can be submitted.
-                        Please contact your {pluralize("instructor", course.instructors.length)} for an extension.
-                    </div>
-                </div>
-            ) }
-            <div className={ assignmentInfoSectionClass } style={{ marginTop: 0, marginBottom: 8 }}>
->>>>>>> cae31e41c33fd24c27e904518df29b933801e477
+            <div className={ assignmentInfoSectionClass }>
                 <h5 className={ assignmentInfoSectionHeaderClass }>
                     Assignment Notebook
                 </h5>
