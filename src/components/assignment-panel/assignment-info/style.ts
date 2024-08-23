@@ -22,11 +22,14 @@ export const assignmentNameClass = style({
 export const assignmentInfoSectionClass = (style as any)({
     color: 'var(--jp-ui-font-color1)',
     marginBottom: 16,
-    '& > *:first-child': {
-        fontSize: 12
+    '&:last-child': {
+        marginBottom: 8
     },
     '& > *': {
         fontSize: 14
+    },
+    '& > *:first-child': {
+        fontSize: 12
     }
 })
 

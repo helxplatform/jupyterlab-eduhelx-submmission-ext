@@ -1,6 +1,6 @@
 import { IStudent, Student } from './student'
 import { ISubmission, Submission } from './submission'
-import { AssignmentResponse } from './api-responses'
+import { AssignmentResponse, AssignmentStatus } from './api-responses'
 import { IStagedChange, StagedChange } from './staged-change'
 
 export interface IAssignment {
@@ -21,13 +21,14 @@ export interface IAssignment {
     readonly adjustedAvailableDate: Date | null
     readonly adjustedDueDate: Date | null
     readonly lastModifiedDate: Date
+    
+    readonly isPublished: boolean
+    readonly status: AssignmentStatus
 
     // Indicates that release date has been deferred to a later date for the student
     readonly isDeferred: boolean
     // Indicates that due date is extended to a later date for the student
     readonly isExtended: boolean
-    // Indicates if an assignment has an available_date and a due_date assigned to it.
-    readonly isCreated: boolean
     // Indicates if an assignment is available to work on (e.g. date is greater than adjusted_available_date)
     readonly isAvailable: boolean
     // Indicates if an assignment is no longer available to work on (e.g. date is greater than adjusted_due_date)
@@ -63,19 +64,17 @@ export class Assignment implements IAssignment {
         private _adjustedAvailableDate: Date | null,
         private _adjustedDueDate: Date | null,
         private _lastModifiedDate: Date,
+        
+        private _isPublished: boolean,
+        private _status: AssignmentStatus,
 
         private _isDeferred: boolean,
         private _isExtended: boolean,
-        private _isCreated: boolean,
         private _isAvailable: boolean,
         private _isClosed: boolean,
         private _submissions?: ISubmission[],
         private _stagedChanges?: IStagedChange[]
-    ) {
-        // TEMP: REMOVE AFTER ATTEMPTS PR IN GRADER-API
-        if (this._maxAttempts === undefined) this._maxAttempts = null
-        if (this._currentAttempts === undefined) this._currentAttempts = 0
-    }
+    ) {}
     
     get id() { return this._id }
     get name() { return this._name }
@@ -92,11 +91,12 @@ export class Assignment implements IAssignment {
     get adjustedAvailableDate() { return this._adjustedAvailableDate }
     get adjustedDueDate() { return this._adjustedDueDate }
     get lastModifiedDate() { return this._lastModifiedDate }
-    
+
+    get isPublished() { return this._isPublished }
+    get status() { return this._status }
 
     get isDeferred() { return this._isDeferred }
     get isExtended() { return this._isExtended }
-    get isCreated() { return this._isCreated }
     get isAvailable() { return this._isAvailable }
     get isClosed() { return this._isClosed }
 
@@ -128,9 +128,11 @@ export class Assignment implements IAssignment {
             data.adjusted_due_date ? new Date(data.adjusted_due_date) : null,
             new Date(data.last_modified_date),
 
+            data.is_published,
+            data.status,
+
             data.is_deferred,
             data.is_extended,
-            data.is_created,
             data.is_available,
             data.is_closed,
             data.submissions?.map((res) => Submission.fromResponse(res)),

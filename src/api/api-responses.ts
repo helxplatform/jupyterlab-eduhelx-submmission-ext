@@ -3,6 +3,13 @@ export enum UserType {
     INSTRUCTOR = 'instructor'
 }
 
+export enum AssignmentStatus {
+    UNPUBLISHED = 'UNPUBLISHED',
+    UPCOMING    = 'UPCOMING',
+    OPEN        = 'OPEN',
+    CLOSED      = 'CLOSED'
+}
+
 export interface CommitResponse {
     id: string
     message: string
@@ -65,9 +72,10 @@ export interface AssignmentResponse {
     adjusted_due_date: string | null
     last_modified_date: string
 
+    status: AssignmentStatus
     is_deferred: boolean
     is_extended: boolean
-    is_created: boolean
+    is_published: boolean
     is_available: boolean
     is_closed: boolean
 
