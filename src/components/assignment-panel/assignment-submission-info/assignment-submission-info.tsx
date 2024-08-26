@@ -103,10 +103,14 @@ export const AssignmentSubmissionInfo = ({ }: AssignmentSubmissionInfoProps) => 
                 // The student's active submission is graded.
                 if (activeSubmission.graded) graded.push(student)
                 else {
-                    // The student has submitted but not active submission is not graded (possibly no submissions graded)
-                    submitted.push(student)
-                    // The student already has a graded submission but it isn't their active submission
-                    if (hasGradedSubmission) resubmitted.push(student)
+                    // The student has submitted but their active submission is not graded. Possibly none are graded.
+                    if (hasGradedSubmission) {
+                        // The student already has a graded submission but it isn't their active submission
+                        graded.push(student)
+                        resubmitted.push(student)
+                    } else {
+                        submitted.push(student)
+                    }
                 }
             }
         })

@@ -26,7 +26,7 @@ export const AssignmentPanel = ({}: IAssignmentPanelProps) => {
         const headerFragments = []
         // if (assignment) headerFragments.push(assignment.name)
         if (course) headerFragments.push(course.name)
-        headerFragments.push('EduHeLx')
+        else headerFragments.push('EduHeLx')
         return (
             <Fragment>
                 { headerFragments.join(' • ') }
