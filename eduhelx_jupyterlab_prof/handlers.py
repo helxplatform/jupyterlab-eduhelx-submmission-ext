@@ -242,10 +242,12 @@ class SubmissionHandler(BaseHandler):
             return
 
         current_assignment_path = instructor_repo.get_assignment_path(instructor_repo.current_assignment)
+        current_assignment = instructor_repo.current_assignment
 
         try:
             instructor_repo = InstructorClassRepo(course, assignments, current_assignment_path)
-            instructor_repo.create_student_notebook()
+            # We only create a student version for autograded assignments.
+            if not current_assignment["manual_grading"]: instructor_repo.create_student_notebook()
         except Exception as e:
             self.set_status(400)
             self.finish(json.dumps({
