@@ -15,7 +15,8 @@ export interface IAssignment {
     // to open an assignment, even though we don't know where the repo root is.
     readonly absoluteDirectoryPath: string
     readonly masterNotebookPath: string
-    readonly studentNotebookPath: string
+    readonly studentNotebookPath: string,
+    readonly manualGrading: boolean,
     readonly createdDate: Date
     readonly availableDate: Date | null
     readonly dueDate: Date | null
@@ -51,6 +52,7 @@ export class Assignment implements IAssignment {
         private _absoluteDirectoryPath: string,
         private _masterNotebookPath: string,
         private _studentNotebookPath: string,
+        private _manualGrading: boolean,
         private _protectedFiles: string[],
         private _overwritableFiles: string[],
         private _createdDate: Date,
@@ -80,6 +82,7 @@ export class Assignment implements IAssignment {
     get absoluteDirectoryPath() { return this._absoluteDirectoryPath }
     get masterNotebookPath() { return this._masterNotebookPath }
     get studentNotebookPath() { return this._studentNotebookPath }
+    get manualGrading() { return this._manualGrading }
     get protectedFiles() { return this._protectedFiles }
     get overwritableFiles() { return this._overwritableFiles }
     get createdDate() { return this._createdDate }
@@ -109,6 +112,7 @@ export class Assignment implements IAssignment {
             data.absolute_directory_path,
             data.master_notebook_path,
             data.student_notebook_path,
+            data.manual_grading,
             data.protected_files,
             data.overwritable_files,
             new Date(data.created_date),

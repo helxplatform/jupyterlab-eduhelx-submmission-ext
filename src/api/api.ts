@@ -22,6 +22,7 @@ export interface UpdateAssignmentData {
     name?: string | null,
     directory_path?: string | null,
     master_notebook_path?: string,
+    manual_grading?: boolean
     available_date?: string | null,
     due_date?: string | null,
 }
