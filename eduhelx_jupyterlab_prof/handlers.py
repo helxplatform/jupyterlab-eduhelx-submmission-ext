@@ -172,14 +172,16 @@ class AssignmentsHandler(BaseHandler):
     async def patch(self):
         name = self.get_argument("name")
         data = self.get_json_body()
+        
+        assignments = await self.api.get_my_assignments()
+        assignment = [assignment for assignment in assignments if assignment["name"] == name][0]
+
         await self.api.update_assignment(name, **data)
         if "master_notebook_path" in data:
-            await self.update_gitignore_master_notebook(name, data["master_notebook_path"])
+            await self.update_gitignore_master_notebook(assignment, data["master_notebook_path"])
 
-    async def update_gitignore_master_notebook(self, assignment_name, master_notebook_path):
+    async def update_gitignore_master_notebook(self, assignment, master_notebook_path):
         course = await self.api.get_course()
-        assignments = await self.api.get_my_assignments()
-        assignment = [assignment for assignment in assignments if assignment["name"] == assignment_name][0]
         
         repo_root = InstructorClassRepo._compute_repo_root(course["name"])
         assignment_gitignore_path: Path = repo_root / assignment["directory_path"] / ".gitignore"
@@ -192,9 +194,18 @@ class AssignmentsHandler(BaseHandler):
             gitignore_lines = []
             
         matches_gitignore = parse_gitignore(assignment_gitignore_path)
-        if not matches_gitignore(repo_root / assignment["directory_path"] / master_notebook_path):
+
+        if assignment["manual_grading"]:
+            # The master notebook is shared among students for manually graded assignments.
+            # We want to remove the new master notebook if possible (using a naive scan)
+            lines = [line for line in gitignore_lines if line.strip() != master_notebook_path.strip()]
             with open(assignment_gitignore_path, "w") as f:
-                f.writelines([*gitignore_lines, f"{ master_notebook_path }\n"])
+                f.writelines(lines)
+        else:
+            # We want to add the new master notebook to gitignore if it's not already matched.
+            if not matches_gitignore(repo_root / assignment["directory_path"] / master_notebook_path):
+                with open(assignment_gitignore_path, "w") as f:
+                    f.writelines([*gitignore_lines, f"{ master_notebook_path }\n"])
 
 class SubmissionHandler(BaseHandler):
     @tornado.web.authenticated
@@ -231,10 +242,12 @@ class SubmissionHandler(BaseHandler):
             return
 
         current_assignment_path = instructor_repo.get_assignment_path(instructor_repo.current_assignment)
+        current_assignment = instructor_repo.current_assignment
 
         try:
             instructor_repo = InstructorClassRepo(course, assignments, current_assignment_path)
-            instructor_repo.create_student_notebook()
+            # We only create a student version for autograded assignments.
+            if not current_assignment["manual_grading"]: instructor_repo.create_student_notebook()
         except Exception as e:
             self.set_status(400)
             self.finish(json.dumps({

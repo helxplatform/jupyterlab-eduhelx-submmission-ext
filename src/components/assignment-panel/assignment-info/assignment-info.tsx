@@ -3,7 +3,7 @@ import { Tooltip } from 'antd'
 import moment from 'moment'
 import classNames from 'classnames'
 import { Dialog, showErrorMessage } from '@jupyterlab/apputils'
-import { TextField, MenuItem, Select, FormHelperText, CircularProgress } from '@material-ui/core'
+import { TextField, MenuItem, Checkbox, Select, FormHelperText, CircularProgress } from '@material-ui/core'
 import { ArrowBackSharp } from '@material-ui/icons'
 import { useDebouncedCallback } from 'use-debounce'
 import { assignmentInfoClass, assignmentInfoSectionClass, assignmentInfoSectionHeaderClass, assignmentInfoSectionWarningClass, assignmentNameClass, tagClass } from './style'
@@ -54,10 +54,14 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
     const masterNotebookTooltipContent = useMemo(() => {
         return (
             <div>
-                This notebook contains the solutions and test cases used for autograding.
+                { assignment.manualGrading ? (
+                    "This notebook contains the questions for students to answer."
+                ) : (
+                    "This notebook contains the solutions and test cases used for autograding."
+                ) }
             </div>
         )
-    }, [])
+    }, [assignment])
 
     const assignmentReleasedTag = useMemo(() => {
         let color = undefined
@@ -196,6 +200,14 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
         }()
     }, 1000, { leading: true })
 
+    const onManualGradingChanged = useDebouncedCallback((e: ChangeEvent<HTMLInputElement>) => {
+        void async function() {
+            await updateAssignment(assignment.name, {
+                manual_grading: e.target.checked
+            })
+        }()
+    }, 1000, { leading: true })
+
     const onGradedNotebookChanged = useDebouncedCallback((e: ChangeEvent<HTMLInputElement>) => {
         void async function() {
             await updateAssignment(assignment.name, {
@@ -244,11 +256,19 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
 
         const templateNotebookName = computeUniqueNotebookName()
         const templateNotebookPath = `${ assignment.absoluteDirectoryPath }/${ templateNotebookName }`
-        const templateNotebookContent = JSON.stringify({
-            "cells":[
+        const notebookMetadata = {
+            "metadata":{
+                "kernelspec":{"display_name":"Python 3 (ipykernel)","language":"python","name":"python3"},
+                "language_info":{"codemirror_mode":{"name":"ipython","version":3},"file_extension":".py","mimetype":"text/x-python","name":"python","nbconvert_exporter":"python","pygments_lexer":"ipython3"}
+            },
+            "nbformat":4,
+            "nbformat_minor":5
+        }
+        const autogradedTemplateNotebookContent = JSON.stringify({
+            "cells": [
                 {"cell_type":"markdown","id":"b35bba0c-d691-43e9-852f-4cf05f651f2c","metadata":{},"source": ["## This is a template. Delete this cell.\n","\n","This template is intended to help you start writing an assignment for Otter.\n","\n","You can find Otter Grader documentation on creating notebooks [here](https://otter-grader.readthedocs.io/en/latest/otter_assign/notebook_format.html) and [EduHeLx user documentation here](https://renci.atlassian.net/wiki/spaces/EHI/overview). Make sure you restart kernel and run all cells before attempting to push the notebook.\n","\n","*This cell should be removed prior to pushing.*"]},
                 {"cell_type":"raw","id":"0f25e6b1-e3f3-4d6f-828b-d002f4f84f0f","metadata":{},"source":["# ASSIGNMENT CONFIG\n","requirements: requirements.txt\n","show_question_points: true"]},
-                {"cell_type":"markdown","id":"efa64998-0bee-4ec4-8b2f-ae369eb24b73","metadata":{},"source":["# Assignment 1: Test Juypter"]},
+                {"cell_type":"markdown","id":"efa64998-0bee-4ec4-8b2f-ae369eb24b73","metadata":{},"source":[`# ${ assignment.name }`]},
                 {"cell_type":"code","execution_count":1,"id":"a018cc99-7dc6-4cbc-a919-8fafc2a3b3b3","metadata":{},"outputs":[],"source":["# Import statements\n","import pandas as pd\n","import numpy as np"]},
                 {"cell_type":"raw","id":"813f41e7-e7b8-479c-b187-5ece631470f6","metadata":{},"source":["# BEGIN QUESTION\n","name: question1"]},
                 {"cell_type":"markdown","id":"29f1c87e-7816-436e-8b9d-e363eb877c4f","metadata":{},"source":["**Question 1**: Description"]},
@@ -263,15 +283,20 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                 {"cell_type":"raw","id":"3857366d-26d4-4d52-9ce2-bf94b984479c","metadata":{},"source":["# END TESTS"]},
                 {"cell_type":"raw","id":"42c48a4e-7efa-4b90-8d5b-d747d1ddffc5","metadata":{},"source":["# END QUESTION"]}
             ],
-            "metadata":{
-                "kernelspec":{"display_name":"Python 3 (ipykernel)","language":"python","name":"python3"},
-                "language_info":{"codemirror_mode":{"name":"ipython","version":3},"file_extension":".py","mimetype":"text/x-python","name":"python","nbconvert_exporter":"python","pygments_lexer":"ipython3"}
-            },
-            "nbformat":4,
-            "nbformat_minor":5
+            ...notebookMetadata
+        })
+        const manuallyGradedTemplateNotebookContent = JSON.stringify({
+            "cells": [
+                {"cell_type":"markdown","id":"efa64998-0bee-4ec4-8b2f-ae369eb24b73","metadata":{},"source":[`# ${ assignment.name }`]},
+                {"cell_type":"code","execution_count":1,"id":"a018cc99-7dc6-4cbc-a919-8fafc2a3b3b3","metadata":{},"outputs":[],"source":["# Import statements\n","import pandas as pd\n","import numpy as np"]},
+            ],
+            ...notebookMetadata
         })
         try {
-            await createFile(templateNotebookPath, templateNotebookContent)
+            await createFile(
+                templateNotebookPath,
+                assignment.manualGrading ? manuallyGradedTemplateNotebookContent : autogradedTemplateNotebookContent
+            )
             if (setActive) try {
                 await updateAssignment(assignment.name, {
                     master_notebook_path: templateNotebookName
@@ -369,6 +394,24 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                     />
                 </div>
             </div>
+            <div
+                className={ assignmentInfoSectionClass }
+                style={{ marginTop: 0, display: "flex", alignItems: "center", gap: 4 }}
+            >
+                <h5 className={ assignmentInfoSectionHeaderClass } style={{ margin: 0 }}>
+                    Manually graded
+                </h5>
+                <div>
+                    <Checkbox
+                        defaultChecked={ assignment.manualGrading }
+                        onChange={ (e: ChangeEvent<HTMLInputElement>) => {
+                            onManualGradingChanged(e)
+                        } }
+                        size="small"
+                        style={{ boxSizing: "content-box", padding: 0, color: "var(--md-blue-500)" }}
+                    />
+                </div>
+            </div>
             <div className={ assignmentInfoSectionClass } style={{ marginTop: 0 }}>
                 <h5 className={ assignmentInfoSectionHeaderClass }>
                     Master notebook
@@ -440,14 +483,16 @@ export const AssignmentInfo = ({  }: AssignmentInfoProps) => {
                                     Create template
                                 </a>
                             </FormHelperText>
-                            <FormHelperText style={{ color: creatingStudentNotebook ? "var(--jp-ui-font-color2)" : "#1976d2" }}>
-                                <a
-                                    onClick={ createStudentNotebook }
-                                    style={{ cursor: creatingStudentNotebook ? "default" : "pointer", whiteSpace: "nowrap" }}
-                                >
-                                    { studentNotebookInvalid ? "Create" : "Recreate" } student version
-                                </a>
-                            </FormHelperText>
+                            { !assignment.manualGrading && (
+                                <FormHelperText style={{ color: creatingStudentNotebook ? "var(--jp-ui-font-color2)" : "#1976d2" }}>
+                                    <a
+                                        onClick={ createStudentNotebook }
+                                        style={{ cursor: creatingStudentNotebook ? "default" : "pointer", whiteSpace: "nowrap" }}
+                                    >
+                                        { studentNotebookInvalid ? "Create" : "Recreate" } student version
+                                    </a>
+                                </FormHelperText>
+                            ) }
                         </div>
                     )}
                 </div>

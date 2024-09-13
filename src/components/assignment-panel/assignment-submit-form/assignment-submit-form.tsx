@@ -25,11 +25,22 @@ export const AssignmentSubmitForm = ({ }: AssignmentSubmitFormProps) => {
     const [summaryText, setSummaryText] = useState<string>("")
     const [submitting, setSubmitting] = useState<boolean>(false)
 
-    const disabled = !assignment || submitting || summaryText === "" || !gradedNotebookExists(assignment)
+    const masterNotebookIgnoredForManualAssignment = useMemo<boolean>(() => (
+        !!assignment && assignment.manualGrading && assignment.ignoredFiles.includes(assignment.masterNotebookPath)
+    ), [assignment])
+
+    const disabled = (
+        !assignment ||
+        submitting ||
+        summaryText === "" ||
+        !gradedNotebookExists(assignment) ||
+        masterNotebookIgnoredForManualAssignment
+    )
     const disabledReason = disabled ? (
         !assignment ? undefined :
         submitting ? `Currently uploading assignment` :
         !gradedNotebookExists(assignment) ? "Please select a notebook to use for grading" :
+        masterNotebookIgnoredForManualAssignment ? "Please remove the master notebook from your gitignore" :
         summaryText === "" ? `Please enter a summary describing your changes` : undefined
     ) : undefined
     
