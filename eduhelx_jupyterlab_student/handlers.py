@@ -248,8 +248,12 @@ class SubmissionHandler(BaseHandler):
             return
 
         student_notebook_path = student_repo.current_assignment_path / student_repo.current_assignment["student_notebook_path"]
-        with open(student_notebook_path, "r") as f:
-            student_notebook_content = f.read()
+        if not student_notebook_path.exists():
+            self.set_status(400)
+            self.finish(json.dumps({
+                "message": "Student notebook does not exist"
+            }))
+        student_notebook_content = student_notebook_path.read()
         
         rollback_id = get_head_commit_id(path=student_repo.repo_root)
         stage_files(".", path=student_repo.current_assignment_path)
