@@ -248,6 +248,16 @@ class SubmissionHandler(BaseHandler):
             return
 
         current_assignment_path = student_repo.get_assignment_path(student_repo.current_assignment)
+        student_notebook_path = current_assignment_path / student_repo.current_assignment["student_notebook_path"]
+
+        if not student_notebook_path.exists():
+            self.set_status(400)
+            self.finish(json.dumps({
+                "message": "Student notebook file does not exist"
+            }))
+            return
+        student_notebook_content = student_notebook_path.read_text()
+        
         
         rollback_id = get_head_commit_id(path=student_repo.repo_root)
         stage_files(".", path=current_assignment_path)
@@ -268,7 +278,8 @@ class SubmissionHandler(BaseHandler):
         try:
             await self.api.create_submission(
                 student_repo.current_assignment["id"],
-                commit_id
+                commit_id=commit_id,
+                student_notebook_content=student_notebook_content
             )
         except Exception as e:
             # If the submission fails create in the API, rollback the local commit to the previous head.
