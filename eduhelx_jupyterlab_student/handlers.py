@@ -253,7 +253,7 @@ class SubmissionHandler(BaseHandler):
             self.finish(json.dumps({
                 "message": "Student notebook does not exist"
             }))
-        student_notebook_content = student_notebook_path.read()
+        student_notebook_content = student_notebook_path.read_text()
         
         rollback_id = get_head_commit_id(path=student_repo.repo_root)
         stage_files(".", path=student_repo.current_assignment_path)
