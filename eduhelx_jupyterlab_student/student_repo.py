@@ -30,7 +30,7 @@ class StudentClassRepo:
         self.current_assignment = self._compute_current_assignment(self.assignments, self.repo_root, self.current_path)
     
     def get_assignment_path(self, assignment):
-        return os.path.join(self.repo_root, assignment["directory_path"])
+        return Path(os.path.join(self.repo_root, assignment["directory_path"]))
 
     def get_protected_file_paths(self, assignment) -> list[Path]:
         files = []
