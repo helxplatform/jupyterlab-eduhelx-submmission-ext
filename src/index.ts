@@ -1,18 +1,15 @@
 import {
-  ILayoutRestorer,
   ILabShell,
+  ILayoutRestorer,
   JupyterFrontEnd,
   JupyterFrontEndPlugin
 } from '@jupyterlab/application'
-import { FileBrowserModel, IDefaultFileBrowser } from '@jupyterlab/filebrowser'
 import { Dialog, showErrorMessage } from '@jupyterlab/apputils'
-import { IChangedArgs } from '@jupyterlab/coreutils'
-import { getServerSettings, IServerSettings } from './api'
-import { AssignmentWidget } from './widgets'
-import { EduhelxSubmissionModel } from './model'
-import { submissionIcon } from './style/icons'
-import { IFileBrowserFactory } from '@jupyterlab/filebrowser'
+import { IDefaultFileBrowser } from '@jupyterlab/filebrowser'
 import { ISettingRegistry } from '@jupyterlab/settingregistry'
+import { getServerSettings, IServerSettings } from './api'
+import { submissionIcon } from './style/icons'
+import { AssignmentWidget } from './widgets'
 
 async function activate (
   app: JupyterFrontEnd,
@@ -38,7 +35,7 @@ async function activate (
     // A couple things are required to get jupyter to show dotfiles/~ files/etc.
     // This browser setting needs to be enabled for filebrowser, as well as
     // the server setting ContentsManager.allow_hidden=True
-    settingRegistry.set("@jupyterlab/filebrowser-extension:browser", "showHiddenFiles", true)
+    settingRegistry.set('@jupyterlab/filebrowser-extension:browser', 'showHiddenFiles', true)
   })
 
   // const model = new EduhelxSubmissionModel()
