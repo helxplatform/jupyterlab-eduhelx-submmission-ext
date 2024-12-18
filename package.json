@@ -155,5 +155,6 @@
       }
     },
     "outputDir": "eduhelx_jupyterlab_student/labextension"
-  }
+  },
+  "packageManager": "yarn@4.1.1"
 }
