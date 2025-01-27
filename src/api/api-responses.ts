@@ -39,6 +39,35 @@ export interface StudentResponse extends UserResponse {
     fork_cloned: boolean
 }
 
+export enum JobStatusEnum {
+    PENDING = 'pending',
+    RECEIVED = 'received',
+    STARTED = 'started',
+    RETRY = 'retry',
+    FAILURE = 'failure',
+    SUCCESS = 'success',
+    REVOKED = 'revoked'
+}
+
+export interface JobStatusResponse {
+    id: string
+    // May be undefined for PENDING statuses
+    type?: string | null
+    status: JobStatusEnum
+}
+
+export interface JobResultResponse extends JobStatusResponse {
+    result: any
+    type: string | null
+    ready: boolean
+    successful: boolean
+    failed: boolean
+    queue: string | null
+    retries: number | null
+    traceback: string | null
+    finished_date: string | null
+}
+
 export interface StagedChangeResponse {
     path_from_repo: string
     path_from_assn: string

@@ -27,7 +27,9 @@ dependencies = [
     "httpx>=0,<1",
     "PyJWT>=2.0.0,<3",
     "backoff==2.2.1",
-    "eduhelx_utils@git+https://github.com/helxplatform/eduhelx-utils"
+    "eduhelx_utils@git+https://github.com/helxplatform/eduhelx-utils",
+    "gitignore-parser==0.1.11",
+    "websockets==14.1"
 ]
 dynamic = ["version", "description", "authors", "urls", "keywords"]
 

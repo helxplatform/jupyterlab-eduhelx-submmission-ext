@@ -19,7 +19,7 @@ interface AssignmentSubmitFormProps {
 }
 
 export const AssignmentSubmitForm = ({ }: AssignmentSubmitFormProps) => {
-    const { assignment, course, path } = useAssignment()!
+    const { assignment, course, path, updateAssignments } = useAssignment()!
     const backdrop = useBackdrop()!
     const snackbar = useSnackbar()!
 
@@ -87,6 +87,10 @@ export const AssignmentSubmitForm = ({ }: AssignmentSubmitFormProps) => {
                 message: 'Failed to submit assignment!'
             })
         }
+        try {
+            // In order to immediately update staged changes tacked onto `current_assignment`.
+            await updateAssignments()
+        } catch (e: any) {}
         setSubmitting(false)
     }
     

@@ -67,7 +67,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
     IDefaultFileBrowser,
     ILayoutRestorer,
     ILabShell,
-    ISettingRegistry
+    ISettingRegistry as any
   ],
   activate
 };

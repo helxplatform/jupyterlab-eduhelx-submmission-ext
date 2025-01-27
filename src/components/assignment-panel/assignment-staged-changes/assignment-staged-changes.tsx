@@ -20,14 +20,14 @@ const ModifiedTypeBadge = ({ modificationType }: ModifiedTypeBadgeProps) => {
         switch (modificationType) {
             case "??": {
                 return [
-                    <span style={{ fontWeight: 500 }}>+</span>,
+                    <span key={ 1 } style={{ fontWeight: 500 }}>+</span>,
                     "Added (untracked)",
                     "var(--md-green-500)"
                 ]
             }
             case "M": {
                 return [
-                    <span className={ largeBulletClass } style={{ backgroundColor: "var(--md-orange-500)" }} />,
+                    <span key={ 2 } className={ largeBulletClass } style={{ backgroundColor: "var(--md-orange-500)" }} />,
                     "Modified",
                     undefined
                 ]
@@ -36,7 +36,7 @@ const ModifiedTypeBadge = ({ modificationType }: ModifiedTypeBadgeProps) => {
                 return [
                     // Could also use a minus and boost its font-size to like 18px and make its line-height to 1
                     // but its too small at normal font size
-                    <span style={{ fontWeight: 500}}>D</span>,
+                    <span key={ 3 } style={{ fontWeight: 500}}>D</span>,
                     "Deleted",
                     "var(--md-red-500)"
                 ]
@@ -98,7 +98,7 @@ export const AssignmentStagedChanges = ({ ...props }: AssignmentStagedChangesPro
                     />
                 </h3>
                 <p style={{ fontSize: 13, marginTop: 0 }}>
-                    Files you've changed since your last submission will appear here.
+                    Files you&apos;ve changed since your last submission will appear here.
                 </p>
             </div>
         </div>
@@ -109,7 +109,7 @@ export const AssignmentStagedChanges = ({ ...props }: AssignmentStagedChangesPro
             <div className={ stagedChangesListClass }>
             {
                 stagedChangesSource.slice(0, showMore ? undefined : SHOW_MORE_CUTOFF).map((change, i) => (
-                    <div className={ stagedChangeListItemClass }>
+                    <div key={ change.pathFromAssignmentRoot } className={ stagedChangeListItemClass }>
                         <div style={{ display: "flex", alignItems: "center", marginTop: i === 0 ? 4 : 0 }}>
                             { change.type === "directory" ? (
                                 <folderIcon.react
