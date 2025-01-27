@@ -13,6 +13,8 @@ from urllib.parse import urlparse
 from jupyter_server.base.handlers import APIHandler, JupyterHandler
 from jupyter_server.base.websocket import WebSocketMixin as WSMixin
 from jupyter_server.auth.decorator import ws_authenticated
+from websockets.asyncio.client import connect as ws_client_connect
+from websockets.exceptions import ConnectionClosed as WSClientConnetionClosed
 from tornado.websocket import WebSocketHandler as WSHandler
 from jupyter_server.utils import url_path_join
 from pathlib import Path
@@ -81,7 +83,7 @@ class BaseHandler(APIHandler):
 
         cls, exc, traceback = kwargs["exc_info"]
         if isinstance(exc, APIException):
-            self.set_status(status_code)
+            self.set_status(exc.response.status_code)
             self.finish(exc.response.text)
     
     # Default error handling
@@ -97,16 +99,14 @@ class BaseHandler(APIHandler):
 class WebsocketHandler(WSMixin, WSHandler, BaseHandler):
     clients = []
     queued_messages = []
-
-    def check_origin(self, origin):
-        return True
+    grader_websocket_client = None
 
     def set_default_headers(self):
         pass
 
     def get_compression_options(self):
         return self.settings.get("websocket_compression_options", None)
-    
+
     def prepare(self, *args, **kwargs):
         try:
             del kwargs["_redirect_to_login"]
@@ -116,9 +116,11 @@ class WebsocketHandler(WSMixin, WSHandler, BaseHandler):
     @ws_authenticated
     async def open(self):
         if self not in self.clients: self.clients.append(self)
+
+        # Once a client connects, we can empty any queued messages we have onto them.
         while len(self.queued_messages) > 0:
             message = self.queued_messages.pop()
-            self.emit(*message[0], **message[1])
+            self.emit(message)
 
     def on_message(self, message):
         print("message", message)
@@ -127,11 +129,36 @@ class WebsocketHandler(WSMixin, WSHandler, BaseHandler):
         if self in self.clients: self.clients.remove(self)
 
     @classmethod
-    def emit(cls, *args, **kwargs):
-        if len(cls.clients) == 0:
-            cls.queued_messages.append((args, kwargs))
+    def emit(cls, message: dict, queue=False):
+        """ Some messages will be fired before any clients connect, or when no clients are connected
+        and the server is only running the background. Hence, queueing may be relevant to any background
+        processes that may emit messages without being prompted by client interactions. """
+        if queue and len(cls.clients) == 0:
+            cls.queued_messages.append(message)
         for client in cls.clients:
-            client.write_message(*args, **kwargs)
+            client.write_message(message)
+
+    @classmethod
+    async def get_auth_ws_url(cls, context: AppContext):
+        # This ensures that we have a valid access token when we access it.
+        await context.api._ensure_access_token()
+        bearer_token = context.api.access_token
+        auth_ws_url = f"{ context.config.GRADER_API_WS_URL }?authorization={ bearer_token }"
+        return auth_ws_url
+
+    @classmethod
+    async def proxy_api_ws(cls, context: AppContext):
+        while True:
+            auth_ws_url = await cls.get_auth_ws_url(context)
+            async with ws_client_connect(auth_ws_url) as grader_websocket_client:
+                cls.grader_websocket_client = grader_websocket_client
+                try:
+                    while True:
+                        message = await grader_websocket_client.recv()
+                        cls.emit(message)
+                except WSClientConnetionClosed:
+                    continue
+            
 
 class CourseAndStudentHandler(BaseHandler):
     async def get_value(self):
@@ -318,6 +345,18 @@ class NotebookFilesHandler(BaseHandler):
             "notebooks": assignment_notebooks
         }))
 
+class JobStatusHandler(BaseHandler):
+    @tornado.web.authenticated
+    async def get(self):
+        job_id: str = self.get_argument("job_id")
+        self.finish(json.dumps(await self.api.get_job_status(job_id)))
+
+class JobResultHandler(BaseHandler):
+    @tornado.web.authenticated
+    async def get(self):
+        job_id: str = self.get_argument("job_id")
+        self.finish(json.dumps(await self.api.get_job(job_id)))
+
 class SettingsHandler(BaseHandler):
     @tornado.web.authenticated
     async def get(self):
@@ -347,7 +386,7 @@ async def create_ssh_config_if_not_exists(context: AppContext, course, student) 
     if not urlparse(ssh_public_url).scheme:
         ssh_public_url = "ssh://" + ssh_public_url
 
-    ssh_private_url = settings["gitea_ssh_url"] if not context.config.LOCAL else "ssh://git@localhost:2222"
+    ssh_private_url = settings["gitea_ssh_url"] if not context.config.GITEA_SSH_URL else context.config.GITEA_SSH_URL
     if not urlparse(ssh_private_url).scheme:
         ssh_private_url = "ssh://" + ssh_private_url 
 
@@ -691,8 +730,11 @@ async def sync_upstream_repository(context: AppContext, course) -> None:
     # TODO: when websockets added, ping the client if anything was changed.
     added_files = git_diff_status(f"{local_head}..{upstream_head}", diff_filter="A", path=repo_root)
     WebsocketHandler.emit({
-        "type": "downsync",
-        "files": added_files
+        "event_name": "git_pull_event",
+        "uuid": "",
+        "data": {
+            "files": added_files
+        }
     })
 
 async def setup_backend(context: AppContext):
@@ -718,6 +760,7 @@ def setup_handlers(server_app):
     
     loop = asyncio.get_event_loop()
     asyncio.run_coroutine_threadsafe(setup_backend(BaseHandler.context), loop)
+    asyncio.run_coroutine_threadsafe(WebsocketHandler.proxy_api_ws(BaseHandler.context), loop)
 
     host_pattern = ".*$"
 
@@ -728,7 +771,10 @@ def setup_handlers(server_app):
         ("course_student", CourseAndStudentHandler),
         ("submit_assignment", SubmissionHandler),
         ("notebook_files", NotebookFilesHandler),
-        ("settings", SettingsHandler)
+        ("job_status", JobStatusHandler),
+        ("job_result", JobResultHandler),
+        ("settings", SettingsHandler),
+        ("ws", WebsocketHandler)
     ]
 
     handlers_with_path = [
